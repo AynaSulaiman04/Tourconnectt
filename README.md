@@ -360,6 +360,7 @@ Fallback behavior:
 
 ## Troubleshooting
 
+- Production hosting is linked through `.openai/hosting.json`; runtime credentials stay in the hosting environment and must never be committed.
 - Missing env variables: check `.env.local`.
 - Supabase table not found: run migrations in order.
 - Bucket missing: verify the `operator-documents` bucket exists and is private.
