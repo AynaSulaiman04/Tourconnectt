@@ -1,6 +1,6 @@
 import "server-only";
 
-import { google } from "googleapis";
+import { OAuth2Client } from "google-auth-library";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 type InquiryRow = {
@@ -95,6 +95,24 @@ type GoogleConflict = {
   summary: string;
   startDate: string;
   endDate: string;
+};
+
+type GoogleCalendarEvent = {
+  id?: string | null;
+  status?: string | null;
+  summary?: string | null;
+  start?: { date?: string | null; dateTime?: string | null } | null;
+  end?: { date?: string | null; dateTime?: string | null } | null;
+  extendedProperties?: { private?: Record<string, string | undefined> | null } | null;
+};
+
+type GoogleEventsListResponse = {
+  items?: GoogleCalendarEvent[];
+  nextSyncToken?: string | null;
+};
+
+type GoogleFreeBusyResponse = {
+  calendars?: Record<string, { busy?: Array<{ start?: string | null; end?: string | null }> }>;
 };
 
 type ConflictSummary = {
@@ -516,7 +534,91 @@ function createGoogleOAuthClient() {
   const clientSecret = getRequiredEnv("GOOGLE_CLIENT_SECRET");
   const redirectUri = getGoogleRedirectUri();
 
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  return new OAuth2Client(clientId, clientSecret, redirectUri);
+}
+
+function createGoogleCalendarClient(oauth2Client: OAuth2Client) {
+  const calendarBaseUrl = "https://www.googleapis.com/calendar/v3";
+  const calendarPath = (calendarId: string) =>
+    `${calendarBaseUrl}/calendars/${encodeURIComponent(calendarId)}`;
+
+  return {
+    events: {
+      async list(params: {
+        calendarId: string;
+        singleEvents?: boolean;
+        showDeleted?: boolean;
+        timeMin?: string;
+        timeMax?: string;
+        syncToken?: string;
+        maxResults?: number;
+      }) {
+        return oauth2Client.request<GoogleEventsListResponse>({
+          url: `${calendarPath(params.calendarId)}/events`,
+          method: "GET",
+          params: {
+            singleEvents: params.singleEvents,
+            showDeleted: params.showDeleted,
+            timeMin: params.timeMin,
+            timeMax: params.timeMax,
+            syncToken: params.syncToken,
+            maxResults: params.maxResults,
+          },
+        });
+      },
+      async insert(params: {
+        calendarId: string;
+        requestBody: Record<string, unknown>;
+        sendUpdates?: string;
+      }) {
+        return oauth2Client.request<{ id?: string | null }>({
+          url: `${calendarPath(params.calendarId)}/events`,
+          method: "POST",
+          params: { sendUpdates: params.sendUpdates },
+          data: params.requestBody,
+        });
+      },
+      async update(params: {
+        calendarId: string;
+        eventId: string;
+        requestBody: Record<string, unknown>;
+        sendUpdates?: string;
+      }) {
+        return oauth2Client.request<{ id?: string | null }>({
+          url: `${calendarPath(params.calendarId)}/events/${encodeURIComponent(params.eventId)}`,
+          method: "PUT",
+          params: { sendUpdates: params.sendUpdates },
+          data: params.requestBody,
+        });
+      },
+      async delete(params: {
+        calendarId: string;
+        eventId: string;
+        sendUpdates?: string;
+      }) {
+        return oauth2Client.request<void>({
+          url: `${calendarPath(params.calendarId)}/events/${encodeURIComponent(params.eventId)}`,
+          method: "DELETE",
+          params: { sendUpdates: params.sendUpdates },
+        });
+      },
+    },
+    freebusy: {
+      async query(params: {
+        requestBody: {
+          timeMin: string;
+          timeMax: string;
+          items: Array<{ id: string }>;
+        };
+      }) {
+        return oauth2Client.request<GoogleFreeBusyResponse>({
+          url: `${calendarBaseUrl}/freeBusy`,
+          method: "POST",
+          data: params.requestBody,
+        });
+      },
+    },
+  };
 }
 
 async function loadCalendarContext(inquiryId: string): Promise<CalendarContext | null> {
@@ -743,7 +845,7 @@ async function getCalendarClientForOperator(operatorId: string) {
 
   return {
     oauth2Client,
-    calendar: google.calendar({ version: "v3", auth: oauth2Client }),
+    calendar: createGoogleCalendarClient(oauth2Client),
     integration: integration as OperatorCalendarIntegration,
   };
 }

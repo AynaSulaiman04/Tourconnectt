@@ -4,7 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["exceljs", "googleapis", "nodemailer", "openai", "pdf-lib"],
+  serverExternalPackages: ["exceljs", "nodemailer", "openai", "pdf-lib"],
   experimental: {
     proxyClientMaxBodySize: "250mb",
     serverActions: {
