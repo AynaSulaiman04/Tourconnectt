@@ -9,7 +9,8 @@
     "build:worker": "npm run build",
     "start": "next start",
     "lint": "eslint",
-    "seed:admin": "node scripts/seed-admin.mjs"
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "seed:demo": "node scripts/seed-demo-accounts.mjs"
   },
   "dependencies": {
     "@fontsource-variable/material-symbols-outlined": "^5.2.44",

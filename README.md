@@ -125,28 +125,17 @@ Important storage notes:
 
 These are for testing and manual walkthroughs only. Do not hardcode them into application code.
 
-### Traveler
+### Demo Accounts
 
-- Email: `traveler.demo@ttconnect.test`
-- Password: `DemoPass1234`
-
-### Operator
-
-- Email: `operator.demo.20260522@example.com`
-- Password: `DemoPass1234`
-
-### Admin
-
-- The repository includes a seed script at `scripts/seed-admin.mjs`.
-- Default admin email: `admin@ttconnect.com`
-- Default admin password: `Admin12345!`
-- Run it with:
+The repository includes a role-aware demo seeder at `scripts/seed-demo-accounts.mjs`.
+It creates traveler, operator, and admin accounts using one password supplied at
+runtime. Do not commit that password.
 
 ```bash
-npm run seed:admin
+DEMO_ACCOUNT_PASSWORD="use-a-client-specific-password" npm run seed:demo
 ```
 
-If your environment overrides `ADMIN_EMAIL`, `ADMIN_PASSWORD`, or `ADMIN_FULL_NAME`, the script will use those values instead.
+See `CLIENT_HANDOFF.md` for the demo emails, login routes, and protected portal routes.
 
 ## Role Workflow
 

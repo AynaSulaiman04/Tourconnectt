@@ -15,20 +15,19 @@ export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
     [images],
   );
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const normalizedIndex = safeImages.length ? activeIndex % safeImages.length : 0;
 
   useEffect(() => {
-    if (safeImages.length < 2 || prefersReducedMotion || isPaused) {
+    if (safeImages.length < 2) {
       return;
     }
 
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % safeImages.length);
-    }, 5000);
+    }, 4000);
 
     return () => window.clearInterval(timer);
-  }, [isPaused, prefersReducedMotion, safeImages.length]);
+  }, [safeImages.length]);
 
   useEffect(() => {
     if (safeImages.length < 2) {
@@ -60,14 +59,7 @@ export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
   const currentImage = safeImages[normalizedIndex] ?? safeImages[0];
 
   return (
-    <section
-      className="lp-showcase"
-      aria-label="Featured destinations slideshow"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onFocusCapture={() => setIsPaused(true)}
-      onBlurCapture={() => setIsPaused(false)}
-    >
+    <section className="lp-showcase" aria-label="Featured destinations slideshow">
       <div className="lp-showcase-frame">
         <AnimatePresence mode="sync" initial={false}>
           <motion.div
