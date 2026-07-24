@@ -2,14 +2,6 @@
 @import "@fontsource-variable/material-symbols-outlined/wght.css";
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Material Symbols Outlined";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 700;
-  src: url("@fontsource-variable/material-symbols-outlined/files/material-symbols-outlined-latin-wght-normal.woff2") format("woff2-variations");
-}
-
 :root {
   --tc-bg: #f7f3ea;
   --tc-surface: #fffdf8;
