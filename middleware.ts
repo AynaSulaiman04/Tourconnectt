@@ -50,7 +50,7 @@ function hasSupabaseSessionCookie(request: NextRequest) {
   return request.cookies.getAll().some((entry) => /^sb-.*-auth-token(\.\d+)?$/.test(entry.name));
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
   const portalCookie = readPortalAuthCookieValue(request.cookies.get(PORTAL_AUTH_COOKIE_NAME)?.value);
   const hasSupabaseAuth = hasSupabaseSessionCookie(request);
