@@ -14,13 +14,50 @@ import {
   saveConciergeMessage,
   updateConciergeConversationTitle,
 } from "@/lib/ai/concierge-store";
+import { isConciergeQuotaLedgerId } from "@/lib/ai/concierge-hidden";
 import { buildConciergeContext } from "@/lib/ai/concierge-context";
 import { generateConciergeReply } from "@/lib/ai/concierge";
+import {
+  CONCIERGE_BURST_LIMIT,
+  CONCIERGE_DAILY_LIMIT,
+  createConciergeQuotaMarker,
+  deleteConciergeQuotaMarker,
+  getConciergeQuotaSnapshot,
+  withConciergeProfileLock,
+} from "@/lib/ai/concierge-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_LENGTH = 2000;
+
+function conciergeRateLimitResponse(
+  quota: Awaited<ReturnType<typeof getConciergeQuotaSnapshot>>,
+) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "You have reached the current Concierge request limit. Please try again later.",
+    },
+    {
+      status: 429,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": String(Math.max(quota.retryAfterSeconds, 1)),
+        "X-RateLimit-Limit": `${CONCIERGE_BURST_LIMIT};w=600, ${CONCIERGE_DAILY_LIMIT};w=86400`,
+        "X-RateLimit-Remaining": String(
+          Math.max(
+            Math.min(
+              CONCIERGE_BURST_LIMIT - quota.burstCount,
+              CONCIERGE_DAILY_LIMIT - quota.dailyCount,
+            ),
+            0,
+          ),
+        ),
+      },
+    },
+  );
+}
 
 function getRequiredEnv(name: string) {
   const value = process.env[name];
@@ -55,31 +92,30 @@ async function getProfileFromBearerToken(request: NextRequest) {
     getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   );
 
-  const { data: authData } = await supabase.auth.getUser(accessToken);
+  const { data: authData, error: authError } = await supabase.auth.getUser(accessToken);
 
-  if (!authData.user) {
+  if (authError || !authData.user) {
     return null;
   }
 
   const admin = createSupabaseServiceRoleClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("id,email,full_name,preferred_inquiry_area,role,created_at,updated_at,avatar_base64,profile_image_url")
+    .select(
+      "id,email,full_name,preferred_inquiry_area,role,is_active,status_reason,last_seen_at,created_at,updated_at,avatar_base64,profile_image_url",
+    )
     .eq("id", authData.user.id)
     .maybeSingle();
 
   if (profile) {
+    if (!profile.is_active) {
+      return null;
+    }
+
     return {
-      authUser: {
-        id: authData.user.id,
-        email: authData.user.email ?? null,
-        user_metadata: authData.user.user_metadata ?? {},
-      },
+      authUser: authData.user,
       profile: {
         ...profile,
-        is_active: true,
-        status_reason: null,
-        last_seen_at: null,
         profile_image_url:
           normalizeProfileImageSource(profile.avatar_base64) ??
           normalizeProfileImageSource(profile.profile_image_url) ??
@@ -98,10 +134,9 @@ async function getProfileFromBearerToken(request: NextRequest) {
           ? authData.user.user_metadata.full_name.trim()
           : (authData.user.email ?? "Traveler").split("@")[0],
       preferred_inquiry_area: null,
-      role:
-        authData.user.user_metadata?.role === "operator" || authData.user.user_metadata?.role === "admin"
-          ? authData.user.user_metadata.role
-          : "traveler",
+      role: "traveler",
+      is_active: true,
+      status_reason: null,
     },
     { onConflict: "id" },
   );
@@ -112,25 +147,20 @@ async function getProfileFromBearerToken(request: NextRequest) {
 
   const { data: createdProfile } = await admin
     .from("profiles")
-    .select("id,email,full_name,preferred_inquiry_area,role,created_at,updated_at,avatar_base64,profile_image_url")
+    .select(
+      "id,email,full_name,preferred_inquiry_area,role,is_active,status_reason,last_seen_at,created_at,updated_at,avatar_base64,profile_image_url",
+    )
     .eq("id", authData.user.id)
     .maybeSingle();
 
-  if (!createdProfile) {
+  if (!createdProfile?.is_active) {
     return null;
   }
 
   return {
-    authUser: {
-      id: authData.user.id,
-      email: authData.user.email ?? null,
-      user_metadata: authData.user.user_metadata ?? {},
-    },
+    authUser: authData.user,
     profile: {
       ...createdProfile,
-      is_active: true,
-      status_reason: null,
-      last_seen_at: null,
       profile_image_url:
         normalizeProfileImageSource(createdProfile.avatar_base64) ??
         normalizeProfileImageSource(createdProfile.profile_image_url) ??
@@ -170,6 +200,17 @@ export async function POST(request: NextRequest) {
     const action = body?.action?.trim() ?? null;
 
     if (action === "new" || action === "clear" || action === "refresh_suggestions") {
+      if (
+        action === "clear" &&
+        requestedConversationId &&
+        isConciergeQuotaLedgerId(requestedConversationId, profileContext.profile.id)
+      ) {
+        return NextResponse.json(
+          { ok: false, error: "That internal conversation cannot be cleared." },
+          { status: 400 },
+        );
+      }
+
       if (action === "refresh_suggestions") {
         const activeConversation =
           requestedConversationId && profileContext.profile
@@ -269,47 +310,175 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const conversation = await getOrCreateConciergeConversation({
-      userId: profileContext.profile.id,
-      conversationId: requestedConversationId,
-      title: deriveConciergeConversationTitle(message),
-    });
+    const reservation = await withConciergeProfileLock(
+      profileContext.profile.id,
+      async () => {
+        const quotaBeforeReservation = await getConciergeQuotaSnapshot(
+          profileContext.profile.id,
+        );
 
-    const storageAvailable = Boolean(conversation);
-    const activeConversationId =
-      conversation?.id ?? requestedConversationId ?? `session-${profileContext.profile.id}-${Date.now()}`;
-    const historyMessages = storageAvailable
-      ? await getConciergeConversationMessages({
-          conversationId: conversation!.id,
+        if (!quotaBeforeReservation.allowed) {
+          return {
+            ok: false as const,
+            reason: "rate_limit" as const,
+            quota: quotaBeforeReservation,
+          };
+        }
+
+        const conversation = await getOrCreateConciergeConversation({
           userId: profileContext.profile.id,
-          limit: 10,
-        })
-      : [];
-
-    if (storageAvailable) {
-      await saveConciergeMessage({
-        conversationId: conversation!.id,
-        role: "user",
-        content: message,
-      });
-
-      if (!conversation!.title) {
-        await updateConciergeConversationTitle({
-          conversationId: conversation!.id,
-          userId: profileContext.profile.id,
+          conversationId: requestedConversationId,
           title: deriveConciergeConversationTitle(message),
         });
+
+        if (!conversation) {
+          return {
+            ok: false as const,
+            reason: "storage" as const,
+          };
+        }
+
+        const historyMessages = await getConciergeConversationMessages({
+          conversationId: conversation.id,
+          userId: profileContext.profile.id,
+          limit: 10,
+        });
+        const quotaMarker = await createConciergeQuotaMarker(
+          profileContext.profile.id,
+        );
+        let markerReleased = false;
+        const releaseQuotaMarker = async () => {
+          if (markerReleased) {
+            return;
+          }
+
+          try {
+            await deleteConciergeQuotaMarker(
+              profileContext.profile.id,
+              quotaMarker,
+            );
+            markerReleased = true;
+          } catch (deleteError) {
+            console.error("Unable to release a Concierge quota reservation", {
+              profileId: profileContext.profile.id,
+              markerId: quotaMarker.id,
+              error: deleteError,
+            });
+          }
+        };
+
+        try {
+          // The hidden persisted marker is the cross-worker reservation.
+          // Recount before any visible chat write or provider invocation.
+          const quotaAfterReservation = await getConciergeQuotaSnapshot(
+            profileContext.profile.id,
+          );
+          const reservationExceededQuota =
+            quotaAfterReservation.burstCount > CONCIERGE_BURST_LIMIT ||
+            quotaAfterReservation.dailyCount > CONCIERGE_DAILY_LIMIT;
+
+          if (reservationExceededQuota) {
+            await releaseQuotaMarker();
+
+            return {
+              ok: false as const,
+              reason: "rate_limit" as const,
+              quota: quotaAfterReservation,
+            };
+          }
+
+          const userMessage = await saveConciergeMessage({
+            conversationId: conversation.id,
+            role: "user",
+            content: message,
+          });
+
+          if (!userMessage) {
+            await releaseQuotaMarker();
+
+            return {
+              ok: false as const,
+              reason: "storage" as const,
+            };
+          }
+
+          if (!conversation.title) {
+            await updateConciergeConversationTitle({
+              conversationId: conversation.id,
+              userId: profileContext.profile.id,
+              title: deriveConciergeConversationTitle(message),
+            });
+          }
+
+          return {
+            ok: true as const,
+            conversation,
+            historyMessages,
+            quotaMarker,
+          };
+        } catch (error) {
+          await releaseQuotaMarker();
+          throw error;
+        }
+      },
+    );
+
+    if (!reservation.ok) {
+      if (reservation.reason === "rate_limit") {
+        return conciergeRateLimitResponse(reservation.quota);
       }
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Concierge chat storage is temporarily unavailable. Please try again later.",
+        },
+        { status: 503 },
+      );
     }
 
-    const reply = await generateConciergeReply({
-      message,
-      userId: profileContext.profile.id,
-      historyMessages: historyMessages.map((entry) => ({
-        role: entry.role,
-        content: entry.content,
-      })),
-    });
+    const { conversation, historyMessages, quotaMarker } = reservation;
+    const activeConversationId = conversation.id;
+    let reply;
+
+    try {
+      reply = await generateConciergeReply({
+        message,
+        userId: profileContext.profile.id,
+        historyMessages: historyMessages.map((entry) => ({
+          role: entry.role,
+          content: entry.content,
+        })),
+      });
+    } catch (error) {
+      // generateConciergeReply catches provider errors itself. A thrown error
+      // here occurred before the provider attempt (for example context
+      // storage), so do not charge the durable quota marker.
+      await deleteConciergeQuotaMarker(
+        profileContext.profile.id,
+        quotaMarker,
+      ).catch((deleteError) => {
+        console.error("Unable to release a pre-provider Concierge quota marker", {
+          profileId: profileContext.profile.id,
+          markerId: quotaMarker.id,
+          error: deleteError,
+        });
+      });
+      throw error;
+    }
+
+    if (reply.configurationError) {
+      await deleteConciergeQuotaMarker(
+        profileContext.profile.id,
+        quotaMarker,
+      ).catch((deleteError) => {
+        console.error("Unable to release an unconfigured Concierge quota marker", {
+          profileId: profileContext.profile.id,
+          markerId: quotaMarker.id,
+          error: deleteError,
+        });
+      });
+    }
 
     if (!reply.ok) {
       const failureStatus = reply.statusCode ?? (reply.configurationError ? 503 : 500);
@@ -324,33 +493,27 @@ export async function POST(request: NextRequest) {
               : reply.configurationError ?? reply.error ?? "Unable to generate a concierge response.",
           recommendations: reply.recommendations ?? [],
           sources: reply.sources ?? [],
-          persistenceMode: storageAvailable ? "supabase" : "client-only",
-          storageWarning: storageAvailable
-            ? null
-            : "Concierge chat storage is not available yet. Using session-only history until the migration is applied.",
+          persistenceMode: "supabase",
+          storageWarning: null,
         },
         { status: failureStatus },
       );
     }
 
-    const assistantMessage = storageAvailable
-      ? await saveConciergeMessage({
-          conversationId: conversation!.id,
-          role: "assistant",
-          content: reply.assistantText ?? "",
-          sources: reply.sources ?? [],
-        })
-      : null;
+    const assistantMessage = await saveConciergeMessage({
+      conversationId: conversation.id,
+      role: "assistant",
+      content: reply.assistantText ?? "",
+      sources: reply.sources ?? [],
+    });
 
     return NextResponse.json(
       {
         ok: true,
         conversationId: activeConversationId,
-        conversationTitle: conversation?.title ?? deriveConciergeConversationTitle(message),
-        persistenceMode: storageAvailable ? "supabase" : "client-only",
-        storageWarning: storageAvailable
-          ? null
-          : "Concierge chat storage is not available yet. Using session-only history until the migration is applied.",
+        conversationTitle: conversation.title ?? deriveConciergeConversationTitle(message),
+        persistenceMode: "supabase",
+        storageWarning: null,
         assistantMessage: assistantMessage
           ? {
               id: assistantMessage.id,

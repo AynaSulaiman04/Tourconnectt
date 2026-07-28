@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { clearPortalAuthCookie, setPortalAuthCookie } from "@/lib/supabase/portal-auth";
+import { clearPortalAuthCookie } from "@/lib/supabase/portal-auth";
 import { requireAdminProfile } from "@/lib/supabase/admin";
 import { getAdminWorkspaceSettings, recordPlatformEvent } from "@/lib/supabase/analytics";
 
@@ -118,16 +118,6 @@ export async function updateAdminProfileAction(formData: FormData) {
     });
     redirect("/AdminSettings?error=admin-profile-save-failed");
   }
-
-  const cookieStore = await cookies();
-  await clearPortalAuthCookie(cookieStore);
-  await setPortalAuthCookie(cookieStore, {
-    id: profile.id,
-    email: profile.email,
-    full_name: fullName,
-    role: "admin",
-    profile_image_url: profile.profile_image_url ?? undefined,
-  });
 
   revalidatePath("/AdminSettings");
   revalidatePath("/AdminDashboard");

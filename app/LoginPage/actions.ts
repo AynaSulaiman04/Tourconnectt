@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getRoleDashboardRoute } from "@/lib/supabase/profile";
-import { clearPortalAuthCookie, setPortalAuthCookie } from "@/lib/supabase/portal-auth";
+import { clearPortalAuthCookie } from "@/lib/supabase/portal-auth";
 import { initialLoginFormState, type LoginFormState } from "./types";
 import { initialRecoveryFormState, type RecoveryFormState } from "./recovery-types";
 import { initialForgotPasswordFormState, type ForgotPasswordFormState } from "./forgot-password-types";
@@ -148,9 +148,37 @@ export async function loginAction(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("role,full_name")
+    .select("role,full_name,is_active,status_reason")
     .eq("id", data.user.id)
     .maybeSingle();
+
+  if (!profile) {
+    await supabase.auth.signOut();
+    await clearPortalAuthCookie(await cookies());
+
+    return {
+      ...initialLoginFormState,
+      message: "We could not load your account profile. Please try again.",
+      fieldErrors: {
+        email: ["Account profile not found."],
+        password: ["Account profile not found."],
+      },
+    };
+  }
+
+  if (!profile.is_active) {
+    await supabase.auth.signOut();
+    await clearPortalAuthCookie(await cookies());
+
+    return {
+      ...initialLoginFormState,
+      message: profile.status_reason || "This account is not currently active. Contact an administrator.",
+      fieldErrors: {
+        email: ["Account access is disabled."],
+        password: ["Account access is disabled."],
+      },
+    };
+  }
 
   if (expectedRole === "traveler" && profile?.role && profile.role !== "traveler") {
     await supabase.auth.signOut();
@@ -188,19 +216,7 @@ export async function loginAction(
     .update({ last_seen_at: new Date().toISOString() })
     .eq("id", data.user.id);
 
-  await setPortalAuthCookie(await cookies(), {
-    id: data.user.id,
-    email: data.user.email ?? email,
-    full_name:
-      profile?.full_name?.trim().length
-        ? profile.full_name
-        : typeof data.user.user_metadata?.full_name === "string" && data.user.user_metadata.full_name.trim().length > 0
-          ? data.user.user_metadata.full_name.trim()
-          : (data.user.email ?? email).split("@")[0],
-    role: expectedRole === "traveler" ? "traveler" : profile?.role ?? expectedRole ?? "traveler",
-  });
-
-  redirect(getRoleDashboardRoute(expectedRole === "traveler" ? "traveler" : profile?.role));
+  redirect(getRoleDashboardRoute(profile.role));
 }
 
 export async function requestPasswordResetAction(

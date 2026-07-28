@@ -1,12 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useRouter } from "next/navigation";
 import { updateProfileAction } from "./actions";
 import { initialProfileFormState } from "./types";
 import type { TravelerProfile } from "@/lib/supabase/profile-types";
 import type { TravelerCareProfile } from "@/lib/supabase/traveler-care";
-import { setPortalAuthCookieClient } from "@/lib/supabase/portal-auth";
 
 type ProfileEditorProps = {
   profile: TravelerProfile;
@@ -19,19 +17,17 @@ const ALLOWED_PROFILE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/w
 function preferredAreaLabel(value: TravelerProfile["preferred_inquiry_area"]) {
   switch (value) {
     case "desert":
-      return "The High Desert";
+      return "Island Heritage & Culture";
     case "coastal":
-      return "Coastal Archipelagos";
+      return "Beaches & Marine";
     case "arctic":
-      return "Arctic Silence";
+      return "Rainforest & Nature";
     default:
       return "Select an environment";
   }
 }
 
 export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
-  const router = useRouter();
-  const formRef = useRef<HTMLFormElement | null>(null);
   const profileImageInputRef = useRef<HTMLInputElement | null>(null);
   const [state, formAction, pending] = useActionState(
     updateProfileAction,
@@ -39,7 +35,6 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
   );
   const [localPhoto, setLocalPhoto] = useState(profile.profile_image_url);
   const [clientMessage, setClientMessage] = useState<string | null>(null);
-  const hasRefreshedAfterSave = useRef(false);
   const objectUrlRef = useRef<string | null>(null);
   const visibleMessage = state.message || clientMessage;
   const showFormError = Boolean(visibleMessage && !state.success);
@@ -52,22 +47,6 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
     },
     [],
   );
-
-  useEffect(() => {
-    if (!state.success || hasRefreshedAfterSave.current) {
-      return;
-    }
-
-    hasRefreshedAfterSave.current = true;
-    setPortalAuthCookieClient({
-      id: profile.id,
-      email: profile.email,
-      full_name: profile.full_name,
-      role: profile.role,
-      profile_image_url: state.profileImageUrl ?? profile.profile_image_url ?? null,
-    });
-    router.refresh();
-  }, [profile.email, profile.full_name, profile.id, profile.profile_image_url, profile.role, router, state.profileImageUrl, state.success]);
 
   const profilePhoto = state.profileImageUrl ?? localPhoto ?? profile.profile_image_url;
 
@@ -115,14 +94,10 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
     const previewUrl = URL.createObjectURL(file);
     objectUrlRef.current = previewUrl;
     setLocalPhoto(previewUrl);
-
-    window.requestAnimationFrame(() => {
-      formRef.current?.requestSubmit();
-    });
   }
 
   return (
-    <form ref={formRef} className="profile-editor" action={formAction}>
+    <form className="profile-editor" action={formAction}>
       <div className="field profile-photo-field" id="profile-photo">
         <span className="profile-editor-label">Profile Picture</span>
         <div className="profile-photo-preview">
@@ -141,6 +116,7 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
             className="profile-photo-camera"
             type="button"
             aria-label="Upload profile photo"
+            disabled={pending}
             onClick={() => profileImageInputRef.current?.click()}
           >
             <span className="material-symbols-outlined">photo_camera</span>
@@ -152,12 +128,13 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
           name="profile_image"
           accept="image/jpeg,image/png,image/webp"
           type="file"
+          disabled={pending}
           onChange={handleProfileImageChange}
           aria-invalid={Boolean(state.fieldErrors.profileImage?.length)}
           aria-describedby={state.fieldErrors.profileImage?.length ? "profile_image_error" : "profile_image_help"}
         />
         <p className="profile-photo-help" id="profile_image_help">
-          Click the camera icon to upload a JPG, PNG, or WEBP image. Maximum size 2MB.
+          Choose a JPG, PNG, or WEBP image, then select Save Profile. Maximum size 2MB.
         </p>
         {state.fieldErrors.profileImage?.length ? (
           <p className="field-error" id="profile_image_error" role="alert">
@@ -201,9 +178,9 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
           <option disabled value="">
             Select an environment
           </option>
-          <option value="desert">The High Desert</option>
-          <option value="coastal">Coastal Archipelagos</option>
-          <option value="arctic">Arctic Silence</option>
+          <option value="desert">Island Heritage &amp; Culture</option>
+          <option value="coastal">Beaches &amp; Marine</option>
+          <option value="arctic">Rainforest &amp; Nature</option>
         </select>
         {state.fieldErrors.preferredInquiryArea?.length ? (
           <p className="field-error" id="profile_preferred_inquiry_area_error" role="alert">

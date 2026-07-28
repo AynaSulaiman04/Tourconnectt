@@ -7,12 +7,14 @@ import { requireAdminProfile } from "@/lib/supabase/admin";
 import { recordPlatformEvent } from "@/lib/supabase/analytics";
 import { sendBookingConfirmationEmailForInquiryId } from "@/lib/email/workflows";
 import { recordAdminNotifications, recordPlatformNotification } from "@/lib/supabase/notifications";
-import { resolveOperatorProfileId } from "@/lib/supabase/operator-resolution";
 import {
   checkGoogleCalendarConflictsForBooking,
   syncBookingToGoogleCalendar,
 } from "@/lib/calendar/google";
-import { updateWiPayPaymentByOrderId, type WiPayPaymentStatus } from "@/lib/payments/wipay";
+import {
+  transitionWiPayPaymentByOrderId,
+  type WiPayCanonicalPaymentStatus,
+} from "@/lib/payments/wipay";
 
 function getReturnTo(formData: FormData) {
   const value = String(formData.get("return_to") ?? "").trim();
@@ -29,7 +31,7 @@ function buildRedirectUrl(returnTo: string, params: Record<string, string>) {
   return `${url.pathname}${url.search}`;
 }
 
-function normalizePaymentStatus(value: string): WiPayPaymentStatus | null {
+function normalizePaymentStatus(value: string): WiPayCanonicalPaymentStatus | null {
   if (value === "cancelled" || value === "refunded") {
     return value;
   }
@@ -158,11 +160,7 @@ export async function updateInquiryStatusAction(formData: FormData) {
   });
 
   const notificationContext = await getInquiryNotificationContext(inquiryId);
-  const resolvedOperatorId =
-    notificationContext?.operator_id ??
-    (await resolveOperatorProfileId(admin, [notificationContext?.operator_name, notificationContext?.destination]).catch(
-      () => null,
-    ));
+  const resolvedOperatorId = notificationContext?.operator_id ?? null;
   const inquiryLabel =
     notificationContext?.destination_country ??
     notificationContext?.destination ??
@@ -320,18 +318,23 @@ export async function updateWiPayPaymentStatusAction(formData: FormData) {
     redirect(buildRedirectUrl(returnTo, { error: "invalid-payment-status" }));
   }
 
-  const now = new Date().toISOString();
-
+  let transition: Awaited<ReturnType<typeof transitionWiPayPaymentByOrderId>>;
   try {
-    await updateWiPayPaymentByOrderId(orderId, {
+    transition = await transitionWiPayPaymentByOrderId({
+      orderId,
       status,
-      cancelled_at: status === "cancelled" ? now : null,
-      refunded_at: status === "refunded" ? now : null,
-      failed_at: null,
     });
   } catch (error) {
     console.error("Unable to update WiPay payment", { orderId, status, error });
     redirect(buildRedirectUrl(returnTo, { error: "We could not update this payment. Please try again." }));
+  }
+
+  if (transition.currentStatus !== status) {
+    redirect(
+      buildRedirectUrl(returnTo, {
+        error: `This payment cannot move from ${transition.previousStatus} to ${status}.`,
+      }),
+    );
   }
 
   revalidatePath("/AdminDashboard");

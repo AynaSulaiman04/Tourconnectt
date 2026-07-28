@@ -7,9 +7,10 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const LANDING_SLIDESHOW_BUCKET = "landing-slideshow";
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
-const MAX_FILES_PER_UPLOAD = 30;
-const MAX_BATCH_SIZE = 250 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILES_PER_UPLOAD = 10;
+const MAX_BATCH_SIZE = 25 * 1024 * 1024;
+const MAX_REQUEST_SIZE = MAX_BATCH_SIZE + 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 
 function sanitizeFileName(fileName: string) {
@@ -68,12 +69,22 @@ async function uploadFilesInBatches(
 }
 
 export async function POST(request: Request) {
+  await requireAdminProfile();
+
   try {
-    await requireAdminProfile();
+    const declaredContentLength = Number(request.headers.get("content-length"));
+
+    if (Number.isFinite(declaredContentLength) && declaredContentLength > MAX_REQUEST_SIZE) {
+      return NextResponse.json(
+        { message: "This upload batch is too large. Please keep the total under 25 MB." },
+        { status: 413 },
+      );
+    }
+
     const formData = await request.formData();
     const files = formData
       .getAll("landing_slideshow_uploads")
-      .filter((value): value is File => value instanceof File && value.size > 0 && value.type.startsWith("image/"));
+      .filter((value): value is File => value instanceof File && value.size > 0);
 
     if (!files.length) {
       return NextResponse.json({ message: "Choose one or more image files first." }, { status: 400 });
@@ -90,9 +101,25 @@ export async function POST(request: Request) {
 
     if (totalBytes > MAX_BATCH_SIZE) {
       return NextResponse.json(
-        { message: "This upload batch is too large. Please keep the total under 250 MB." },
-        { status: 400 },
+        { message: "This upload batch is too large. Please keep the total under 25 MB." },
+        { status: 413 },
       );
+    }
+
+    for (const file of files) {
+      if (!ALLOWED_MIME_TYPES.has(file.type)) {
+        return NextResponse.json(
+          { message: "Only JPG, PNG, WEBP, or AVIF images are supported." },
+          { status: 400 },
+        );
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { message: "Each slideshow image must be 5 MB or smaller." },
+          { status: 413 },
+        );
+      }
     }
 
     const admin = createSupabaseServiceRoleClient();
@@ -103,16 +130,6 @@ export async function POST(request: Request) {
         { message: "We could not prepare slideshow storage. Please try again." },
         { status: 500 },
       );
-    }
-
-    for (const file of files) {
-      if (!ALLOWED_MIME_TYPES.has(file.type)) {
-        throw new Error("Only JPG, PNG, WEBP, or AVIF images are supported.");
-      }
-
-      if (file.size > MAX_FILE_SIZE) {
-        throw new Error("One of the images is too large. Please use files under 50 MB.");
-      }
     }
 
     await uploadFilesInBatches(admin, files);

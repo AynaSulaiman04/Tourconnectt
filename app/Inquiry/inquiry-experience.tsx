@@ -143,6 +143,16 @@ export function InquiryExperience({
           {hasAnyListings ? (
             <form className="request-form" action={formAction}>
               <input name="referral_code" type="hidden" value={tracking.referralCode} />
+              <div className="sr-only" aria-hidden="true">
+                <label htmlFor="inquiry_website">Website</label>
+                <input
+                  id="inquiry_website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
               <input name="utm_source" type="hidden" value={tracking.utmSource} />
               <input name="utm_medium" type="hidden" value={tracking.utmMedium} />
               <input name="utm_campaign" type="hidden" value={tracking.utmCampaign} />

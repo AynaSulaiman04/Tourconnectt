@@ -8,7 +8,6 @@ import type { TravelerProfile } from "@/lib/supabase/profile-types";
 import { NAVBAR_CONFIG, type NavbarVariant } from "./nav-config";
 import { getRoleDashboardRoute } from "@/lib/supabase/role-route";
 import { NotificationCenter } from "./NotificationCenter";
-import { readPortalAuthCookieFromDocument } from "@/lib/supabase/portal-auth";
 import { SignOutButton } from "./SignOutButton";
 
 type MainNavbarProps = {
@@ -27,29 +26,22 @@ function isActive(pathname: string, href: string) {
 
 const MAX_INLINE_ITEMS = 4;
 
-function hasBrowserAuthSession() {
-  if (typeof document === "undefined") {
-    return false;
-  }
-
-  return document.cookie
-    .split(";")
-    .map((entry) => entry.trim())
-    .some((entry) => /^sb-.*-auth-token(\.\d+)?=/.test(entry));
-}
-
 export function MainNavbar({ variant = "public", travelerProfile = null }: MainNavbarProps) {
   const pathname = usePathname();
   const config = NAVBAR_CONFIG[variant];
   const moreRef = useRef<HTMLDetailsElement | null>(null);
-  const [profile, setProfile] = useState(travelerProfile);
-  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(travelerProfile));
-  const [currentUserId, setCurrentUserId] = useState<string | null>(travelerProfile?.id ?? null);
-  const [currentRole, setCurrentRole] = useState<TravelerProfile["role"] | null>(
-    travelerProfile?.role ?? (variant === "traveler" ? "traveler" : null),
+  const mobileRef = useRef<HTMLDetailsElement | null>(null);
+  const [sessionProfile, setSessionProfile] = useState<MainNavbarProps["travelerProfile"] | undefined>(
+    undefined,
   );
+  const profile = travelerProfile ?? sessionProfile ?? null;
+  const isLoggedIn = Boolean(profile);
+  const currentUserId = profile?.id ?? null;
+  const currentRole = profile?.role ?? (variant === "traveler" && profile ? "traveler" : null);
   const visibleItems =
-    variant === "public" && isLoggedIn ? config.items.filter((item) => item.label !== "Profile") : config.items;
+    variant === "public" && isLoggedIn && currentRole === "traveler"
+      ? config.items.filter((item) => item.label !== "Profile")
+      : config.items;
   const inlineItems = visibleItems.slice(0, MAX_INLINE_ITEMS);
   const overflowItems = visibleItems.slice(MAX_INLINE_ITEMS);
   const showTravelerPanel = Boolean(
@@ -62,6 +54,9 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
       if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
         moreRef.current.open = false;
       }
+      if (mobileRef.current && !mobileRef.current.contains(event.target as Node)) {
+        mobileRef.current.open = false;
+      }
     }
 
     document.addEventListener("mousedown", onClickOutside);
@@ -69,40 +64,34 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
   }, []);
 
   useEffect(() => {
-    const portalProfile = readPortalAuthCookieFromDocument();
-    const hasSupabaseSession = hasBrowserAuthSession();
-
-    if (!portalProfile || (!hasSupabaseSession && !travelerProfile)) {
-      setIsLoggedIn(Boolean(travelerProfile));
-      setCurrentUserId(travelerProfile?.id ?? null);
-      setCurrentRole(travelerProfile?.role ?? (variant === "traveler" ? "traveler" : null));
-      setProfile(travelerProfile);
-      return;
-    }
-
-    setIsLoggedIn(true);
-    setCurrentUserId(travelerProfile?.id ?? portalProfile.id);
-    setCurrentRole(travelerProfile?.role ?? portalProfile.role);
-
-    // Prefer the server-provided traveler profile when it exists so stale
-    // client cookie data cannot swap in another user's avatar.
     if (travelerProfile) {
-      setProfile(travelerProfile);
       return;
     }
 
-    const canShowProfile = variant === "traveler" || portalProfile.role === "traveler";
-    setProfile(
-      canShowProfile
-        ? {
-            full_name: portalProfile.full_name || "Traveler",
-            profile_image_url: portalProfile.profile_image_url ?? null,
-            id: portalProfile.id,
-            role: portalProfile.role,
-          }
-        : null,
-    );
-  }, [travelerProfile, variant]);
+    let cancelled = false;
+
+    void fetch("/api/portal-auth", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        const result = (await response.json()) as {
+          profile?: NonNullable<MainNavbarProps["travelerProfile"]>;
+        };
+        return result.profile ?? null;
+      })
+      .catch(() => null)
+      .then((nextProfile) => {
+        if (!cancelled) {
+          setSessionProfile(nextProfile);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [travelerProfile]);
 
   return (
     <header className={`top-nav top-nav-${variant}`}>
@@ -171,6 +160,59 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
         </nav>
 
         <div className="top-nav-actions">
+          <details className="mobile-nav" ref={mobileRef}>
+            <summary className="btn-icon mobile-nav-toggle" aria-label="Open navigation menu">
+              <span className="material-symbols-outlined mobile-nav-open-icon" aria-hidden="true">
+                menu
+              </span>
+              <span className="material-symbols-outlined mobile-nav-close-icon" aria-hidden="true">
+                close
+              </span>
+            </summary>
+            <nav className="mobile-nav-menu" aria-label="Mobile navigation">
+              {config.items.map((item) => {
+                const href =
+                  variant === "public" && item.label === "Profile"
+                    ? isLoggedIn
+                      ? getRoleDashboardRoute(currentRole ?? "traveler")
+                      : "/SignUp"
+                    : item.href;
+                const active = isActive(pathname, href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`mobile-nav-link ${active ? "mobile-nav-link-active" : ""}`}
+                    href={href}
+                    onClick={() => {
+                      if (mobileRef.current) {
+                        mobileRef.current.open = false;
+                      }
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+              {variant === "operator" || variant === "admin" ? (
+                <Link
+                  className="mobile-nav-link"
+                  href={config.action.href}
+                  onClick={() => {
+                    if (mobileRef.current) {
+                      mobileRef.current.open = false;
+                    }
+                  }}
+                >
+                  Settings
+                </Link>
+              ) : null}
+              {isLoggedIn ? (
+                <SignOutButton className="mobile-nav-signout">Sign out</SignOutButton>
+              ) : null}
+            </nav>
+          </details>
           {variant === "admin" ? (
             <Link className="btn-icon" href="/AdminSettings" aria-label="Admin settings">
               <span className="material-symbols-outlined" aria-hidden="true">

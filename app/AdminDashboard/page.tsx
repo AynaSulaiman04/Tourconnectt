@@ -249,7 +249,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           text-transform: uppercase;
         }
 
-        .page-header h2 {
+        .page-header h1 {
           margin: 8px 0 0;
           font-family: 'Raleway', sans-serif;
           font-size: clamp(38px, 5vw, 56px);
@@ -738,7 +738,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         <header className="page-header">
           <div>
             <span className="admin-label">Administrator</span>
-            <h2>Executive Overview</h2>
+            <h1>Executive Overview</h1>
           </div>
 
           <div className="header-right flex-wrap">
@@ -753,7 +753,6 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                   fill
                   alt={workspace.profile.full_name}
                   className="object-cover"
-                  quality={100}
                   sizes="48px"
                   src={workspace.profile.profile_image_url}
                 />

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/Button";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -14,10 +14,10 @@ export default function PrivacyPolicyPage() {
           <p className="section-copy">
             Data stored in Supabase is used for authentication, profile editing, and journey coordination. We do not sell personal data.
           </p>
-          <div className="actions">
-            <Link className="button primary" href="/">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button href="/" variant="primary">
               Back home
-            </Link>
+            </Button>
           </div>
         </section>
       </main>

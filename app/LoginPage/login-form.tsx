@@ -5,10 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getRoleDashboardRoute } from "@/lib/supabase/role-route";
-import {
-  clearPortalAuthCookieClient,
-  setPortalAuthCookieClient,
-} from "@/lib/supabase/portal-auth";
 
 type LoginBanner = {
   message: string;
@@ -25,6 +21,25 @@ type LoginFieldErrors = {
   email?: string[];
   password?: string[];
 };
+
+const AUTH_REQUEST_TIMEOUT_MS = 12000;
+
+async function withAuthTimeout<T>(promise: PromiseLike<T>) {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error("The sign-in request timed out."));
+    }, AUTH_REQUEST_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([Promise.resolve(promise), timeout]);
+  } finally {
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
 
 function mapAuthError(message: string) {
   const normalized = message.toLowerCase();
@@ -57,7 +72,7 @@ export function LoginForm({
   const [googlePending, setGooglePending] = useState(false);
   const signupHref =
     expectedRole === "admin"
-      ? "/AdminSignUp"
+      ? null
       : expectedRole === "operator"
         ? "/OperatorSignUp"
         : "/SignUp";
@@ -65,112 +80,106 @@ export function LoginForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-
     setFieldErrors({});
     setMessage("");
     setSuccess(false);
 
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error } = await withAuthTimeout(
+        supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      );
 
-    if (error || !data.user) {
-      clearPortalAuthCookieClient();
-      const errorMessage = mapAuthError(error?.message ?? "Unable to sign in.");
-      setMessage(errorMessage);
-      setFieldErrors({
-        email: ["Wrong email or password."],
-        password: ["Wrong email or password."],
+      if (error || !data.user) {
+        const errorMessage = mapAuthError(error?.message ?? "Unable to sign in.");
+        setMessage(errorMessage);
+        setFieldErrors({
+          email: ["Wrong email or password."],
+          password: ["Wrong email or password."],
+        });
+        return;
+      }
+
+      const { data: profile, error: profileError } = await withAuthTimeout(
+        supabase
+          .from("profiles")
+          .select("role,full_name,is_active,status_reason")
+          .eq("id", data.user.id)
+          .maybeSingle(),
+      );
+
+      if (profileError || !profile) {
+        await supabase.auth.signOut();
+        setMessage("We could not load your account profile. Please try again.");
+        setFieldErrors({
+          email: ["Account profile not found."],
+          password: ["Account profile not found."],
+        });
+        return;
+      }
+
+      if (!profile.is_active) {
+        await supabase.auth.signOut();
+        await fetch("/api/portal-auth", { method: "DELETE" }).catch(() => null);
+        setMessage(profile.status_reason || "This account is not currently active. Contact an administrator.");
+        setFieldErrors({
+          email: ["Account access is disabled."],
+          password: ["Account access is disabled."],
+        });
+        return;
+      }
+
+      if (expectedRole && profile.role !== expectedRole) {
+        await supabase.auth.signOut();
+        await fetch("/api/portal-auth", { method: "DELETE" }).catch(() => null);
+        const mismatchMessage =
+          expectedRole === "traveler"
+            ? "This sign-in is reserved for traveler accounts. Please use the traveler login."
+            : expectedRole === "operator"
+              ? "This sign-in is reserved for operator accounts. Please use an operator account."
+              : "This sign-in is reserved for admin accounts. Please use an admin account.";
+
+        setMessage(mismatchMessage);
+        setFieldErrors({
+          email: ["Please use the correct account role."],
+          password: ["Please use the correct account role."],
+        });
+        return;
+      }
+
+      const portalResponse = await fetch("/api/portal-auth", {
+        method: "POST",
+        cache: "no-store",
+        signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS),
       });
-      setSubmitting(false);
-      return;
-    }
+      const portalResult = (await portalResponse.json().catch(() => null)) as
+        | { profile?: { role?: "traveler" | "operator" | "admin" }; error?: string }
+        | null;
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role,full_name")
-      .eq("id", data.user.id)
-      .maybeSingle();
+      if (!portalResponse.ok || !portalResult?.profile?.role) {
+        await supabase.auth.signOut();
+        setMessage(portalResult?.error || "We could not verify your session. Please try again.");
+        return;
+      }
 
-    if (profileError || !profile) {
-      await supabase.auth.signOut();
-      clearPortalAuthCookieClient();
-      setMessage("We could not load your account profile. Please try again.");
-      setFieldErrors({
-        email: ["Account profile not found."],
-        password: ["Account profile not found."],
+      const resolvedRole = portalResult.profile.role;
+      setSuccess(true);
+      setMessage("Sign in successful. Redirecting...");
+      startTransition(() => {
+        router.replace(resolvedRole === "traveler" ? redirectTo : getRoleDashboardRoute(resolvedRole));
       });
+    } catch (error) {
+      setMessage(
+        error instanceof Error && error.message.includes("timed out")
+          ? "Sign in took too long. Check your connection and try again."
+          : "We could not complete sign in. Check your connection and try again.",
+      );
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    if (expectedRole === "traveler" && profile.role && profile.role !== "traveler") {
-      await supabase.auth.signOut();
-      clearPortalAuthCookieClient();
-      setMessage("This sign-in is reserved for traveler accounts. Please use the traveler login.");
-      setFieldErrors({
-        email: ["Please use the traveler login."],
-        password: ["Please use the traveler login."],
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    if (expectedRole && expectedRole !== "traveler" && profile.role && profile.role !== expectedRole) {
-      await supabase.auth.signOut();
-      clearPortalAuthCookieClient();
-      const mismatchMessage =
-        expectedRole === "operator"
-          ? "This sign-in is reserved for operator accounts. Please use an operator account."
-          : expectedRole === "admin"
-            ? "This sign-in is reserved for admin accounts. Please use an admin account."
-            : "Please use the correct traveler account.";
-
-      setMessage(mismatchMessage);
-      setFieldErrors({
-        email: ["Please use the correct account role."],
-        password: ["Please use the correct account role."],
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    const resolvedRole = expectedRole === "traveler" ? "traveler" : profile.role ?? expectedRole ?? "traveler";
-    setPortalAuthCookieClient({
-      id: data.user.id,
-      email: data.user.email ?? email.trim().toLowerCase(),
-      full_name:
-        typeof profile.full_name === "string" && profile.full_name.trim().length > 0
-          ? profile.full_name.trim()
-          : (data.user.email ?? email).split("@")[0],
-      role: resolvedRole,
-    });
-
-    await fetch("/api/portal-auth", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        id: data.user.id,
-        email: data.user.email ?? email.trim().toLowerCase(),
-        full_name:
-          typeof profile.full_name === "string" && profile.full_name.trim().length > 0
-            ? profile.full_name.trim()
-            : (data.user.email ?? email).split("@")[0],
-        role: resolvedRole,
-      }),
-    });
-
-    setSuccess(true);
-    setMessage("Sign in successful. Redirecting...");
-
-    startTransition(() => {
-      router.replace(resolvedRole === "traveler" ? redirectTo : getRoleDashboardRoute(resolvedRole));
-      router.refresh();
-    });
   }
 
   async function handleGoogleSignIn() {
@@ -180,7 +189,10 @@ export function LoginForm({
     setSuccess(false);
 
     try {
-      const healthResponse = await fetch("/api/auth/supabase-health", { cache: "no-store" });
+      const healthResponse = await fetch("/api/auth/supabase-health", {
+        cache: "no-store",
+        signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS),
+      });
       const health = (await healthResponse.json().catch(() => null)) as { error?: string } | null;
 
       if (!healthResponse.ok) {
@@ -189,12 +201,14 @@ export function LoginForm({
       }
 
       const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      const { data, error } = await withAuthTimeout(
+        supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+          },
+        }),
+      );
 
       if (error) {
         setMessage(error.message || "We could not start Google sign-in.");
@@ -215,7 +229,7 @@ export function LoginForm({
   }
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
+    <form className="login-form" method="post" onSubmit={handleSubmit}>
       {expectedRole ? <input name="expected_role" type="hidden" value={expectedRole} /> : null}
       <div className="field">
         <label htmlFor="email">Email</label>
@@ -318,9 +332,15 @@ export function LoginForm({
           <div />
         </div>
 
-        <p className="invite-text invite-text-prominent">
-          New to Tour ConnecTT? <Link href={signupHref}>Sign up here</Link>
-        </p>
+        {signupHref ? (
+          <p className="invite-text invite-text-prominent">
+            New to Tour ConnecTT? <Link href={signupHref}>Sign up here</Link>
+          </p>
+        ) : (
+          <p className="invite-text invite-text-prominent">
+            Administrator access is invite-only.
+          </p>
+        )}
       </div>
 
     </form>

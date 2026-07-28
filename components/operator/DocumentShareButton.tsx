@@ -16,6 +16,8 @@ export function DocumentShareButton({ documentId, documentName, className = "" }
 
   async function handleShare() {
     setStatus({ type: "loading", message: "Creating secure link..." });
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20_000);
 
     try {
       const response = await fetch(`/api/operator/documents/share-link?document_id=${encodeURIComponent(documentId)}`, {
@@ -24,6 +26,7 @@ export function DocumentShareButton({ documentId, documentName, className = "" }
           accept: "application/json",
         },
         cache: "no-store",
+        signal: controller.signal,
       });
 
       const payload = (await response.json()) as { shareUrl?: string; error?: string };
@@ -41,11 +44,16 @@ export function DocumentShareButton({ documentId, documentName, className = "" }
       }
 
       setStatus({ type: "success", message: `${documentName} secure share link copied.` });
-    } catch {
+    } catch (error) {
       setStatus({
         type: "error",
-        message: "We could not copy the secure link. Please try again.",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "Creating the secure link timed out. Please try again."
+            : "We could not copy the secure link. Please try again.",
       });
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
 

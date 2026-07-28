@@ -115,11 +115,10 @@ export async function requireOperatorProfile() {
 
 export async function getOperatorWorkspaceData() {
   const operatorProfile = await requireOperatorProfile();
-  const operatorName = operatorProfile.full_name.trim();
   const [listings, drafts, inquiries] = await Promise.all([
-    getOperatorListings(operatorProfile.id, operatorName),
+    getOperatorListings(operatorProfile.id),
     getOperatorListingDrafts(operatorProfile.id),
-    getOperatorInquiries(operatorProfile.id, operatorName),
+    getOperatorInquiries(operatorProfile.id),
   ]);
 
   const listingById = new Map<string, TourListing>(

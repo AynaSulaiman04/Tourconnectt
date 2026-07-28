@@ -15,7 +15,17 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 
+const ALLOWED_EXTENSIONS_BY_MIME: Record<string, readonly string[]> = {
+  "application/pdf": ["pdf"],
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/png": ["png"],
+  "image/webp": ["webp"],
+  "application/msword": ["doc"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"],
+};
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_NAME_LENGTH = 255;
 const OPERATOR_DOCUMENTS_BUCKET = "operator-documents";
 
 function getReturnTo(formData: FormData) {
@@ -23,8 +33,59 @@ function getReturnTo(formData: FormData) {
   return value || "/OperatorDocuments";
 }
 
-function sanitizeFileName(fileName: string) {
-  return fileName.replace(/[^a-zA-Z0-9._-]+/g, "-");
+function validateFileName(fileName: string, mimeType: string) {
+  const normalizedFileName = fileName.normalize("NFKC").trim();
+
+  if (
+    !normalizedFileName ||
+    normalizedFileName.length > MAX_FILE_NAME_LENGTH ||
+    normalizedFileName === "." ||
+    normalizedFileName === ".." ||
+    /[\u0000-\u001f\u007f/\\]/.test(normalizedFileName)
+  ) {
+    return null;
+  }
+
+  const extensionIndex = normalizedFileName.lastIndexOf(".");
+
+  if (extensionIndex <= 0 || extensionIndex === normalizedFileName.length - 1) {
+    return null;
+  }
+
+  const extension = normalizedFileName.slice(extensionIndex + 1).toLowerCase();
+  const allowedExtensions = ALLOWED_EXTENSIONS_BY_MIME[mimeType] ?? [];
+
+  return allowedExtensions.includes(extension) ? normalizedFileName : null;
+}
+
+function startsWithBytes(bytes: Uint8Array, signature: readonly number[], offset = 0) {
+  if (bytes.length < offset + signature.length) {
+    return false;
+  }
+
+  return signature.every((value, index) => bytes[offset + index] === value);
+}
+
+function fileContentMatchesMimeType(bytes: Uint8Array, mimeType: string) {
+  switch (mimeType) {
+    case "application/pdf":
+      return startsWithBytes(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]);
+    case "image/jpeg":
+      return startsWithBytes(bytes, [0xff, 0xd8, 0xff]);
+    case "image/png":
+      return startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    case "image/webp":
+      return (
+        startsWithBytes(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+        startsWithBytes(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+      );
+    case "application/msword":
+      return startsWithBytes(bytes, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return startsWithBytes(bytes, [0x50, 0x4b, 0x03, 0x04]);
+    default:
+      return false;
+  }
 }
 
 function buildRedirectUrl(returnTo: string, params: Record<string, string>) {
@@ -49,22 +110,16 @@ function isSchemaCacheOrMissingTableError(error: { code?: string | null; message
 }
 
 async function ensureOperatorDocumentsBucket(admin: ReturnType<typeof createSupabaseServiceRoleClient>) {
-  const { data, error } = await admin.storage.getBucket(OPERATOR_DOCUMENTS_BUCKET);
+  const { data } = await admin.storage.getBucket(OPERATOR_DOCUMENTS_BUCKET);
 
-  if (data && !error) {
-    if (data.public) {
-      const { error: updateError } = await admin.storage.updateBucket(OPERATOR_DOCUMENTS_BUCKET, {
-        public: false,
-        fileSizeLimit: MAX_FILE_SIZE,
-        allowedMimeTypes: [...ALLOWED_MIME_TYPES],
-      });
+  if (data) {
+    const { error: updateError } = await admin.storage.updateBucket(OPERATOR_DOCUMENTS_BUCKET, {
+      public: false,
+      fileSizeLimit: MAX_FILE_SIZE,
+      allowedMimeTypes: [...ALLOWED_MIME_TYPES],
+    });
 
-      if (!updateError) {
-        return true;
-      }
-    }
-
-    return true;
+    return !updateError;
   }
 
   const { error: createError } = await admin.storage.createBucket(OPERATOR_DOCUMENTS_BUCKET, {
@@ -73,11 +128,7 @@ async function ensureOperatorDocumentsBucket(admin: ReturnType<typeof createSupa
     allowedMimeTypes: [...ALLOWED_MIME_TYPES],
   });
 
-  if (createError) {
-    return false;
-  }
-
-  return true;
+  return !createError;
 }
 
 export async function uploadOperatorDocumentAction(formData: FormData) {
@@ -90,12 +141,20 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
     redirect(buildRedirectUrl(returnTo, { error: "missing-file" }));
   }
 
-  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+  const declaredMimeType = file.type.trim().toLowerCase();
+
+  if (!declaredMimeType || !ALLOWED_MIME_TYPES.has(declaredMimeType)) {
     redirect(buildRedirectUrl(returnTo, { error: "invalid-file-type" }));
   }
 
   if (file.size > MAX_FILE_SIZE) {
     redirect(buildRedirectUrl(returnTo, { error: "file-too-large" }));
+  }
+
+  const validatedFileName = validateFileName(file.name, declaredMimeType);
+
+  if (!validatedFileName) {
+    redirect(buildRedirectUrl(returnTo, { error: "invalid-file-type" }));
   }
 
   const guestName = String(formData.get("guest_name") ?? "").trim();
@@ -105,6 +164,22 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
 
   if (!guestName || !documentType) {
     redirect(buildRedirectUrl(returnTo, { error: "missing-details" }));
+  }
+
+  const fileBuffer = await file.arrayBuffer().catch(() => null);
+
+  if (!fileBuffer) {
+    redirect(buildRedirectUrl(returnTo, { error: "invalid-file-type" }));
+  }
+
+  const fileBytes = new Uint8Array(fileBuffer);
+
+  if (
+    fileBytes.byteLength !== file.size ||
+    fileBytes.byteLength > MAX_FILE_SIZE ||
+    !fileContentMatchesMimeType(fileBytes, declaredMimeType)
+  ) {
+    redirect(buildRedirectUrl(returnTo, { error: "invalid-file-type" }));
   }
 
   const admin = createSupabaseServiceRoleClient();
@@ -119,7 +194,7 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
       .from("inquiries")
       .select("id")
       .eq("id", inquiryId)
-      .eq("operator_name", profile.full_name)
+      .eq("operator_id", profile.id)
       .maybeSingle();
 
     if (!inquiry) {
@@ -127,15 +202,14 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
     }
   }
 
-  const fileExtension = getExtensionFromType(file.type);
-  const filePath = `${profile.id}/${Date.now()}-${crypto.randomUUID()}-${sanitizeFileName(file.name || `document.${fileExtension}`)}`;
-  const fileBytes = new Uint8Array(await file.arrayBuffer());
+  const fileExtension = getExtensionFromType(declaredMimeType);
+  const filePath = `${profile.id}/${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
 
   const { error: uploadError } = await admin.storage
     .from(OPERATOR_DOCUMENTS_BUCKET)
     .upload(filePath, fileBytes, {
-      upsert: true,
-      contentType: file.type,
+      upsert: false,
+      contentType: declaredMimeType,
       cacheControl: "3600",
     });
 
@@ -147,8 +221,8 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
         const retry = await admin.storage
           .from(OPERATOR_DOCUMENTS_BUCKET)
           .upload(filePath, fileBytes, {
-            upsert: true,
-            contentType: file.type,
+            upsert: false,
+            contentType: declaredMimeType,
             cacheControl: "3600",
           });
 
@@ -161,10 +235,10 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
             booking_id: inquiryId,
             guest_name: guestName,
             document_type: documentType,
-            file_name: file.name || `document.${fileExtension}`,
+            file_name: validatedFileName,
             file_path: filePath,
             file_url: filePath,
-            mime_type: file.type,
+            mime_type: declaredMimeType,
             status: "pending",
             access_level: inquiryId ? "shared" : "private",
             notes: notes || null,
@@ -228,10 +302,10 @@ export async function uploadOperatorDocumentAction(formData: FormData) {
     booking_id: inquiryId,
     guest_name: guestName,
     document_type: documentType,
-    file_name: file.name || `document.${fileExtension}`,
+    file_name: validatedFileName,
     file_path: filePath,
     file_url: filePath,
-    mime_type: file.type,
+    mime_type: declaredMimeType,
     status: "pending",
     access_level: inquiryId ? "shared" : "private",
     notes: notes || null,
@@ -286,11 +360,13 @@ export async function updateOperatorDocumentStatusAction(formData: FormData) {
   }
 
   const admin = createSupabaseServiceRoleClient();
-  const { error } = await admin
+  const { data: updatedDocument, error } = await admin
     .from("operator_documents")
     .update({ status })
     .eq("id", documentId)
-    .eq("operator_id", profile.id);
+    .eq("operator_id", profile.id)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     if (isSchemaCacheOrMissingTableError(error)) {
@@ -303,6 +379,10 @@ export async function updateOperatorDocumentStatusAction(formData: FormData) {
       error: error.message,
     });
     redirect(buildRedirectUrl(returnTo, { error: "We could not update the document. Please try again." }));
+  }
+
+  if (!updatedDocument) {
+    redirect(buildRedirectUrl(returnTo, { error: "missing-document" }));
   }
 
   await recordPlatformEvent({
@@ -334,12 +414,25 @@ export async function shareOperatorDocumentAction(formData: FormData) {
   }
 
   const admin = createSupabaseServiceRoleClient();
-  const { data: targetProfile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("id", sharedWithProfileId)
-    .in("role", ["operator", "admin"])
-    .maybeSingle();
+  const [{ data: ownedDocument }, { data: targetProfile }] = await Promise.all([
+    admin
+      .from("operator_documents")
+      .select("id")
+      .eq("id", documentId)
+      .eq("operator_id", profile.id)
+      .maybeSingle(),
+    admin
+      .from("profiles")
+      .select("id")
+      .eq("id", sharedWithProfileId)
+      .eq("is_active", true)
+      .in("role", ["operator", "admin"])
+      .maybeSingle(),
+  ]);
+
+  if (!ownedDocument) {
+    redirect(buildRedirectUrl(returnTo, { error: "invalid-document" }));
+  }
 
   if (!targetProfile) {
     redirect(buildRedirectUrl(returnTo, { error: "invalid-share-target" }));

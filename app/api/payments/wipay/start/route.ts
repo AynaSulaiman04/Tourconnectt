@@ -11,7 +11,7 @@ import {
   isPendingWiPayPayment,
   isSuccessfulWiPayPayment,
   resolveWiPayInquiryAmount,
-  updateWiPayPaymentByOrderId,
+  transitionWiPayPaymentByOrderId,
 } from "@/lib/payments/wipay";
 
 export const runtime = "nodejs";
@@ -123,18 +123,22 @@ export async function POST(request: NextRequest) {
     });
 
     const checkout = await createWiPayHostedCheckoutSession({
+      inquiryId: inquiry.id,
       orderId,
       amount,
       currency: configStatus.currency,
       countryCode: configStatus.countryCode,
       responseUrl,
+      travelerEmail: inquiry.traveler_email,
     });
 
-    await updateWiPayPaymentByOrderId(orderId, {
-      transaction_id: checkout.transactionId ?? paymentRecord.transaction_id ?? null,
-      checkout_url: checkout.checkoutUrl,
-      response_payload: checkout.responsePayload,
+    await transitionWiPayPaymentByOrderId({
+      orderId,
       status: "initiated",
+      transactionId: checkout.transactionId ?? paymentRecord.transaction_id ?? null,
+      checkoutUrl: checkout.checkoutUrl,
+      responsePayload: checkout.responsePayload,
+      knownPayment: paymentRecord,
     });
 
     if (wantsJsonResponse(request)) {
@@ -150,10 +154,10 @@ export async function POST(request: NextRequest) {
     response.headers.set("Cache-Control", "no-store");
     return response;
   } catch (error) {
-    await updateWiPayPaymentByOrderId(orderId, {
+    await transitionWiPayPaymentByOrderId({
+      orderId,
       status: "failed",
-      failed_at: new Date().toISOString(),
-      response_payload:
+      responsePayload:
         error instanceof Error
           ? {
               error: error.message,

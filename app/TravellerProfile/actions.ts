@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { z } from "zod";
-import { createSupabaseServiceRoleClient, createSupabaseServerClient } from "@/lib/supabase/server";
-import { setPortalAuthCookie } from "@/lib/supabase/portal-auth";
-import { normalizeProfileImageSource } from "@/lib/supabase/profile-image";
-import { parseTravelerCareFormData, upsertTravelerCareProfile } from "@/lib/supabase/traveler-care";
+import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import {
+  parseTravelerCareFormData,
+  TravelerProfileBundleUpdateError,
+  updateTravelerProfileBundle,
+} from "@/lib/supabase/traveler-care";
 import {
   initialProfileFormState,
   initialTravelSummaryFormState,
@@ -46,6 +47,34 @@ function normalizeCountryName(value: string) {
     .filter(Boolean)
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+}
+
+async function getActiveTravelerId() {
+  const supabase = await createSupabaseServerClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !userData.user) {
+    return null;
+  }
+
+  const admin = createSupabaseServiceRoleClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", userData.user.id)
+    .eq("role", "traveler")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error("Unable to verify traveler profile", {
+      userId: userData.user.id,
+      error: profileError.message,
+    });
+    return null;
+  }
+
+  return profile?.id ?? null;
 }
 
 export async function updateProfileAction(
@@ -95,11 +124,9 @@ export async function updateProfileAction(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const cookieStore = await cookies();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const travelerId = await getActiveTravelerId();
 
-  if (authError || !authData.user) {
+  if (!travelerId) {
     return {
       ...initialProfileFormState,
       message: "Please sign in again to update your profile.",
@@ -108,93 +135,32 @@ export async function updateProfileAction(
     };
   }
 
-  const admin = createSupabaseServiceRoleClient();
-  const { data: currentProfile } = await admin
-    .from("profiles")
-    .select("avatar_base64,profile_image_url")
-    .eq("id", authData.user.id)
-    .maybeSingle();
+  const profileImageUrl = profileImageFile ? await fileToDataUrl(profileImageFile) : null;
 
-  const existingProfileImage =
-    normalizeProfileImageSource((currentProfile as { avatar_base64?: string | null } | null)?.avatar_base64) ??
-    normalizeProfileImageSource((currentProfile as { profile_image_url?: string | null } | null)?.profile_image_url);
-
-  let profileImageUrl: string | null = existingProfileImage;
-
-  if (profileImageFile) {
-    profileImageUrl = await fileToDataUrl(profileImageFile);
-  }
-
-  const profileUpdatePayload = {
-    full_name: validatedFields.data.fullName,
-    preferred_inquiry_area: validatedFields.data.preferredInquiryArea,
-    ...(profileImageUrl ? { avatar_base64: profileImageUrl, profile_image_url: null } : {}),
-  };
-
-  let profileUpdateError: { message: string } | null = null;
-
-  {
-    const { error } = await admin
-      .from("profiles")
-      .update(profileUpdatePayload)
-      .eq("id", authData.user.id);
-
-    profileUpdateError = error ?? null;
-  }
-
-  if (profileUpdateError && profileImageUrl) {
-    const { error: fallbackUpdateError } = await admin
-      .from("profiles")
-      .update({
-        full_name: validatedFields.data.fullName,
-        preferred_inquiry_area: validatedFields.data.preferredInquiryArea,
-      })
-      .eq("id", authData.user.id);
-
-    if (!fallbackUpdateError) {
-      profileUpdateError = null;
-    }
-  }
-
-  if (profileUpdateError) {
-    console.error("Unable to update traveler profile", {
-      userId: authData.user.id,
-      error: profileUpdateError.message,
+  try {
+    await updateTravelerProfileBundle({
+      userId: travelerId,
+      fullName: validatedFields.data.fullName,
+      preferredInquiryArea: validatedFields.data.preferredInquiryArea,
+      profileImageDataUrl: profileImageUrl,
+      careProfile: validatedCareFields.data,
+    });
+  } catch (error) {
+    console.error("Unable to update traveler profile bundle", {
+      userId: travelerId,
+      error: error instanceof Error ? error.message : error,
     });
 
     return {
       ...initialProfileFormState,
-      message: "We could not save your profile. Please try again.",
+      message:
+        error instanceof TravelerProfileBundleUpdateError
+          ? error.message
+          : "We could not save your profile. No changes were applied. Please try again.",
       profileImageUrl: null,
       fieldErrors: {},
     };
   }
-
-  try {
-    await upsertTravelerCareProfile(authData.user.id, validatedCareFields.data);
-  } catch (error) {
-    return {
-      ...initialProfileFormState,
-      message: error instanceof Error ? error.message : "We could not save your guest care information.",
-      profileImageUrl,
-      fieldErrors: {},
-    };
-  }
-
-  await setPortalAuthCookie(cookieStore, {
-    id: authData.user.id,
-    email: authData.user.email ?? "",
-    full_name: validatedFields.data.fullName,
-    profile_image_url: profileImageUrl,
-    role:
-      authData.user.user_metadata?.role === "operator" || authData.user.user_metadata?.role === "admin"
-        ? authData.user.user_metadata.role
-        : "traveler",
-  });
-
-  revalidatePath("/TravellerProfile");
-  revalidatePath("/AdminUsers");
-  revalidatePath("/OperatorUserManage");
 
   return {
     success: true,
@@ -220,10 +186,9 @@ export async function addTravelerCountryAction(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const travelerId = await getActiveTravelerId();
 
-  if (authError || !authData.user) {
+  if (!travelerId) {
     return {
       ...initialTravelSummaryFormState,
       message: "Please sign in again to update your travel summary.",
@@ -235,7 +200,7 @@ export async function addTravelerCountryAction(
   const countryName = normalizeCountryName(validatedFields.data.countryName);
 
   const { error } = await admin.from("traveler_countries").insert({
-    user_id: authData.user.id,
+    user_id: travelerId,
     country_name: countryName,
   });
 
@@ -257,7 +222,7 @@ export async function addTravelerCountryAction(
     }
 
     console.error("Unable to add traveler country", {
-      userId: authData.user.id,
+      userId: travelerId,
       countryName,
       error: error.message,
     });
@@ -285,10 +250,9 @@ export async function deleteTravelerCountryAction(formData: FormData) {
     return;
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
+  const travelerId = await getActiveTravelerId();
 
-  if (authError || !authData.user) {
+  if (!travelerId) {
     return;
   }
 
@@ -297,7 +261,7 @@ export async function deleteTravelerCountryAction(formData: FormData) {
     .from("traveler_countries")
     .delete()
     .eq("id", countryId)
-    .eq("user_id", authData.user.id);
+    .eq("user_id", travelerId);
 
   if (error && error.code !== "42P01" && !error.message.includes("Could not find the table")) {
     console.warn("Unable to delete traveler country:", error.message);

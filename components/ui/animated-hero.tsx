@@ -39,13 +39,8 @@ export function AnimatedHeroHeadline({
     return () => window.clearInterval(interval);
   }, [phrases.length, shouldReduceMotion]);
 
-  useEffect(() => {
-    if (activeIndex >= phrases.length) {
-      setActiveIndex(0);
-    }
-  }, [activeIndex, phrases.length]);
-
-  const currentPhrase = phrases[activeIndex] ?? defaultPhrases[0];
+  const normalizedIndex = phrases.length ? activeIndex % phrases.length : 0;
+  const currentPhrase = phrases[normalizedIndex] ?? defaultPhrases[0];
 
   return (
     <div className="lp-animated-hero">

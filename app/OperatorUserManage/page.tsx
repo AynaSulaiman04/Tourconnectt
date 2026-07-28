@@ -193,7 +193,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           gap: 32px;
         }
 
-        .page-header h2 {
+        .page-header h1 {
           margin: 0;
           font-family: 'Raleway', sans-serif;
           font-size: 64px;
@@ -217,6 +217,8 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           display: inline-flex;
           align-items: center;
           gap: 0.65rem;
+          max-width: 100%;
+          box-sizing: border-box;
           padding: 0.9rem 1rem;
           border: 1px solid rgba(17, 19, 24, 0.12);
           border-radius: 1.5rem;
@@ -227,6 +229,8 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           color: var(--secondary);
         }
         .search-wrap input {
+          flex: 1 1 auto;
+          min-width: 0;
           width: 256px;
           min-height: 2.95rem;
           background: rgba(255, 253, 248, 0.94);
@@ -244,6 +248,10 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         .search-wrap input:focus {
           border-color: rgba(197, 22, 29, 0.35);
           box-shadow: 0 0 0 3px rgba(197, 22, 29, 0.12);
+        }
+        .search-submit {
+          flex: 0 0 auto;
+          white-space: nowrap;
         }
 
         .filters-section {
@@ -273,7 +281,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           background: rgba(255, 253, 248, 0.92);
         }
 
-        .filter-pill span {
+        .filter-pill .tc-filter-label {
           color: var(--secondary);
           font-size: 11px;
           line-height: 16px;
@@ -283,6 +291,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         }
 
         .filter-pill select {
+          min-width: 0;
           background: transparent;
           border: 0;
           padding: 0;
@@ -293,6 +302,10 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           line-height: 16px;
           letter-spacing: 0.15em;
           font-weight: 600;
+        }
+        .filter-pill select:focus-visible {
+          outline: 2px solid rgba(197, 22, 29, 0.35);
+          outline-offset: 4px;
         }
 
         .spacer { flex: 1; }
@@ -595,34 +608,236 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
             flex-direction: column;
             align-items: flex-start;
           }
+          .search-wrap { width: min(100%, 36rem); }
           .table-card { overflow-x: auto; }
           table { min-width: 920px; }
           .mini-stats { width: 100%; justify-content: flex-start; text-align: left; }
         }
+
+        @media (max-width: 640px) {
+          .main {
+            padding-bottom: 64px;
+          }
+
+          .page-header,
+          .filters-section,
+          .table-wrap,
+          .footer {
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+
+          .page-header {
+            gap: 24px;
+            padding-top: 32px;
+            padding-bottom: 24px;
+          }
+
+          .page-header h1 {
+            font-size: 40px;
+            line-height: 44px;
+          }
+
+          .page-header p {
+            font-size: 15px;
+            line-height: 24px;
+          }
+
+          .search-wrap {
+            width: 100%;
+            gap: 0.5rem;
+            padding: 0.75rem;
+          }
+
+          .search-wrap > .material-symbols-outlined {
+            display: none;
+          }
+
+          .search-wrap input {
+            width: auto;
+            padding-inline: 0.75rem;
+            letter-spacing: 0.08em;
+          }
+
+          .filters-section {
+            margin-bottom: 24px;
+          }
+
+          .filters-row {
+            gap: 12px;
+            padding: 12px;
+            border-radius: 20px;
+          }
+
+          .filter-pill {
+            width: 100%;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 14px;
+          }
+
+          .filter-pill select {
+            width: 100%;
+          }
+
+          .filters-row > button {
+            width: 100%;
+          }
+
+          .spacer {
+            display: none;
+          }
+
+          .mini-stats {
+            width: 100%;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .mini-stat p:last-child {
+            font-size: 28px;
+            line-height: 36px;
+          }
+
+          .directory-page .table-card {
+            overflow: visible;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+          }
+
+          .directory-page table,
+          .directory-page tbody {
+            display: block;
+            min-width: 0;
+            width: 100%;
+          }
+
+          .directory-page thead {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+          }
+
+          .directory-page tbody {
+            display: grid;
+            gap: 16px;
+          }
+
+          .directory-page tbody tr {
+            display: block;
+            overflow: hidden;
+            border: 1px solid rgba(206, 197, 185, 0.25);
+            border-radius: 20px;
+            background: rgba(255, 253, 248, 0.92);
+            box-shadow: 0 12px 32px rgba(53, 39, 33, 0.06);
+          }
+
+          .directory-page td {
+            display: block;
+            width: 100%;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(206, 197, 185, 0.14);
+          }
+
+          .directory-page td:last-child {
+            border-bottom: 0;
+          }
+
+          .directory-page td[data-label]::before {
+            content: attr(data-label);
+            display: block;
+            margin-bottom: 8px;
+            color: var(--outline);
+            font-size: 10px;
+            line-height: 16px;
+            letter-spacing: 0.15em;
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+
+          .identity-cell {
+            align-items: flex-start;
+          }
+
+          .identity-cell > div:last-child {
+            min-width: 0;
+          }
+
+          .person-email,
+          .presence-sub {
+            overflow-wrap: anywhere;
+          }
+
+          .operations {
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 8px;
+          }
+
+          .operations .btn-outline {
+            flex: 1 1 100%;
+            justify-content: center;
+          }
+
+          .table-footer {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+            margin-top: 16px;
+            padding: 16px;
+            border: 1px solid rgba(206, 197, 185, 0.2);
+            border-radius: 20px;
+            background: rgba(255, 253, 248, 0.92);
+          }
+
+          .pager {
+            width: 100%;
+            justify-content: space-between;
+            gap: 16px;
+          }
+        }
       `}</style>
 
       <div className="directory-page">
-        <div className="grain-overlay" />
+        <div aria-hidden="true" className="grain-overlay" />
         <main className="main">
           <header className="page-header">
             <div>
-              <h2>Customers</h2>
+              <h1>Customers</h1>
               <p>Travelers who have already interacted with this operator through inquiries, messages, or bookings.</p>
             </div>
-              <form className="search-wrap tc-filter-panel" method="get">
-                <span className="material-symbols-outlined">search</span>
-                <input defaultValue={query} name="q" placeholder="SEARCH DIRECTORY" type="text" />
-                <input name="role" type="hidden" value={role} />
-                <input name="status" type="hidden" value={status} />
-                <input name="page" type="hidden" value="1" />
-              </form>
-            </header>
+            <form className="search-wrap tc-filter-panel" method="get">
+              <span aria-hidden="true" className="material-symbols-outlined">search</span>
+              <label className="sr-only" htmlFor="operator-customer-search">Search customer directory</label>
+              <input
+                aria-label="Search customer directory"
+                defaultValue={query}
+                id="operator-customer-search"
+                name="q"
+                placeholder="SEARCH DIRECTORY"
+                type="search"
+              />
+              <input name="role" type="hidden" value={role} />
+              <input name="status" type="hidden" value={status} />
+              <input name="page" type="hidden" value="1" />
+              <button className="btn-primary btn-sm search-submit" type="submit">
+                Search
+              </button>
+            </form>
+          </header>
 
           <section className="filters-section">
             <form className="filters-row tc-filter-tabs" method="get">
               <div className="filter-pill glass-panel tc-filter-pill">
-                <span className="tc-filter-label">SCOPE</span>
-                <select name="role" defaultValue={role}>
+                <label className="tc-filter-label" htmlFor="customer-role-filter">Scope</label>
+                <select id="customer-role-filter" name="role" defaultValue={role}>
                   <option value="all">ALL CUSTOMERS</option>
                   <option value="traveler">TRAVELERS</option>
                   <option value="operator">OPERATORS</option>
@@ -631,8 +846,8 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
               </div>
 
               <div className="filter-pill glass-panel tc-filter-pill">
-                <span className="tc-filter-label">STATUS</span>
-                <select name="status" defaultValue={status}>
+                <label className="tc-filter-label" htmlFor="customer-status-filter">Status</label>
+                <select id="customer-status-filter" name="status" defaultValue={status}>
                   <option value="all">ANY STATUS</option>
                   <option value="active">ACTIVE</option>
                   <option value="suspended">SUSPENDED</option>
@@ -678,7 +893,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                   {loadError ? (
                     <tr>
                       <td colSpan={4}>
-                        <div className="notice error">{loadError}</div>
+                        <div className="notice error" role="alert">{loadError}</div>
                       </td>
                     </tr>
                   ) : hasNoCustomers ? (
@@ -698,7 +913,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                   ) : (
                     visibleProfiles.map((profile: OperatorCustomer) => (
                       <tr key={profile.id} className={!profile.is_active ? "suspended" : ""}>
-                        <td>
+                        <td data-label="Identification">
                           <div className="identity-cell">
                             <div className="avatar relative">
                               {profile.profile_image_url ? (
@@ -706,7 +921,6 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                                   fill
                                   alt={profile.full_name}
                                   className="object-cover"
-                                  quality={100}
                                   sizes="48px"
                                   src={profile.profile_image_url}
                                 />
@@ -746,7 +960,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                             </div>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Designation">
                           <span
                             className={`role-badge ${
                               profile.role === "traveler"
@@ -771,7 +985,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                             {profile.confirmed_booking_count === 1 ? "" : "s"}
                           </p>
                         </td>
-                        <td>
+                        <td data-label="Presence">
                           <p className="presence-main">{profile.is_active ? relativeStatus(profile) : "Suspended"}</p>
                           <p className={`presence-sub ${!profile.is_active ? "error" : ""}`}>
                             {formatPresenceDetail(profile)}
@@ -784,17 +998,17 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                             )}
                           </p>
                         </td>
-                        <td>
+                        <td data-label="Operations">
                           <div className="operations">
                             {profile.latest_inquiry_id ? (
                               <Link className="btn-outline btn-sm" href={`/ConfirmationPage?inquiryId=${profile.latest_inquiry_id}`}>
-                                <span className="material-symbols-outlined">description</span>
+                                <span aria-hidden="true" className="material-symbols-outlined">description</span>
                                 Open Inquiry
                               </Link>
                             ) : null}
                             {profile.latest_conversation_id ? (
                               <Link className="btn-outline btn-sm" href={`/OperatorMessages?conversation=${profile.latest_conversation_id}`}>
-                                <span className="material-symbols-outlined">forum</span>
+                                <span aria-hidden="true" className="material-symbols-outlined">forum</span>
                                 Open Messages
                               </Link>
                             ) : null}
@@ -803,7 +1017,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                                 className="btn-outline btn-sm"
                                 href={`/OperatorBookings?q=${encodeURIComponent(profile.latest_listing_title ?? profile.full_name)}`}
                               >
-                                <span className="material-symbols-outlined">book_online</span>
+                                <span aria-hidden="true" className="material-symbols-outlined">book_online</span>
                                 Booking Details
                               </Link>
                             ) : null}
@@ -822,21 +1036,21 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                 <div className="pager">
                   {prevHref ? (
                     <Link href={prevHref} className="btn-icon" aria-label="Previous page">
-                      <span className="material-symbols-outlined">chevron_left</span>
+                      <span aria-hidden="true" className="material-symbols-outlined">chevron_left</span>
                     </Link>
                   ) : (
                     <button type="button" disabled className="btn-icon" aria-label="Previous page">
-                      <span className="material-symbols-outlined">chevron_left</span>
+                      <span aria-hidden="true" className="material-symbols-outlined">chevron_left</span>
                     </button>
                   )}
                   <span>PAGE {String(page).padStart(2, "0")}</span>
                   {nextHref ? (
                     <Link href={nextHref} className="btn-icon" aria-label="Next page">
-                      <span className="material-symbols-outlined">chevron_right</span>
+                      <span aria-hidden="true" className="material-symbols-outlined">chevron_right</span>
                     </Link>
                   ) : (
                     <button type="button" disabled className="btn-icon" aria-label="Next page">
-                      <span className="material-symbols-outlined">chevron_right</span>
+                      <span aria-hidden="true" className="material-symbols-outlined">chevron_right</span>
                     </button>
                   )}
                 </div>

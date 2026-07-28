@@ -25,8 +25,17 @@ export function PageShell({
   return (
     <div className={`page-shell ${className}`.trim()}>
       <div className="grain-overlay" />
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <MainNavbar travelerProfile={travelerProfile} variant={variant} />
-      <div className={`page-shell-inner ${contentClassName}`.trim()}>{children}</div>
+      <div
+        className={`page-shell-inner ${contentClassName}`.trim()}
+        id="main-content"
+        tabIndex={-1}
+      >
+        {children}
+      </div>
     </div>
   );
 }

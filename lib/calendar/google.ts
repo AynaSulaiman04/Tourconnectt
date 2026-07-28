@@ -244,10 +244,6 @@ function buildDisplayName(primary: string | null | undefined, fallback: string) 
   return primary && primary.trim().length > 0 ? primary.trim() : fallback;
 }
 
-function pickOperatorNames(values: Array<string | null | undefined>) {
-  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value && value.length > 0)))];
-}
-
 function parseDurationDays(duration: string | null | undefined) {
   if (!duration) {
     return 1;
@@ -331,36 +327,6 @@ async function getInquiryCalendarColumns() {
   const columns = new Set<string>(data.map((entry) => String(entry.column_name)));
   inquiryCalendarColumnCache.set("inquiries", columns);
   return columns;
-}
-
-async function resolveOperatorProfileByName(admin: ReturnType<typeof createSupabaseServiceRoleClient>, names: Array<string | null | undefined>) {
-  const operatorNames = pickOperatorNames(names);
-
-  for (const operatorName of operatorNames) {
-    const queries = [
-      admin.from("profiles").select("id,email,full_name,role").eq("role", "operator").eq("full_name", operatorName),
-      admin.from("profiles").select("id,email,full_name,role").eq("role", "operator").eq("email", operatorName),
-    ] as const;
-
-    for (const query of queries) {
-      const { data, error } = await query;
-
-      if (error) {
-        if (isMissingRelationOrSchemaCacheError(error) || isMissingColumnError(error)) {
-          return null;
-        }
-
-        throw new Error(error.message);
-      }
-
-      const match = (data ?? []).find((profile) => profile.role === "operator");
-      if (match) {
-        return match as ProfileRow;
-      }
-    }
-  }
-
-  return null;
 }
 
 async function updateInquiryCalendarFields(
@@ -676,8 +642,7 @@ async function loadCalendarContext(inquiryId: string): Promise<CalendarContext |
     }
   }
 
-  const operatorName = inquiry.operator_name ?? listing?.operator_name ?? null;
-  let operatorId = inquiry.operator_id ?? listing?.operator_id ?? null;
+  const operatorId = inquiry.operator_id ?? listing?.operator_id ?? null;
   let operatorProfile: ProfileRow | null = null;
   let integration: OperatorCalendarIntegration | null = null;
 
@@ -686,6 +651,8 @@ async function loadCalendarContext(inquiryId: string): Promise<CalendarContext |
       .from("profiles")
       .select("id,email,full_name,role")
       .eq("id", operatorId)
+      .eq("role", "operator")
+      .eq("is_active", true)
       .maybeSingle();
 
     if (profileError) {
@@ -695,16 +662,9 @@ async function loadCalendarContext(inquiryId: string): Promise<CalendarContext |
     } else {
       operatorProfile = (profileData ?? null) as ProfileRow | null;
     }
-  } else if (operatorName) {
-    operatorProfile = await resolveOperatorProfileByName(admin, [operatorName, listing?.operator_name, inquiry.operator_name]);
-    operatorId = operatorProfile?.id ?? null;
   }
 
-  if (operatorProfile && !operatorId) {
-    operatorId = operatorProfile.id;
-  }
-
-  if (operatorId) {
+  if (operatorId && operatorProfile) {
     const { data: integrationData, error: integrationError } = await admin
       .from("operator_calendar_integrations")
       .select(
@@ -1206,15 +1166,27 @@ export async function checkGoogleCalendarConflicts(params: {
       })()
     : null;
 
-  const operatorName = inquiry?.operator_name ?? listing?.operator_name ?? null;
-  const operatorProfile = inquiry?.operator_id
-    ? null
-    : await resolveOperatorProfileByName(admin, [operatorName, listing?.operator_name]);
+  const assignedOperatorId = inquiry?.operator_id ?? listing?.operator_id ?? null;
+  if (assignedOperatorId && assignedOperatorId !== params.operatorId) {
+    return {
+      ok: false,
+      errors: ["The booking is assigned to a different operator."],
+    } satisfies ConflictSummary;
+  }
 
-  const operatorId = inquiry?.operator_id ?? listing?.operator_id ?? operatorProfile?.id ?? params.operatorId;
+  const operatorId = inquiry ? assignedOperatorId : params.operatorId;
   if (!operatorId) {
     return { ok: true } satisfies ConflictSummary;
   }
+
+  const { data: operatorProfileData } = await admin
+    .from("profiles")
+    .select("id,email,full_name,role")
+    .eq("id", operatorId)
+    .eq("role", "operator")
+    .eq("is_active", true)
+    .maybeSingle();
+  const operatorProfile = (operatorProfileData ?? null) as ProfileRow | null;
 
   const window = params.inquiryId && inquiry
     ? resolveInquiryWindow(inquiry, listing)
@@ -1257,15 +1229,8 @@ export async function checkGoogleCalendarConflicts(params: {
       updated_at: new Date().toISOString(),
     } satisfies InquiryRow),
     listing,
-    operatorProfile: operatorProfile ?? (await (async () => {
-      if (!operatorId) {
-        return null;
-      }
-
-      const { data } = await admin.from("profiles").select("id,email,full_name,role").eq("id", operatorId).maybeSingle();
-      return (data ?? null) as ProfileRow | null;
-    })()),
-    integration: await getOperatorCalendarIntegration(operatorId),
+    operatorProfile,
+    integration: operatorProfile ? await getOperatorCalendarIntegration(operatorId) : null,
   };
 
   return checkGoogleCalendarConflictsInternal(context, window, params.inquiryId ?? undefined);

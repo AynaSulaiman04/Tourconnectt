@@ -141,6 +141,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
     <PageShell variant="admin">
       <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
         <SectionHeader
+          level={1}
           eyebrow="Admin listings"
           title="Moderate every listing before it reaches travelers."
           description="Review operator submissions, approve high-quality tours, and keep the platform's featured inventory aligned with the Tour ConnecTT standard."
@@ -282,7 +283,6 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                                     alt={item.title}
                                     fill
                                     className="object-cover"
-                                    quality={100}
                                     sizes="40px"
                                     src={item.image_url}
                                   />

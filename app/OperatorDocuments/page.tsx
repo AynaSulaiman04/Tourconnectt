@@ -105,7 +105,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
           text-transform: uppercase;
         }
 
-        .documents-header h2,
+        .documents-header h1,
         .section-title {
           margin: 0;
           font-family: 'Raleway', sans-serif;
@@ -443,7 +443,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
         <header className="documents-header">
           <div>
             <p className="eyebrow">Document management</p>
-            <h2>Customer Files</h2>
+            <h1>Customer Files</h1>
             <p>Store and review guest documents in a luxury, file-vault layout that matches the rest of the operator portal.</p>
           </div>
           <div className="document-chip">

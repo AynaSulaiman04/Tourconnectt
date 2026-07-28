@@ -6,21 +6,6 @@ import { GlassPanel } from "@/components/ui/GlassPanel";
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { getOperatorListingDrafts, getOperatorListings } from "@/lib/supabase/operator-listings";
 
-type OperatorListing = {
-  id: string;
-  title: string;
-  location: string | null;
-  country: string | null;
-  duration: string | null;
-  summary: string | null;
-  image_url: string | null;
-  price: string | null;
-  featured: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
 function formatRelativeTime(value: string) {
   const diffMs = Date.now() - new Date(value).getTime();
   const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
@@ -47,9 +32,8 @@ export default async function OperatorListingsPage() {
     redirect(getRoleDashboardRoute(profileContext.profile.role));
   }
 
-  const operatorName = profileContext.profile.full_name.trim();
   const [listings, drafts] = await Promise.all([
-    getOperatorListings(profileContext.profile.id, operatorName),
+    getOperatorListings(profileContext.profile.id),
     getOperatorListingDrafts(profileContext.profile.id),
   ]);
   const activeListings = listings.filter((listing) => listing.is_active);

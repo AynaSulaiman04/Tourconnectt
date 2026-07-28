@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { recordAdminNotifications } from "@/lib/supabase/notifications";
 import { initialSignupFormState, type SignupFormState } from "./types";
 
@@ -55,15 +55,16 @@ async function runSignupAction(role: AccountRole, redirectTo: string, formData: 
   }
 
   const { fullName, email, password } = validatedFields.data;
+  const supabase = await createSupabaseServerClient();
   const supabaseAdmin = createSupabaseServiceRoleClient();
 
-  const { data: createdUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+  const { data: createdUser, error: createUserError } = await supabase.auth.signUp({
     email,
     password,
-    email_confirm: true,
-    user_metadata: {
-      full_name: fullName,
-      role,
+    options: {
+      data: {
+        full_name: fullName,
+      },
     },
   });
 
@@ -75,21 +76,26 @@ async function runSignupAction(role: AccountRole, redirectTo: string, formData: 
     } satisfies SignupFormState;
   }
 
-  if (!createdUser.user) {
+  if (!createdUser.user || createdUser.user.identities?.length === 0) {
     return {
       ...initialSignupFormState,
-      message: "We could not create your account. Please try again.",
+      message: createdUser.user
+        ? "That email is already registered. Try signing in instead."
+        : "We could not create your account. Please try again.",
       fieldErrors: {},
     } satisfies SignupFormState;
   }
 
+  const newUser = createdUser.user;
   const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
     {
-      id: createdUser.user.id,
+      id: newUser.id,
       email,
       full_name: fullName,
       preferred_inquiry_area: null,
       role,
+      is_active: true,
+      status_reason: null,
     },
     {
       onConflict: "id",
@@ -97,30 +103,38 @@ async function runSignupAction(role: AccountRole, redirectTo: string, formData: 
   );
 
   if (profileError) {
+    const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(newUser.id);
+    if (rollbackError) {
+      console.error("Unable to roll back incomplete signup", {
+        userId: newUser.id,
+        code: rollbackError.status,
+      });
+    }
+
     return {
       ...initialSignupFormState,
-      message: profileError.message,
+      message: "We could not finish creating your account. Please try again.",
       fieldErrors: {},
     } satisfies SignupFormState;
   }
 
-  if (role !== "admin") {
+  if (role !== "admin" && newUser.email_confirmed_at) {
     await recordAdminNotifications({
-      actorProfileId: createdUser.user.id,
-      excludeProfileId: createdUser.user.id,
+      actorProfileId: newUser.id,
+      excludeProfileId: newUser.id,
       kind: "user_signed_up",
       title: "New user joined",
       body: `${fullName} created a ${role} account.`,
-      href: `/AdminUsers?user=${createdUser.user.id}`,
+      href: `/AdminUsers?user=${newUser.id}`,
       entityType: "profile",
-      entityId: createdUser.user.id,
+      entityId: newUser.id,
       metadata: {
         role,
         email,
       },
     }).catch((notificationError) => {
       console.error("Unable to record signup notification", {
-        userId: createdUser.user.id,
+        userId: newUser.id,
         role,
         error: notificationError,
       });
@@ -134,19 +148,21 @@ export async function signUpTravelerAction(
   _state: SignupFormState,
   formData: FormData,
 ): Promise<SignupFormState> {
-  return runSignupAction("traveler", "/LoginPage?signup=success", formData);
+  return runSignupAction("traveler", "/LoginPage?signup=check-email", formData);
 }
 
-export async function signUpOperatorAction(
-  _state: SignupFormState,
-  formData: FormData,
-): Promise<SignupFormState> {
-  return runSignupAction("operator", "/OperatorLogin?signup=success", formData);
+export async function signUpOperatorAction(): Promise<SignupFormState> {
+  return {
+    ...initialSignupFormState,
+    message: "Operator accounts are invite-only. Ask an administrator to grant operator access.",
+    fieldErrors: {},
+  };
 }
 
-export async function signUpAdminAction(
-  _state: SignupFormState,
-  formData: FormData,
-): Promise<SignupFormState> {
-  return runSignupAction("admin", "/AdminLogin?signup=success", formData);
+export async function signUpAdminAction(): Promise<SignupFormState> {
+  return {
+    ...initialSignupFormState,
+    message: "Administrator accounts are invite-only. Ask an existing administrator to grant access.",
+    fieldErrors: {},
+  };
 }

@@ -35,46 +35,6 @@ function normalizePublicListingImage(value: string | null | undefined) {
   return normalized;
 }
 
-async function resolveUniqueOperatorProfileByName(
-  admin: ReturnType<typeof createSupabaseServiceRoleClient>,
-  operatorName: string | null | undefined,
-) {
-  const name = normalizeText(operatorName);
-
-  if (!name) {
-    return null;
-  }
-
-  const { data, error } = await admin
-    .from("profiles")
-    .select("id,email,full_name,role,avatar_base64,profile_image_url")
-    .eq("role", "operator")
-    .eq("full_name", name);
-
-  if (error) {
-    if (isMissingRelationError(error) || error.message?.includes("schema cache")) {
-      return null;
-    }
-
-    throw new Error(error.message);
-  }
-
-  const operators = (data ?? []).filter((entry) => entry.role === "operator");
-
-  if (operators.length !== 1) {
-    return null;
-  }
-
-  return operators[0] as {
-    id: string;
-    email: string | null;
-    full_name: string;
-    role: "operator";
-    avatar_base64?: string | null;
-    profile_image_url?: string | null;
-  };
-}
-
 async function loadListingDraftContactByListingId(
   admin: ReturnType<typeof createSupabaseServiceRoleClient>,
   listingId: string,
@@ -146,9 +106,10 @@ export async function getInquiryListings() {
     const { data, error } = await admin
       .from("tour_listings")
       .select(
-        "id,title,location,country,duration,summary,image_url,price,operator_id,operator_name,featured,is_active,created_at,updated_at",
+        "id,title,location,country,duration,summary,image_url,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at",
       )
       .eq("is_active", true)
+      .eq("status", "live")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -353,7 +314,7 @@ export async function getTravelerInquiryDashboard(userId: string) {
 
       if (operatorProfilesError) {
         if (isMissingRelationError(operatorProfilesError) || operatorProfilesError.message?.includes("schema cache")) {
-          // Continue with name-based fallback below.
+          // Legacy schemas may not expose every optional profile column.
         } else {
           throw new Error(operatorProfilesError.message);
         }
@@ -369,27 +330,10 @@ export async function getTravelerInquiryDashboard(userId: string) {
       });
     }
 
-    const operatorProfilesByName = new Map<string, { id: string; email: string | null; full_name: string; role: "operator" }>();
-    const unresolvedNames = [
-      ...new Set(
-        inquiriesForDashboard
-          .map((inquiry) => normalizeText(inquiry.operator_name))
-          .filter((value): value is string => Boolean(value)),
-      ),
-    ];
-
-    for (const operatorName of unresolvedNames) {
-      const resolvedProfile = await resolveUniqueOperatorProfileByName(admin, operatorName);
-      if (resolvedProfile) {
-        operatorProfilesByName.set(operatorName.toLowerCase(), resolvedProfile);
-      }
-    }
-
     const enrichedInquiries: InquiryConfirmation[] = inquiriesForDashboard.map((inquiry) => {
       const listing = inquiry.listing_id ? listingsById.get(inquiry.listing_id) ?? null : null;
       const operatorProfile =
         (inquiry.operator_id ? operatorProfilesById.get(inquiry.operator_id) ?? null : null) ??
-        (operatorProfilesByName.get(normalizeText(inquiry.operator_name)?.toLowerCase() ?? "") ?? null) ??
         (listing?.operator_id ? operatorProfilesById.get(listing.operator_id) ?? null : null) ??
         null;
       const draftContact = listing?.id ? draftContacts.get(listing.id) ?? null : null;
@@ -472,6 +416,10 @@ export async function getInquiryConfirmation(
     role: "traveler" | "operator" | "admin";
   } | null,
 ) {
+  if (!viewer) {
+    return null;
+  }
+
   const admin = createSupabaseServiceRoleClient();
   const { data: inquiry, error } = await admin
     .from("inquiries")
@@ -511,7 +459,6 @@ export async function getInquiryConfirmation(
   if (viewer) {
     const viewerRole = viewer.role;
     const viewerEmail = normalizeText(viewer.email)?.toLowerCase() ?? null;
-    const viewerName = normalizeText(viewer.full_name)?.toLowerCase() ?? null;
 
     if (viewerRole === "traveler") {
       const matchesOwner =
@@ -524,7 +471,6 @@ export async function getInquiryConfirmation(
     } else if (viewerRole === "operator") {
       const matchesOperator =
         inquiry.operator_id === viewer.id ||
-        (!inquiry.operator_id && viewerName && normalizeText(inquiry.operator_name)?.toLowerCase() === viewerName) ||
         (listing?.operator_id === viewer.id);
 
       if (!matchesOperator) {
@@ -541,13 +487,7 @@ export async function getInquiryConfirmation(
 
   let operatorEmail: string | null = null;
   let operatorPhone: string | null = null;
-  let resolvedOperatorId = inquiry.operator_id ?? listing?.operator_id ?? null;
-
-  if (!resolvedOperatorId && listing?.operator_name) {
-    const resolvedOperator = await resolveUniqueOperatorProfileByName(admin, listing.operator_name);
-    resolvedOperatorId = resolvedOperator?.id ?? resolvedOperatorId;
-    operatorEmail = resolvedOperator?.email ?? null;
-  }
+  const resolvedOperatorId = inquiry.operator_id ?? listing?.operator_id ?? null;
 
   if (resolvedOperatorId) {
     const { data: operatorProfile } = await admin

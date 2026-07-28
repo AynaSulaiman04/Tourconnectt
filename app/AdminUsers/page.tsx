@@ -133,6 +133,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
     <PageShell variant="admin">
       <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
         <SectionHeader
+          level={1}
           eyebrow="Admin users"
           title="Control platform access across travelers and operators."
           description="Review credentials, verify operators, manage access tiers, and keep the account surface aligned with Tour ConnecTT policy."

@@ -1,7 +1,7 @@
-import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { getGoogleCalendarConfigStatus, getGoogleOAuthClient } from "@/lib/calendar/google";
+import { createGoogleCalendarOAuthState } from "@/lib/calendar/google-oauth-state";
 
 const OAUTH_STATE_COOKIE = "ttc-google-calendar-state";
 const GOOGLE_SCOPE = "https://www.googleapis.com/auth/calendar.events";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const profileContext = await getOptionalCurrentUserProfile();
 
-  if (!profileContext?.profile) {
+  if (!profileContext?.profile || !profileContext.profile.is_active) {
     return NextResponse.redirect(new URL("/LoginPage", request.url));
   }
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const oauth2Client = getGoogleOAuthClient();
-    const state = crypto.randomBytes(32).toString("hex");
+    const state = createGoogleCalendarOAuthState(profileContext.profile.id);
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: "offline",

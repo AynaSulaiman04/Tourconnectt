@@ -6,13 +6,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["exceljs", "nodemailer", "openai", "pdf-lib"],
   experimental: {
-    proxyClientMaxBodySize: "250mb",
+    proxyClientMaxBodySize: "30mb",
     serverActions: {
       bodySizeLimit: "25mb",
     },
   },
   images: {
-    qualities: [75, 92, 100],
+    qualities: [75, 85, 92],
     remotePatterns: [
       {
         protocol: "https",

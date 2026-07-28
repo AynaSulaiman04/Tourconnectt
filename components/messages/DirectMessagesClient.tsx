@@ -19,29 +19,19 @@ type DirectMessagesClientProps = {
   state: DirectMessagePageState;
 };
 
-function formatRelativeTime(value: string | null | undefined) {
+function formatMessageTime(value: string | null | undefined) {
   if (!value) {
     return "Just now";
   }
 
-  const diffMs = Date.now() - new Date(value).getTime();
-  const diffMinutes = Math.max(0, Math.floor(diffMs / (1000 * 60)));
-
-  if (diffMinutes < 1) {
-    return "Just now";
-  }
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-  return diffDays === 1 ? "Yesterday" : `${diffDays}d ago`;
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  }).format(new Date(value));
 }
 
 function buildConversationHref(pathname: string, conversationId: string) {
@@ -51,6 +41,7 @@ function buildConversationHref(pathname: string, conversationId: string) {
 }
 
 const EMOJI_OPTIONS = ["🙂", "✈️", "🌴", "✨", "👍"];
+const FALLBACK_POLL_INTERVAL_MS = 120_000;
 
 function resolveCounterpartAvatar(
   role: DirectMessageRouteRole,
@@ -77,11 +68,8 @@ export function DirectMessagesClient({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const syncMessagesRef = useRef<(() => Promise<void>) | null>(null);
+  const realtimeConnectedRef = useRef(false);
   const requestedConversationId = searchParams.get("conversation");
-  const hasExplicitThreadSelection =
-    Boolean(requestedConversationId) ||
-    Boolean(searchParams.get("listing")) ||
-    Boolean(searchParams.get("inquiry"));
   const initialConversationId = state.activeConversation?.id ?? requestedConversationId ?? state.conversations[0]?.id ?? null;
 
   const [draft, setDraft] = useState("");
@@ -152,48 +140,13 @@ export function DirectMessagesClient({
   }, [liveNotice]);
 
   useEffect(() => {
-    if (activeConversationId || !conversations.length) {
-      return;
-    }
-
-    if (state.activeConversation?.id) {
-      setActiveConversationId(state.activeConversation.id);
-      return;
-    }
-
-    setActiveConversationId(conversations[0]?.id ?? null);
-  }, [activeConversationId, conversations, state.activeConversation?.id]);
-
-  useEffect(() => {
-    if (
-      hasExplicitThreadSelection ||
-      state.activeConversation ||
-      activeConversationId ||
-      !visibleConversations.length
-    ) {
-      return;
-    }
-
-    const firstConversation = visibleConversations[0];
-    if (!firstConversation) {
-      return;
-    }
-
-    if (firstConversation.launch_href) {
-      router.replace(firstConversation.launch_href, { scroll: false });
-      return;
-    }
-
-    setActiveConversationId(firstConversation.id);
-  }, [activeConversationId, hasExplicitThreadSelection, router, state.activeConversation, visibleConversations]);
-
-  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
     let active = true;
     let inFlight = false;
+    let activeRequest: AbortController | null = null;
 
     async function syncDirectMessages() {
       if (inFlight) {
@@ -201,10 +154,12 @@ export function DirectMessagesClient({
       }
 
       inFlight = true;
+      activeRequest = new AbortController();
 
       try {
         const response = await fetch(`/api/direct-messages${searchQuery ? `?${searchQuery}` : ""}`, {
           cache: "no-store",
+          signal: activeRequest.signal,
         });
 
         const payload = (await response.json().catch(() => null)) as
@@ -257,6 +212,7 @@ export function DirectMessagesClient({
       } catch {
         // Quiet polling failures are acceptable; the page will keep the last known state.
       } finally {
+        activeRequest = null;
         inFlight = false;
       }
     }
@@ -264,14 +220,29 @@ export function DirectMessagesClient({
     syncMessagesRef.current = syncDirectMessages;
     void syncDirectMessages();
     const interval = window.setInterval(() => {
-      void syncDirectMessages();
-    }, 15000);
+      if (document.visibilityState === "visible" && !realtimeConnectedRef.current) {
+        void syncDirectMessages();
+      }
+    }, FALLBACK_POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !realtimeConnectedRef.current) {
+        void syncDirectMessages();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       active = false;
+      activeRequest?.abort();
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (syncMessagesRef.current === syncDirectMessages) {
+        syncMessagesRef.current = null;
+      }
     };
-  }, [hasExplicitThreadSelection, role, searchQuery]);
+  }, [role, searchQuery]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -280,6 +251,9 @@ export function DirectMessagesClient({
 
     const supabase = createSupabaseBrowserClient();
     let active = true;
+    const expectedChannelCount = activeConversationId ? 2 : 1;
+    const subscribedChannels = new Set<string>();
+    realtimeConnectedRef.current = false;
 
     const refreshFromRealtime = () => {
       if (!active) {
@@ -287,50 +261,72 @@ export function DirectMessagesClient({
       }
 
       void syncMessagesRef.current?.();
-      router.refresh();
     };
 
+    const updateRealtimeStatus = (channelKey: string, status: string) => {
+      if (!active) {
+        return;
+      }
+
+      if (status === "SUBSCRIBED") {
+        subscribedChannels.add(channelKey);
+      } else {
+        subscribedChannels.delete(channelKey);
+      }
+
+      const wasConnected = realtimeConnectedRef.current;
+      realtimeConnectedRef.current = subscribedChannels.size === expectedChannelCount;
+
+      if (realtimeConnectedRef.current && !wasConnected) {
+        void syncMessagesRef.current?.();
+      }
+    };
+
+    const conversationChannelKey = `conversations:${currentUserRole}:${currentUserId}`;
+    const conversationChannel = supabase
+      .channel(`direct-messages-conversations:${currentUserRole}:${currentUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "traveler_operator_conversations",
+          filter: `${currentUserRole === "traveler" ? "traveler_id" : "operator_id"}=eq.${currentUserId}`,
+        },
+        refreshFromRealtime,
+      );
     const channels = [
-      supabase
-        .channel(`direct-messages-conversations:${currentUserRole}:${currentUserId}`)
+      conversationChannel.subscribe((status) => updateRealtimeStatus(conversationChannelKey, status)),
+    ];
+
+    if (activeConversationId) {
+      const threadChannelKey = `thread:${activeConversationId}`;
+      const threadChannel = supabase
+        .channel(`direct-messages-thread:${activeConversationId}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
-            table: "traveler_operator_conversations",
-            filter: `${currentUserRole === "traveler" ? "traveler_id" : "operator_id"}=eq.${currentUserId}`,
+            table: "traveler_operator_messages",
+            filter: `conversation_id=eq.${activeConversationId}`,
           },
           refreshFromRealtime,
-        )
-        .subscribe(),
-    ];
+        );
 
-    if (activeConversationId) {
       channels.push(
-        supabase
-          .channel(`direct-messages-thread:${activeConversationId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "traveler_operator_messages",
-              filter: `conversation_id=eq.${activeConversationId}`,
-            },
-            refreshFromRealtime,
-          )
-          .subscribe(),
+        threadChannel.subscribe((status) => updateRealtimeStatus(threadChannelKey, status)),
       );
     }
 
     return () => {
       active = false;
+      realtimeConnectedRef.current = false;
       channels.forEach((channel) => {
         void supabase.removeChannel(channel);
       });
     };
-  }, [activeConversationId, currentUserId, currentUserRole, router]);
+  }, [activeConversationId, currentUserId, currentUserRole]);
 
   async function handleSendMessage() {
     const trimmed = draft.trim();
@@ -340,6 +336,8 @@ export function DirectMessagesClient({
 
     setPending(true);
     setError(null);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
 
     try {
       const response = await fetch("/api/direct-messages", {
@@ -353,6 +351,7 @@ export function DirectMessagesClient({
           listingId: context?.listingId,
           inquiryId: context?.inquiryId,
         }),
+        signal: controller.signal,
       });
 
       const payload = (await response.json().catch(() => null)) as
@@ -391,6 +390,7 @@ export function DirectMessagesClient({
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "Unable to send the message.");
     } finally {
+      window.clearTimeout(timeoutId);
       setPending(false);
     }
   }
@@ -441,7 +441,7 @@ export function DirectMessagesClient({
     name: conversation.counterpart_name,
     tripTitle: conversation.listing_title ?? conversation.inquiry_destination ?? conversation.subtitle,
     preview: conversation.last_message_preview,
-    time: formatRelativeTime(conversation.last_message_at ?? conversation.updated_at),
+    time: formatMessageTime(conversation.last_message_at ?? conversation.updated_at),
     unreadCount: conversation.unread_count,
     avatarUrl: resolveCounterpartAvatar(role, conversation),
     active: conversation.id === activeConversationId,
@@ -453,7 +453,7 @@ export function DirectMessagesClient({
     return {
       id: message.id,
       body: message.message,
-      time: formatRelativeTime(message.created_at),
+      time: formatMessageTime(message.created_at),
       sender: isOwnMessage ? "You" : role === "traveler" ? "Operator" : "Traveler",
       mine: isOwnMessage,
     };
@@ -492,7 +492,6 @@ export function DirectMessagesClient({
       onSelectConversation={handleSelectConversation}
       title={pageTitle}
       copy={pageCopy}
-      sidebarTitle="Messages"
       sidebarCopy={null}
       searchValue={conversationSearch}
       onSearchChange={setConversationSearch}

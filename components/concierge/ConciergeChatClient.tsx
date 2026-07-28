@@ -2,7 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Dispatch,
+  type FormEvent,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { useRouter } from "next/navigation";
 import type {
   ConciergeConversationSummary,
@@ -41,6 +51,101 @@ type ConciergeChatClientProps = {
   recommendations: ConciergeRecommendation[];
   knowledgeSources: ConciergeKnowledgeSource[];
 };
+
+type ConciergeChatResponsePayload = {
+  ok?: boolean;
+  conversationId?: string | null;
+  conversationTitle?: string | null;
+  assistantMessage?: ConciergeClientMessage;
+  recommendations?: ConciergeRecommendation[];
+  error?: string;
+  configurationError?: string;
+  storageWarning?: string | null;
+};
+
+type ResettableState<T> = {
+  sourceValue: T;
+  value: T;
+};
+
+const CHAT_REQUEST_TIMEOUT_MS = 60_000;
+
+function subscribeToHydration() {
+  return () => {};
+}
+
+function getHydratedSnapshot() {
+  return true;
+}
+
+function getServerHydratedSnapshot() {
+  return false;
+}
+
+function useResettableState<T>(sourceValue: T): [T, Dispatch<SetStateAction<T>>] {
+  const [state, setState] = useState<ResettableState<T>>(() => ({
+    sourceValue,
+    value: sourceValue,
+  }));
+  const value = Object.is(state.sourceValue, sourceValue) ? state.value : sourceValue;
+
+  const setValue: Dispatch<SetStateAction<T>> = (nextValue) => {
+    setState((current) => {
+      const currentValue = Object.is(current.sourceValue, sourceValue)
+        ? current.value
+        : sourceValue;
+
+      return {
+        sourceValue,
+        value:
+          typeof nextValue === "function"
+            ? (nextValue as (previousValue: T) => T)(currentValue)
+            : nextValue,
+      };
+    });
+  };
+
+  return [value, setValue];
+}
+
+async function fetchJsonWithTimeout<T>(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMessage: string,
+) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, CHAT_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+    let payload: T | null = null;
+
+    try {
+      payload = (await response.json()) as T;
+    } catch (parseError) {
+      if (controller.signal.aborted) {
+        throw parseError;
+      }
+    }
+
+    return { response, payload };
+  } catch (requestError) {
+    if (timedOut) {
+      throw new Error(timeoutMessage);
+    }
+
+    throw requestError;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 function formatRelativeTime(value: string | null | undefined, referenceTime = Date.now()) {
   if (!value) {
@@ -193,35 +298,38 @@ export function ConciergeChatClient({
   aiConfigured,
   currentConversationId,
   currentConversationTitle,
-  conversations: _conversations,
   messages,
-  recommendations: _recommendations,
-  knowledgeSources: _knowledgeSources,
+  recommendations,
 }: ConciergeChatClientProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  void _conversations;
-  void _recommendations;
-  void _knowledgeSources;
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatActionsRef = useRef<HTMLDivElement | null>(null);
+  const initialChatMessages = useMemo(
+    () => loadInitialChatMessages(messages, currentConversationId),
+    [currentConversationId, messages],
+  );
 
   const [draft, setDraft] = useState("");
-  const [chatMessages, setChatMessages] = useState<ConciergeClientMessage[]>(() =>
-    loadInitialChatMessages(messages, currentConversationId),
-  );
+  const [chatMessages, setChatMessages] = useResettableState(initialChatMessages);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [storageNotice, setStorageNotice] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [tick, setTick] = useState(() => Date.now());
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(currentConversationId);
-  const [activeConversationTitle, setActiveConversationTitle] = useState<string | null>(currentConversationTitle);
-  const [suggestedListings, setSuggestedListings] = useState(() => _recommendations);
+  const [activeConversationId, setActiveConversationId] =
+    useResettableState(currentConversationId);
+  const [activeConversationTitle, setActiveConversationTitle] =
+    useResettableState(currentConversationTitle);
+  const [suggestedListings, setSuggestedListings] = useResettableState(recommendations);
   const [showSuggestedListings, setShowSuggestedListings] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydratedSnapshot,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined" || !activeConversationId) {
@@ -254,20 +362,6 @@ export function ConciergeChatClient({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
 
-  useEffect(() => {
-    setActiveConversationId(currentConversationId);
-    setActiveConversationTitle(currentConversationTitle);
-    setChatMessages(loadInitialChatMessages(messages, currentConversationId));
-  }, [currentConversationId, currentConversationTitle, messages]);
-
-  useEffect(() => {
-    setSuggestedListings(_recommendations);
-  }, [_recommendations]);
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   function renderRelativeTime(value: string | null | undefined) {
     if (!isHydrated) {
       return "Just now";
@@ -276,15 +370,7 @@ export function ConciergeChatClient({
     return formatRelativeTime(value, tick);
   }
 
-  const conversationLabel = useMemo(() => {
-    if (activeConversationTitle) {
-      return activeConversationTitle;
-    }
-
-    return "Ask live questions";
-  }, [activeConversationTitle, chatMessages.length]);
-
-  const latestMessage = chatMessages.length ? chatMessages[chatMessages.length - 1] : null;
+  const conversationLabel = activeConversationTitle ?? "Ask live questions";
 
   async function sendMessage(messageText: string) {
     const trimmed = messageText.trim();
@@ -310,39 +396,22 @@ export function ConciergeChatClient({
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
 
-      const response = await fetch("/api/concierge/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
-          message: trimmed,
-          conversationId: activeConversationId,
-        }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            conversationId?: string | null;
-            conversationTitle?: string | null;
-            assistantMessage?: ConciergeClientMessage;
-            recommendations?: ConciergeRecommendation[];
-            sources?: ConciergeKnowledgeSource[] | Array<{
-              id: string;
-              sourceType: "listing" | "knowledge_source";
-              title: string;
-              url: string | null;
-              excerpt: string;
-              metadata: Record<string, unknown> | null;
-            }>;
-            error?: string;
-            configurationError?: string;
-            persistenceMode?: "supabase" | "client-only";
-            storageWarning?: string | null;
-          }
-        | null;
+      const { response, payload } =
+        await fetchJsonWithTimeout<ConciergeChatResponsePayload>(
+          "/api/concierge/chat",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            body: JSON.stringify({
+              message: trimmed,
+              conversationId: activeConversationId,
+            }),
+          },
+          "The concierge response timed out. Please try again.",
+        );
 
       if (!response.ok || !payload?.ok) {
         const nextError = payload?.configurationError ?? payload?.error ?? "Unable to send your message right now.";
@@ -411,35 +480,22 @@ export function ConciergeChatClient({
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
 
-      const response = await fetch("/api/concierge/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
-          action,
-          conversationId: activeConversationId,
-        }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            conversationId?: string | null;
-            conversationTitle?: string | null;
-            recommendations?: ConciergeRecommendation[];
-            sources?: ConciergeKnowledgeSource[] | Array<{
-              id: string;
-              sourceType: "listing" | "knowledge_source";
-              title: string;
-              url: string | null;
-              excerpt: string;
-              metadata: Record<string, unknown> | null;
-            }>;
-            error?: string;
-          }
-        | null;
+      const { response, payload } =
+        await fetchJsonWithTimeout<ConciergeChatResponsePayload>(
+          "/api/concierge/chat",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            body: JSON.stringify({
+              action,
+              conversationId: activeConversationId,
+            }),
+          },
+          "The concierge update timed out. Please try again.",
+        );
 
       if (!response.ok || !payload?.ok) {
         throw new Error(payload?.error ?? "Unable to update concierge chat right now.");
@@ -447,16 +503,6 @@ export function ConciergeChatClient({
 
       const nextConversationId = payload.conversationId ?? null;
       const nextConversationTitle = payload.conversationTitle ?? null;
-      const nextConversation = nextConversationId
-        ? {
-            id: nextConversationId,
-            title: nextConversationTitle,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            last_message_preview: null,
-            last_message_role: null,
-          }
-        : null;
 
       setActiveConversationId(nextConversationId);
       setActiveConversationTitle(nextConversationTitle);
@@ -504,7 +550,7 @@ export function ConciergeChatClient({
   }
 
   function refreshSuggestions() {
-    setSuggestedListings(_recommendations);
+    setSuggestedListings(recommendations);
     setShowSuggestedListings(true);
     setStatusNotice("Suggestions refreshed.");
     setMenuOpen(false);
@@ -685,7 +731,7 @@ export function ConciergeChatClient({
           background: rgba(255, 253, 251, 0.7);
         }
 
-        .chat-header h2 {
+        .chat-header h1 {
           margin: 0;
           font-family: var(--font-display);
           font-size: clamp(1.8rem, 2vw, 2.6rem);
@@ -1187,7 +1233,7 @@ export function ConciergeChatClient({
         <section className="concierge-main">
           <header className="chat-header">
             <div className="min-w-0">
-              <h2 className="truncate">{conversationLabel}</h2>
+              <h1 className="truncate">{conversationLabel}</h1>
               <p className="chat-subtitle">
                 {isAuthenticated
                   ? "Ask about live listings, itinerary ideas, or operator replies."
@@ -1266,7 +1312,7 @@ export function ConciergeChatClient({
                 ))
               ) : (
                 <div className="empty-state">
-                  <h3>Tell me what kind of trip you're looking for.</h3>
+                  <h3>Tell me what kind of trip you&apos;re looking for.</h3>
                   <p>
                     I can suggest real Tour ConnecTT listings, pull in active knowledge sources, and
                     remember the conversation for next time.

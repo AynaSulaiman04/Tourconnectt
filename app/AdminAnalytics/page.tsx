@@ -178,13 +178,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
   const series = buildSeries(platformEvents, selectedRange);
   const selectedStart = getRangeStart(selectedRange);
   const chartLabels = buildChartLabels(series.labels, selectedRange);
-  const selectedGrowthEvents = platformEvents.filter(
-    (event) =>
-      new Date(event.created_at) >= selectedStart &&
-      (event.event_type === "referral_click" ||
-        event.event_type === "referral_conversion" ||
-        event.event_type === "listing_featured"),
-  );
   const successfulPayments = paymentRows.filter((payment) => isSuccessfulWiPayPayment(payment.status));
 
   const inquiriesInRange = workspace.inquiries.filter((item) => new Date(item.created_at) >= selectedStart);
@@ -205,9 +198,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
   const promotedTours = workspace.featuredListings.length ? workspace.featuredListings : workspace.recentListings;
   const activeCampaigns = workspace.promotions.filter((campaign) => campaign.status === "Active").length;
   const pausedCampaigns = workspace.promotions.length - activeCampaigns;
-  const referralClicks = selectedGrowthEvents.filter((event) => event.event_type === "referral_click").length;
-  const referralConversions = selectedGrowthEvents.filter((event) => event.event_type === "referral_conversion").length;
-  const conversionRate = referralClicks > 0 ? Math.round((referralConversions / referralClicks) * 100) : 0;
   const topCampaign =
     [...workspace.promotions].sort((left, right) => right.conversions - left.conversions || right.usage - left.usage)[0] ?? null;
   const activeRevenueSignal =
@@ -250,6 +240,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
     <PageShell variant="admin">
       <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
         <SectionHeader
+          level={1}
           eyebrow="Analytics"
           title="Platform insights and reporting."
           description="A single dashboard for growth metrics, inquiry trends, booking performance, operator performance, and traveler behavior."
@@ -546,7 +537,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                                   alt={tour.title}
                                   fill
                                   className="object-cover"
-                                  quality={100}
                                   sizes="48px"
                                   src={tour.image_url}
                                 />

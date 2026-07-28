@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PORTAL_AUTH_COOKIE_NAME, readPortalAuthCookieValue } from "@/lib/supabase/portal-auth";
 
-const AUTH_ROUTES = ["/LoginPage", "/SignUp", "/AdminLogin", "/AdminSignUp", "/OperatorLogin", "/OperatorSignUp"];
-
-const PROTECTED_ROUTES: Record<"admin" | "operator" | "traveler", string[]> = {
+const PROTECTED_ROUTES = {
   admin: [
     "/AdminDashboard",
     "/AdminBookings",
@@ -24,77 +21,38 @@ const PROTECTED_ROUTES: Record<"admin" | "operator" | "traveler", string[]> = {
     "/OperatorUserManage",
     "/CreateListing",
   ],
-  traveler: ["/TravellerProfile", "/AccountSetting"],
-};
-
-function getRoleHome(role: "traveler" | "operator" | "admin") {
-  switch (role) {
-    case "admin":
-      return "/AdminDashboard";
-    case "operator":
-      return "/OperatorDashboard";
-    default:
-      return "/TravellerProfile";
-  }
-}
+  traveler: ["/TravellerProfile", "/AccountSetting", "/Messages"],
+} as const;
 
 function pathMatches(pathname: string, candidate: string) {
   return pathname === candidate || pathname.startsWith(`${candidate}/`);
-}
-
-function firstAuthRoute(pathname: string) {
-  return AUTH_ROUTES.find((route) => pathMatches(pathname, route)) ?? null;
 }
 
 function hasSupabaseSessionCookie(request: NextRequest) {
   return request.cookies.getAll().some((entry) => /^sb-.*-auth-token(\.\d+)?$/.test(entry.name));
 }
 
+// Next.js 16 recommends proxy.ts, but Proxy is Node-only. OpenNext currently
+// requires edge middleware, which the Next.js 16 upgrade guide explicitly
+// supports by retaining this file convention.
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
-  const portalCookie = readPortalAuthCookieValue(request.cookies.get(PORTAL_AUTH_COOKIE_NAME)?.value);
-  const hasSupabaseAuth = hasSupabaseSessionCookie(request);
-  const authRoute = firstAuthRoute(pathname);
-  const isProtectedAdminRoute =
-    PROTECTED_ROUTES.admin.some((route) => pathMatches(pathname, route)) && !pathMatches(pathname, "/AdminLogin") && !pathMatches(pathname, "/AdminSignUp");
-  const isProtectedOperatorRoute =
-    PROTECTED_ROUTES.operator.some((route) => pathMatches(pathname, route)) &&
-    !pathMatches(pathname, "/OperatorLogin") &&
-    !pathMatches(pathname, "/OperatorSignUp");
-  const isProtectedTravelerRoute =
-    PROTECTED_ROUTES.traveler.some((route) => pathMatches(pathname, route)) &&
-    !pathMatches(pathname, "/LoginPage") &&
-    !pathMatches(pathname, "/SignUp");
+  if (hasSupabaseSessionCookie(request)) {
+    return NextResponse.next();
+  }
 
-  if (portalCookie) {
-    if (authRoute) {
-      return NextResponse.redirect(new URL(getRoleHome(portalCookie.role), request.url));
-    }
-
-    const protectedRole =
-      Object.entries(PROTECTED_ROUTES).find(([, routes]) => routes.some((route) => pathMatches(pathname, route)))?.[0] as
-        | "admin"
-        | "operator"
-        | "traveler"
-        | undefined;
-
-    if (protectedRole && portalCookie.role !== protectedRole) {
-      const destination =
-        portalCookie.role === "admin"
-          ? "/AdminDashboard"
-          : portalCookie.role === "operator"
-            ? "/OperatorDashboard"
-            : "/TravellerProfile";
-      return NextResponse.redirect(new URL(destination, request.url));
-    }
-  } else if (!hasSupabaseAuth && isProtectedTravelerRoute) {
+  if (PROTECTED_ROUTES.traveler.some((route) => pathMatches(pathname, route))) {
     const redirectUrl = new URL("/LoginPage", request.url);
     const redirectTarget = `${pathname}${searchParams.toString() ? request.nextUrl.search : ""}`;
     redirectUrl.searchParams.set("redirect", redirectTarget);
     return NextResponse.redirect(redirectUrl);
-  } else if (!hasSupabaseAuth && isProtectedAdminRoute) {
+  }
+
+  if (PROTECTED_ROUTES.admin.some((route) => pathMatches(pathname, route))) {
     return NextResponse.redirect(new URL("/AdminLogin", request.url));
-  } else if (!hasSupabaseAuth && isProtectedOperatorRoute) {
+  }
+
+  if (PROTECTED_ROUTES.operator.some((route) => pathMatches(pathname, route))) {
     return NextResponse.redirect(new URL("/OperatorLogin", request.url));
   }
 

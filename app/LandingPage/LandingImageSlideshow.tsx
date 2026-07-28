@@ -29,15 +29,6 @@ export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
     return () => window.clearInterval(timer);
   }, [safeImages.length]);
 
-  useEffect(() => {
-    if (safeImages.length < 2) {
-      return;
-    }
-
-    const nextImage = new window.Image();
-    nextImage.src = safeImages[(normalizedIndex + 1) % safeImages.length];
-  }, [normalizedIndex, safeImages]);
-
   if (!safeImages.length) {
     return (
       <section className="lp-showcase" aria-label="Featured destinations slideshow">
@@ -74,9 +65,7 @@ export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
               fill
               alt={`Featured Trinidad and Tobago destination ${normalizedIndex + 1}`}
               className="lp-showcase-image"
-              priority={normalizedIndex === 0}
-              quality={100}
-              unoptimized
+              unoptimized={currentImage.startsWith("data:") || currentImage.startsWith("blob:")}
               sizes="100vw"
               src={currentImage}
             />

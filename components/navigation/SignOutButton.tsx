@@ -2,7 +2,6 @@
 
 import { useState, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { clearPortalAuthCookieClient } from "@/lib/supabase/portal-auth";
 
 type SignOutButtonProps = {
   children: ReactNode;
@@ -47,7 +46,6 @@ export function SignOutButton({ children, className }: SignOutButtonProps) {
       await supabase.auth.signOut({ scope: "local" }).catch(() => null);
       await fetch("/api/portal-auth", { method: "DELETE" }).catch(() => null);
     } finally {
-      clearPortalAuthCookieClient();
       clearBrowserAuthCookies();
       clearBrowserAuthStorage();
       window.location.replace("/");

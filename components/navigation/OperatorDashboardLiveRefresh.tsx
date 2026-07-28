@@ -8,6 +8,9 @@ type OperatorDashboardLiveRefreshProps = {
   profileId: string | null;
 };
 
+const REFRESH_DEBOUNCE_MS = 750;
+const MIN_REFRESH_INTERVAL_MS = 10_000;
+
 export function OperatorDashboardLiveRefresh({ profileId }: OperatorDashboardLiveRefreshProps) {
   const router = useRouter();
   const refreshTimerRef = useRef<number | null>(null);
@@ -19,25 +22,39 @@ export function OperatorDashboardLiveRefresh({ profileId }: OperatorDashboardLiv
 
     const supabase = createSupabaseBrowserClient();
     let active = true;
+    let dirty = false;
+    let lastRefreshAt = 0;
 
     const scheduleRefresh = () => {
       if (!active) {
         return;
       }
 
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
+      dirty = true;
+
+      if (document.visibilityState !== "visible" || refreshTimerRef.current !== null) {
+        return;
       }
 
+      const elapsedSinceRefresh = Date.now() - lastRefreshAt;
+      const delay = Math.max(REFRESH_DEBOUNCE_MS, MIN_REFRESH_INTERVAL_MS - elapsedSinceRefresh);
+
       refreshTimerRef.current = window.setTimeout(() => {
-        if (!active) {
+        refreshTimerRef.current = null;
+
+        if (!active || !dirty || document.visibilityState !== "visible") {
           return;
         }
 
+        dirty = false;
+        lastRefreshAt = Date.now();
         router.refresh();
-      }, 250);
+      }, delay);
     };
 
+    // Message rows do not include an operator id, so subscribing to that table
+    // would refresh every operator's dashboard for every platform message.
+    // Scoped conversation and notification changes provide safe refresh signals.
     const channel = supabase
       .channel(`operator-dashboard:${profileId}`)
       .on(
@@ -85,15 +102,6 @@ export function OperatorDashboardLiveRefresh({ profileId }: OperatorDashboardLiv
         {
           event: "*",
           schema: "public",
-          table: "traveler_operator_messages",
-        },
-        scheduleRefresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
           table: "platform_notifications",
           filter: `recipient_profile_id=eq.${profileId}`,
         },
@@ -101,10 +109,20 @@ export function OperatorDashboardLiveRefresh({ profileId }: OperatorDashboardLiv
       )
       .subscribe();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && dirty) {
+        scheduleRefresh();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       active = false;
-      if (refreshTimerRef.current) {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (refreshTimerRef.current !== null) {
         window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
       void supabase.removeChannel(channel);
     };

@@ -232,6 +232,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
     <PageShell variant="admin">
       <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
         <SectionHeader
+          level={1}
           eyebrow="Booking oversight"
           title="Monitor every booking request from one place."
           description="This dedicated admin surface keeps inquiry flow, booking status, and customer communication visible without mixing it into operator tools."

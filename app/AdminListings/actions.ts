@@ -6,7 +6,6 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { requireAdminProfile } from "@/lib/supabase/admin";
 import { recordPlatformEvent } from "@/lib/supabase/analytics";
 import { recordAdminNotifications, recordPlatformNotification } from "@/lib/supabase/notifications";
-import { resolveOperatorProfileId } from "@/lib/supabase/operator-resolution";
 
 function getReturnTo(formData: FormData) {
   const value = String(formData.get("return_to") ?? "").trim();
@@ -40,9 +39,7 @@ export async function updateListingModerationAction(formData: FormData) {
     .select("operator_id,operator_name,title")
     .eq("id", listingId)
     .maybeSingle();
-  const resolvedOperatorId =
-    currentListing?.operator_id ??
-    (await resolveOperatorProfileId(admin, [currentListing?.operator_name, currentListing?.title]).catch(() => null));
+  const resolvedOperatorId = currentListing?.operator_id ?? null;
 
   const patch: { is_active?: boolean; featured?: boolean; status?: "under_review" | "live" | "rejected" } = {};
 
@@ -56,13 +53,17 @@ export async function updateListingModerationAction(formData: FormData) {
   } else if (action === "feature") {
     const { data: current } = await admin
       .from("tour_listings")
-      .select("featured,status")
+      .select("featured,status,is_active")
       .eq("id", listingId)
       .maybeSingle();
 
+    if (!current || current.status !== "live" || !current.is_active) {
+      redirect(buildRedirectUrl(returnTo, { error: "Only live listings can be featured." }));
+    }
+
     patch.featured = !(current?.featured ?? false);
-    patch.is_active = true;
-    patch.status = "live";
+  } else {
+    redirect(buildRedirectUrl(returnTo, { error: "Choose a valid moderation action." }));
   }
 
   const { error } = await admin.from("tour_listings").update(patch).eq("id", listingId);

@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  isConciergeQuotaLedgerId,
+  isConciergeQuotaLedgerTitle,
+} from "@/lib/ai/concierge-hidden";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 const DIRECT_CHAT_PREFIX = "__operator_chat__:";
@@ -74,9 +78,9 @@ export async function getConciergeConversationSummaries(userId: string, limit = 
     .from("concierge_conversations")
     .select("id,title,created_at,updated_at")
     .eq("user_id", userId)
-    .not("title", "like", `${DIRECT_CHAT_PREFIX}%`)
+    .or(`title.is.null,title.not.like.${DIRECT_CHAT_PREFIX}%`)
     .order("updated_at", { ascending: false })
-    .limit(limit);
+    .limit(limit + 1);
 
   if (error) {
     if (isMissingRelationOrSchemaCacheError(error)) {
@@ -86,7 +90,9 @@ export async function getConciergeConversationSummaries(userId: string, limit = 
     throw new Error(error.message);
   }
 
-  const conversations = (data ?? []) as Array<ConciergeConversationRecord>;
+  const conversations = ((data ?? []) as Array<ConciergeConversationRecord>)
+    .filter((conversation) => !isConciergeQuotaLedgerTitle(conversation.title))
+    .slice(0, limit);
 
   const summaries = await Promise.all(
     conversations.map(async (conversation) => {
@@ -133,7 +139,10 @@ export async function getConciergeConversationById(conversationId: string, userI
     throw new Error(error.message);
   }
 
-  return (data ?? null) as ConciergeConversationRecord | null;
+  const conversation = (data ?? null) as ConciergeConversationRecord | null;
+  return conversation && !isConciergeQuotaLedgerTitle(conversation.title)
+    ? conversation
+    : null;
 }
 
 export async function getLatestConciergeConversation(userId: string) {
@@ -142,10 +151,9 @@ export async function getLatestConciergeConversation(userId: string) {
     .from("concierge_conversations")
     .select("id,user_id,title,created_at,updated_at")
     .eq("user_id", userId)
-    .not("title", "like", `${DIRECT_CHAT_PREFIX}%`)
+    .or(`title.is.null,title.not.like.${DIRECT_CHAT_PREFIX}%`)
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(2);
 
   if (error) {
     if (isMissingRelationOrSchemaCacheError(error)) {
@@ -155,10 +163,18 @@ export async function getLatestConciergeConversation(userId: string) {
     throw new Error(error.message);
   }
 
-  return (data ?? null) as ConciergeConversationRecord | null;
+  return (
+    ((data ?? []) as ConciergeConversationRecord[]).find(
+      (conversation) => !isConciergeQuotaLedgerTitle(conversation.title),
+    ) ?? null
+  );
 }
 
 export async function createConciergeConversation(userId: string, title: string | null = null) {
+  if (isConciergeQuotaLedgerTitle(title)) {
+    return null;
+  }
+
   const admin = createSupabaseServiceRoleClient();
   const { data, error } = await admin
     .from("concierge_conversations")
@@ -181,7 +197,30 @@ export async function createConciergeConversation(userId: string, title: string 
 }
 
 export async function deleteConciergeConversation(params: { conversationId: string; userId: string }) {
+  if (isConciergeQuotaLedgerId(params.conversationId, params.userId)) {
+    return false;
+  }
+
   const admin = createSupabaseServiceRoleClient();
+  const { data: ownedConversation, error: lookupError } = await admin
+    .from("concierge_conversations")
+    .select("id,title")
+    .eq("id", params.conversationId)
+    .eq("user_id", params.userId)
+    .maybeSingle();
+
+  if (lookupError) {
+    if (isMissingRelationOrSchemaCacheError(lookupError)) {
+      return false;
+    }
+
+    throw new Error(lookupError.message);
+  }
+
+  if (!ownedConversation || isConciergeQuotaLedgerTitle(ownedConversation.title)) {
+    return false;
+  }
+
   const { error } = await admin
     .from("concierge_conversations")
     .delete()
@@ -226,6 +265,13 @@ export async function updateConciergeConversationTitle(params: {
   userId: string;
   title: string;
 }) {
+  if (
+    isConciergeQuotaLedgerId(params.conversationId, params.userId) ||
+    isConciergeQuotaLedgerTitle(params.title)
+  ) {
+    return;
+  }
+
   const admin = createSupabaseServiceRoleClient();
   const { error } = await admin
     .from("concierge_conversations")

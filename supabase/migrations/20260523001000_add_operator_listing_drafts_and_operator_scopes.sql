@@ -11,19 +11,8 @@ create index if not exists tour_listings_operator_id_created_at_idx
 create index if not exists inquiries_operator_id_created_at_idx
   on public.inquiries (operator_id, created_at desc);
 
-update public.tour_listings as listing
-set operator_id = profile.id
-from public.profiles as profile
-where listing.operator_id is null
-  and profile.role = 'operator'
-  and lower(trim(listing.operator_name)) = lower(trim(profile.full_name));
-
-update public.inquiries as inquiry
-set operator_id = profile.id
-from public.profiles as profile
-where inquiry.operator_id is null
-  and profile.role = 'operator'
-  and lower(trim(inquiry.operator_name)) = lower(trim(profile.full_name));
+-- Legacy display names are not ownership credentials. Existing orphaned rows
+-- remain unassigned until an administrator maps them to an immutable profile ID.
 
 create table if not exists public.operator_listing_drafts (
   id uuid primary key default gen_random_uuid(),

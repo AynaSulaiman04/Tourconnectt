@@ -37,9 +37,10 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/calendar/callback
 
-WIPAY_DEVELOPER_ID=
-WIPAY_BUSINESS_KEY=
-WIPAY_API_BASE_URL=https://wipaycaribbean.com/api
+WIPAY_ACCOUNT_NUMBER=
+WIPAY_API_KEY=
+WIPAY_WEBHOOK_SECRET=
+WIPAY_API_BASE_URL=https://tt.wipayfinancial.com/plugins/payments/request
 WIPAY_ENVIRONMENT=sandbox
 WIPAY_CURRENCY=TTD
 WIPAY_COUNTRY_CODE=TT
@@ -218,19 +219,23 @@ Manual setup checklist:
 
 1. Create or log in to your WiPay merchant account.
 2. Enable sandbox testing first.
-3. Copy your WiPay Developer ID and Business Key into `.env.local`.
+3. Copy your Payments API account number and API key into `WIPAY_ACCOUNT_NUMBER` and `WIPAY_API_KEY`.
 4. Set `WIPAY_ENVIRONMENT=sandbox` while testing.
 5. Keep `WIPAY_CURRENCY=TTD` and `WIPAY_COUNTRY_CODE=TT` unless your WiPay account is configured differently.
 6. Set `WIPAY_API_BASE_URL=https://tt.wipayfinancial.com/plugins/payments/request` for the hosted checkout request endpoint.
-7. Run `npx supabase db push` after pulling the latest migration.
-8. Make sure the app is reachable from the internet when WiPay sends callback redirects. For local testing, use a tunnel such as ngrok or Cloudflare Tunnel and set `NEXT_PUBLIC_APP_URL` to that public HTTPS URL.
-9. Restart `npm run dev` after changing environment variables.
-10. Confirm a booking, start payment from the traveler profile, and verify the row in `public.wipay_payments`.
+7. Register `/api/wipay/webhook` as a Payments API webhook and store its endpoint signing secret in `WIPAY_WEBHOOK_SECRET`.
+8. Run `npx supabase db push` after pulling the latest migration.
+9. Make sure the app is reachable from the internet when WiPay sends callback redirects and webhooks. For local testing, use a tunnel such as ngrok or Cloudflare Tunnel and set `NEXT_PUBLIC_APP_URL` to that public HTTPS URL.
+10. Restart `npm run dev` after changing environment variables.
+11. Confirm a booking, start payment from the traveler profile, and verify the row in `public.wipay_payments`.
+
+Legacy deployments may continue using `WIPAY_DEVELOPER_ID` as the account-number alias and `WIPAY_BUSINESS_KEY` as the API-key alias.
 
 What the app handles automatically:
 
 - Hosted checkout is requested from the server only.
-- The callback response is checked on the server before the payment row is updated.
+- Hosted responses are reconciled from WiPay's query-string redirect and successful responses use the server-only API key for hash verification.
+- Webhooks are verified against the raw request body with the separate endpoint signing secret and a five-minute replay window.
 - Successful payments are written to Supabase and included in revenue totals.
 - Return and cancel flows send the traveler back to `TravellerProfile` for the same inquiry.
 

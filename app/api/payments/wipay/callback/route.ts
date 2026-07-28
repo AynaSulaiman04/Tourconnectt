@@ -4,15 +4,15 @@ import { sendPaidBookingEmailsForInquiry } from "@/lib/email/workflows";
 import {
   calculatePaymentSettlement,
   getWiPayPaymentByOrderId,
-  isSuccessfulWiPayPayment,
   normalizeWiPayCallbackStatus,
   parseWiPayAmount,
-  updateWiPayPaymentByOrderId,
+  transitionWiPayPaymentByOrderId,
   verifyWiPayCallbackHash,
 } from "@/lib/payments/wipay";
+import { getInquiryConfirmation } from "@/lib/supabase/inquiry";
 import { recordPlatformNotification } from "@/lib/supabase/notifications";
+import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { resolveOperatorProfileId } from "@/lib/supabase/operator-resolution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +54,24 @@ function buildTravellerRedirect(request: NextRequest, params: { inquiryId?: stri
   return target;
 }
 
+function redirectToTraveller(
+  request: NextRequest,
+  params: { inquiryId?: string; orderId?: string; payment: string; error?: string },
+) {
+  // A 303 also makes legacy POST responses safe to follow without replaying
+  // the provider payload against the destination page.
+  return NextResponse.redirect(buildTravellerRedirect(request, params), 303);
+}
+
+async function canApplyUnsignedBrowserOutcome(inquiryId: string) {
+  const profileContext = await getOptionalCurrentUserProfile().catch(() => null);
+  if (!profileContext || profileContext.profile.role !== "traveler") {
+    return false;
+  }
+
+  return Boolean(await getInquiryConfirmation(inquiryId, profileContext.profile).catch(() => null));
+}
+
 async function readCallbackPayload(request: NextRequest): Promise<CallbackPayload> {
   if (request.method === "GET") {
     const params = request.nextUrl.searchParams;
@@ -63,7 +81,11 @@ async function readCallbackPayload(request: NextRequest): Promise<CallbackPayloa
       transaction_id: getString(params.get("transaction_id")) || null,
       total: getString(params.get("total")) || null,
       currency: getString(params.get("currency")) || null,
-      message: getString(params.get("message")) || null,
+      message:
+        getString(params.get("message")) ||
+        getString(params.get("reasonDescription")) ||
+        getString(params.get("reason")) ||
+        null,
       hash: getString(params.get("hash")) || null,
       date: getString(params.get("date")) || null,
       card: getString(params.get("card")) || null,
@@ -81,7 +103,11 @@ async function readCallbackPayload(request: NextRequest): Promise<CallbackPayloa
       transaction_id: getString(body?.transaction_id) || null,
       total: getString(body?.total) || null,
       currency: getString(body?.currency) || null,
-      message: getString(body?.message) || null,
+      message:
+        getString(body?.message) ||
+        getString(body?.reasonDescription) ||
+        getString(body?.reason) ||
+        null,
       hash: getString(body?.hash) || null,
       date: getString(body?.date) || null,
       card: getString(body?.card) || null,
@@ -121,7 +147,11 @@ async function readCallbackPayload(request: NextRequest): Promise<CallbackPayloa
     transaction_id: getString(formData.get("transaction_id")) || null,
     total: getString(formData.get("total")) || null,
     currency: getString(formData.get("currency")) || null,
-    message: getString(formData.get("message")) || null,
+    message:
+      getString(formData.get("message")) ||
+      getString(formData.get("reasonDescription")) ||
+      getString(formData.get("reason")) ||
+      null,
     hash: getString(formData.get("hash")) || null,
     date: getString(formData.get("date")) || null,
     card: getString(formData.get("card")) || null,
@@ -154,82 +184,142 @@ async function loadPaymentContext(inquiryId: string) {
 }
 
 export async function GET(request: NextRequest) {
-  return POST(request);
+  return handleProviderResponse(request);
 }
 
-export async function POST(request: NextRequest) {
+async function handleProviderResponse(request: NextRequest) {
   try {
     const payload = await readCallbackPayload(request);
     const orderId = payload.order_id;
 
     if (!orderId) {
-      return NextResponse.redirect(buildTravellerRedirect(request, { payment: "failed", error: "Missing WiPay order id." }));
+      return redirectToTraveller(request, { payment: "failed", error: "Missing WiPay order id." });
     }
 
     const existingPayment = await getWiPayPaymentByOrderId(orderId);
     if (!existingPayment) {
-      return NextResponse.redirect(
-        buildTravellerRedirect(request, { payment: "failed", orderId, error: "We could not match that WiPay payment." }),
-      );
+      return redirectToTraveller(request, {
+        payment: "failed",
+        orderId,
+        error: "We could not match that WiPay payment.",
+      });
     }
 
     const normalizedStatus = normalizeWiPayCallbackStatus(payload.status);
-    const amount = parseWiPayAmount(payload.total);
-    const expectedAmount = parseWiPayAmount(existingPayment.amount);
-    const signatureIsValid =
-      normalizedStatus !== "paid" || verifyWiPayCallbackHash(payload, payload.hash) || !payload.hash;
-    // WiPay can return a fee-inclusive total in the callback, while the stored
-    // inquiry/payment amount represents the quoted base amount.
-    const amountMatches = !amount || !expectedAmount || amount >= expectedAmount;
-
-    const now = new Date().toISOString();
-    const inquiryContext = await loadPaymentContext(existingPayment.inquiry_id);
-
-    if (normalizedStatus === "paid") {
-      if (!signatureIsValid || !amountMatches) {
-        await updateWiPayPaymentByOrderId(orderId, {
-          status: "failed",
-          failed_at: now,
-          response_payload: {
-            ...(existingPayment.response_payload ?? {}),
-            ...payload,
-            settlement: calculatePaymentSettlement(payload.total ?? existingPayment.amount),
-            verification_failed: true,
-          },
-          transaction_id: payload.transaction_id ?? existingPayment.transaction_id,
-        });
-
-        revalidatePath("/TravellerProfile");
-        revalidatePath("/OperatorDashboard");
-        revalidatePath("/AdminDashboard");
-        revalidatePath("/AdminBookings");
-        revalidatePath("/ConfirmationPage");
-
-        return NextResponse.redirect(
-          buildTravellerRedirect(request, {
-            inquiryId: existingPayment.inquiry_id,
-            orderId,
-            payment: "failed",
-            error: "WiPay payment verification failed.",
-          }),
-        );
-      }
-
-      await updateWiPayPaymentByOrderId(orderId, {
-        status: "paid",
-        transaction_id: payload.transaction_id ?? existingPayment.transaction_id,
-        paid_at: now,
-        cancelled_at: null,
-        failed_at: null,
-        response_payload: {
-          ...(existingPayment.response_payload ?? {}),
-          ...payload,
-          settlement: calculatePaymentSettlement(payload.total ?? existingPayment.amount),
-          total: payload.total ?? existingPayment.amount,
-        },
+    if (!normalizedStatus) {
+      console.warn("Rejected WiPay callback with unsupported status", {
+        orderId,
+        providerStatus: payload.status || null,
       });
 
-      if (!isSuccessfulWiPayPayment(existingPayment.status)) {
+      return redirectToTraveller(request, {
+        inquiryId: existingPayment.inquiry_id,
+        orderId,
+        payment: "failed",
+        error: "WiPay returned an unsupported payment status.",
+      });
+    }
+
+    const amount = parseWiPayAmount(payload.total);
+    const expectedAmount = parseWiPayAmount(existingPayment.amount);
+    const storedTransactionId = existingPayment.transaction_id?.trim() || null;
+    const transactionIdConflicts =
+      Boolean(storedTransactionId) &&
+      payload.transaction_id !== storedTransactionId;
+    // WiPay can return a fee-inclusive total in the callback, while the stored
+    // inquiry/payment amount represents the quoted base amount.
+    const amountMatches =
+      amount !== null &&
+      expectedAmount !== null &&
+      Number.parseFloat(amount) >= Number.parseFloat(expectedAmount);
+    const currencyMatches =
+      !payload.currency ||
+      payload.currency.toUpperCase() === existingPayment.currency.toUpperCase();
+
+    if (!payload.transaction_id || transactionIdConflicts) {
+      console.warn("Rejected WiPay response with mismatched transaction id", {
+        orderId,
+        status: normalizedStatus,
+        transactionIdPresent: Boolean(payload.transaction_id),
+      });
+
+      return redirectToTraveller(request, {
+        inquiryId: existingPayment.inquiry_id,
+        orderId,
+        payment: "failed",
+        error: "WiPay payment verification failed.",
+      });
+    }
+
+    const successfulHashIsValid =
+      normalizedStatus === "paid" &&
+      expectedAmount !== null &&
+      verifyWiPayCallbackHash(payload, expectedAmount);
+
+    if (
+      normalizedStatus === "paid" &&
+      (!storedTransactionId ||
+        payload.transaction_id !== storedTransactionId ||
+        !amountMatches ||
+        !currencyMatches ||
+        !successfulHashIsValid)
+    ) {
+      console.warn("Rejected unverified WiPay paid callback", {
+        orderId,
+        storedTransactionIdPresent: Boolean(storedTransactionId),
+        amountMatches,
+        currencyMatches,
+        hashPresent: Boolean(payload.hash),
+      });
+
+      return redirectToTraveller(request, {
+        inquiryId: existingPayment.inquiry_id,
+        orderId,
+        payment: "failed",
+        error: "WiPay payment verification failed.",
+      });
+    }
+
+    // WiPay signs successful hosted returns, but its browser failure/cancel
+    // outcomes are not cryptographically authenticated. Limit those state
+    // changes to the active traveler who owns the underlying inquiry.
+    if (
+      normalizedStatus !== "paid" &&
+      !(await canApplyUnsignedBrowserOutcome(existingPayment.inquiry_id))
+    ) {
+      console.warn("Ignored unsigned WiPay browser outcome without booking ownership", {
+        orderId,
+        status: normalizedStatus,
+      });
+
+      return redirectToTraveller(request, {
+        inquiryId: existingPayment.inquiry_id,
+        orderId,
+        payment: "pending",
+        error: "Sign in to your traveler account to confirm this WiPay outcome.",
+      });
+    }
+
+    const transition = await transitionWiPayPaymentByOrderId({
+      orderId,
+      status: normalizedStatus,
+      // An unsigned browser failure may report a transaction, but it must
+      // never bind a new provider transaction to an order. The signed webhook
+      // remains the authority when checkout did not return an identifier.
+      transactionId: storedTransactionId ? payload.transaction_id : null,
+      responsePayload: {
+        ...payload,
+        settlement: calculatePaymentSettlement(existingPayment.amount),
+        original_total: expectedAmount,
+        total: payload.total ?? existingPayment.amount,
+      },
+      knownPayment: existingPayment,
+    });
+
+    if (transition.paidClaimed) {
+      const inquiryContext = await loadPaymentContext(transition.payment.inquiry_id);
+      const paidAt = transition.payment.paid_at ?? new Date().toISOString();
+      try {
         const travelerName = inquiryContext?.traveler_name ?? "Traveler";
         const travelerBody = `Payment for ${travelerName}'s booking has been confirmed.`;
         if (inquiryContext?.user_id) {
@@ -238,22 +328,18 @@ export async function POST(request: NextRequest) {
             kind: "payment_confirmed",
             title: "Payment confirmed",
             body: travelerBody,
-            href: `/TravellerProfile?inquiryId=${existingPayment.inquiry_id}&payment=paid`,
+            href: `/TravellerProfile?inquiryId=${transition.payment.inquiry_id}&payment=paid`,
             entityType: "payment",
-            entityId: existingPayment.id,
+            entityId: transition.payment.id,
             metadata: {
               orderId,
-              inquiryId: existingPayment.inquiry_id,
+              inquiryId: transition.payment.inquiry_id,
               status: "paid",
             },
           });
         }
 
-        const operatorId =
-          inquiryContext?.operator_id ??
-          (await resolveOperatorProfileId(createSupabaseServiceRoleClient(), [inquiryContext?.operator_name, inquiryContext?.destination]).catch(
-            () => null,
-          ));
+        const operatorId = inquiryContext?.operator_id ?? null;
 
         if (operatorId) {
           await recordPlatformNotification({
@@ -263,146 +349,79 @@ export async function POST(request: NextRequest) {
             body: `A traveler payment has been completed for ${inquiryContext?.destination_country ?? inquiryContext?.destination ?? "your booking"}.`,
             href: `/OperatorDashboard?paymentStatus=paid`,
             entityType: "payment",
-            entityId: existingPayment.id,
+            entityId: transition.payment.id,
             metadata: {
               orderId,
-              inquiryId: existingPayment.inquiry_id,
+              inquiryId: transition.payment.inquiry_id,
               status: "paid",
             },
           });
         }
-
-        const emailResult = await sendPaidBookingEmailsForInquiry({
-          inquiryId: existingPayment.inquiry_id,
+      } catch (error) {
+        console.error("WiPay callback paid notification warning", {
+          inquiryId: transition.payment.inquiry_id,
           orderId,
-          amount: payload.total ?? existingPayment.amount,
-          paidAt: now,
-        }).catch((error) => ({
-          ok: false as const,
-          error: error instanceof Error ? error.message : "Unable to send paid booking emails.",
-        }));
-
-        if (!emailResult.ok) {
-          console.error("WiPay callback paid email warning", {
-            inquiryId: existingPayment.inquiry_id,
-            orderId,
-            error: "error" in emailResult ? emailResult.error : "Paid booking emails were not sent.",
-          });
-        }
+          error: error instanceof Error ? error.message : "Paid notifications were not recorded.",
+        });
       }
 
-      revalidatePath("/TravellerProfile");
-      revalidatePath("/OperatorDashboard");
-      revalidatePath("/AdminDashboard");
-      revalidatePath("/AdminBookings");
-      revalidatePath("/ConfirmationPage");
-
-      return NextResponse.redirect(
-        buildTravellerRedirect(request, {
-          inquiryId: existingPayment.inquiry_id,
-          orderId,
-          payment: "paid",
-        }),
-      );
-    }
-
-    if (normalizedStatus === "failed") {
-      await updateWiPayPaymentByOrderId(orderId, {
-        status: "failed",
-        transaction_id: payload.transaction_id ?? existingPayment.transaction_id,
-        failed_at: now,
-        response_payload: {
-          ...(existingPayment.response_payload ?? {}),
-          ...payload,
-          settlement: calculatePaymentSettlement(payload.total ?? existingPayment.amount),
-        },
-      });
-
-      revalidatePath("/TravellerProfile");
-      revalidatePath("/OperatorDashboard");
-      revalidatePath("/AdminDashboard");
-      revalidatePath("/AdminBookings");
-      revalidatePath("/ConfirmationPage");
-
-      return NextResponse.redirect(
-        buildTravellerRedirect(request, {
-          inquiryId: existingPayment.inquiry_id,
-          orderId,
-          payment: "failed",
-          error: payload.message ?? "WiPay payment failed.",
-        }),
-      );
-    }
-
-    if (normalizedStatus === "cancelled") {
-      await updateWiPayPaymentByOrderId(orderId, {
-        status: "cancelled",
-        transaction_id: payload.transaction_id ?? existingPayment.transaction_id,
-        cancelled_at: now,
-        response_payload: {
-          ...(existingPayment.response_payload ?? {}),
-          ...payload,
-          settlement: calculatePaymentSettlement(payload.total ?? existingPayment.amount),
-        },
-      });
-
-      revalidatePath("/TravellerProfile");
-      revalidatePath("/OperatorDashboard");
-      revalidatePath("/AdminDashboard");
-      revalidatePath("/AdminBookings");
-      revalidatePath("/ConfirmationPage");
-
-      return NextResponse.redirect(
-        buildTravellerRedirect(request, {
-          inquiryId: existingPayment.inquiry_id,
-          orderId,
-          payment: "cancelled",
-        }),
-      );
-    }
-
-    if (normalizedStatus === "refunded") {
-      await updateWiPayPaymentByOrderId(orderId, {
-        status: "refunded",
-        transaction_id: payload.transaction_id ?? existingPayment.transaction_id,
-        refunded_at: now,
-        response_payload: {
-          ...(existingPayment.response_payload ?? {}),
-          ...payload,
-          settlement: calculatePaymentSettlement(payload.total ?? existingPayment.amount),
-        },
-      });
-
-      revalidatePath("/TravellerProfile");
-      revalidatePath("/OperatorDashboard");
-      revalidatePath("/AdminDashboard");
-      revalidatePath("/AdminBookings");
-      revalidatePath("/ConfirmationPage");
-
-      return NextResponse.redirect(
-        buildTravellerRedirect(request, {
-          inquiryId: existingPayment.inquiry_id,
-          orderId,
-          payment: "refunded",
-        }),
-      );
-    }
-
-    return NextResponse.redirect(
-      buildTravellerRedirect(request, {
-        inquiryId: existingPayment.inquiry_id,
+      const emailResult = await sendPaidBookingEmailsForInquiry({
+        inquiryId: transition.payment.inquiry_id,
         orderId,
-        payment: "pending",
-        error: payload.message ?? "WiPay payment is still pending.",
-      }),
-    );
+        amount: transition.payment.amount,
+        paidAt,
+      }).catch((error) => ({
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Unable to send paid booking emails.",
+      }));
+
+      if (!emailResult.ok) {
+        console.error("WiPay callback paid email warning", {
+          inquiryId: transition.payment.inquiry_id,
+          orderId,
+          error: "error" in emailResult ? emailResult.error : "Paid booking emails were not sent.",
+        });
+      }
+    }
+
+    if (transition.transitionApplied) {
+      revalidatePath("/TravellerProfile");
+      revalidatePath("/OperatorDashboard");
+      revalidatePath("/AdminDashboard");
+      revalidatePath("/AdminBookings");
+      revalidatePath("/ConfirmationPage");
+    }
+
+    const browserStatus =
+      transition.currentStatus === "paid"
+        ? "paid"
+        : transition.currentStatus === "refunded"
+          ? "refunded"
+          : transition.currentStatus === "cancelled"
+            ? "cancelled"
+            : transition.currentStatus === "failed"
+              ? "failed"
+              : "pending";
+
+    return redirectToTraveller(request, {
+      inquiryId: transition.payment.inquiry_id,
+      orderId,
+      payment: browserStatus,
+      ...(browserStatus === "failed"
+        ? { error: payload.message ?? "WiPay payment failed." }
+        : browserStatus === "pending"
+          ? { error: payload.message ?? "WiPay payment is still pending." }
+          : {}),
+    });
   } catch (error) {
     console.error("WiPay callback error", error);
-    return NextResponse.redirect(
-      buildTravellerRedirect(request, {
-        payment: "failed",
-        error: "Unable to process the WiPay payment response.",
-      }),
-    );
+    return redirectToTraveller(request, {
+      payment: "failed",
+      error: "Unable to process the WiPay payment response.",
+    });
   }
+}
+
+export async function POST(request: NextRequest) {
+  return handleProviderResponse(request);
 }

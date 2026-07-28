@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/Button";
 
 type InformationPageProps = {
   eyebrow: string;
@@ -23,10 +23,10 @@ export function InformationPage({
           <p className="section-eyebrow">{eyebrow}</p>
           <h1 className="section-title">{title}</h1>
           <p className="section-copy mt-4 whitespace-pre-line">{body}</p>
-          <div className="actions">
-            <Link className="button primary" href={actionHref}>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button href={actionHref} variant="primary">
               {actionLabel}
-            </Link>
+            </Button>
           </div>
         </section>
       </main>

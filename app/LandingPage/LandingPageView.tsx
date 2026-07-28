@@ -176,8 +176,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
                       <Image
                         fill
                         alt={listing.title}
-                        quality={100}
-                        unoptimized
+                        unoptimized={listing.imageUrl.startsWith("data:") || listing.imageUrl.startsWith("blob:")}
                         sizes="(max-width: 1024px) 100vw, 33vw"
                         src={listing.imageUrl}
                       />
@@ -254,7 +253,14 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
               <p className="lp-quote">“{item.text}”</p>
               <div className="lp-person">
                 {item.avatarUrl ? (
-                  <Image className="lp-avatar" alt={item.name} width={40} height={40} src={item.avatarUrl} unoptimized />
+                  <Image
+                    className="lp-avatar"
+                    alt={item.name}
+                    width={40}
+                    height={40}
+                    src={item.avatarUrl}
+                    unoptimized={item.avatarUrl.startsWith("data:") || item.avatarUrl.startsWith("blob:")}
+                  />
                 ) : (
                   <div className="lp-avatar" aria-hidden="true">
                     {item.name.charAt(0)}

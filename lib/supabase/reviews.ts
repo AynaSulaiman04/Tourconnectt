@@ -36,38 +36,6 @@ function normalizeText(value: string | null | undefined) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-async function resolveUniqueOperatorProfileByName(
-  admin: ReturnType<typeof createSupabaseServiceRoleClient>,
-  operatorName: string | null | undefined,
-) {
-  const name = normalizeText(operatorName);
-
-  if (!name) {
-    return null;
-  }
-
-  const { data, error } = await admin
-    .from("profiles")
-    .select("id,email,full_name,role")
-    .eq("role", "operator")
-    .eq("full_name", name);
-
-  if (error) {
-    if (isMissingRelationOrSchemaError(error)) {
-      return null;
-    }
-
-    throw new Error(error.message);
-  }
-
-  const operators = (data ?? []).filter(
-    (profile): profile is { id: string; email: string | null; full_name: string; role: "operator" } =>
-      profile.role === "operator",
-  );
-
-  return operators.length === 1 ? operators[0] : null;
-}
-
 export async function loadTravelerReviewMap(travelerId: string, inquiryIds: string[]) {
   if (!inquiryIds.length) {
     return new Map<string, TravelerReviewRecord>();
@@ -157,9 +125,6 @@ export async function submitTravelerReview(params: {
 
     if (listing?.operator_id) {
       listingOperatorId = listing.operator_id;
-    } else if (!listingOperatorId) {
-      const operator = await resolveUniqueOperatorProfileByName(admin, listing?.operator_name ?? inquiry.operator_name);
-      listingOperatorId = operator?.id ?? null;
     }
   }
 

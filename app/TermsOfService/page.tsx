@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/Button";
 
 export default function TermsOfServicePage() {
   return (
@@ -14,10 +14,10 @@ export default function TermsOfServicePage() {
           <p className="section-copy">
             You agree to keep your credentials secure, provide accurate profile information, and use the service in accordance with applicable laws and platform policies.
           </p>
-          <div className="actions">
-            <Link className="button primary" href="/">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button href="/" variant="primary">
               Back home
-            </Link>
+            </Button>
           </div>
         </section>
       </main>

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
-import { serializePortalAuthCookie } from "@/lib/supabase/portal-auth";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { getRoleDashboardRoute } from "@/lib/supabase/role-route";
 
 function getRequiredEnv(name: string) {
   const value = process.env[name];
@@ -12,10 +13,24 @@ function getRequiredEnv(name: string) {
   return value;
 }
 
+function redirectWithSessionCookies(target: URL, sessionResponse: NextResponse) {
+  const redirectResponse = NextResponse.redirect(target);
+
+  for (const cookie of sessionResponse.cookies.getAll()) {
+    redirectResponse.cookies.set(cookie);
+  }
+
+  return redirectResponse;
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const nextPath = url.searchParams.get("next") ?? "/TravellerProfile";
+  const requestedNextPath = url.searchParams.get("next") ?? "";
+  const nextPath =
+    requestedNextPath.startsWith("/") && !requestedNextPath.startsWith("//")
+      ? requestedNextPath
+      : "/TravellerProfile";
   const response = NextResponse.redirect(new URL(nextPath, request.url));
 
   if (!code) {
@@ -47,35 +62,52 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(fallbackUrl);
   }
 
-  const { data: userData } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const authUser = userData.user;
 
-  if (userData.user) {
-    const fullName =
-      typeof userData.user.user_metadata?.full_name === "string" &&
-      userData.user.user_metadata.full_name.trim().length > 0
-        ? userData.user.user_metadata.full_name.trim()
-        : (userData.user.email ?? "Traveler").split("@")[0];
-
-    response.cookies.set(
-      "tt-connect-portal-auth",
-      serializePortalAuthCookie({
-        id: userData.user.id,
-        email: userData.user.email ?? "",
-        full_name: fullName,
-        role:
-          userData.user.user_metadata?.role === "operator" ||
-          userData.user.user_metadata?.role === "admin"
-            ? userData.user.user_metadata.role
-            : "traveler",
-      }),
-      {
-        httpOnly: false,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    );
+  if (userError || !authUser) {
+    const failedUrl = new URL("/LoginPage", request.url);
+    failedUrl.searchParams.set("auth", "error");
+    return redirectWithSessionCookies(failedUrl, response);
   }
 
-  return response;
+  const admin = createSupabaseServiceRoleClient();
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("role,is_active,status_reason")
+    .eq("id", authUser.id)
+    .maybeSingle();
+
+  const hasValidRole =
+    profile?.role === "traveler" ||
+    profile?.role === "operator" ||
+    profile?.role === "admin";
+
+  if (profileError || !profile || !hasValidRole) {
+    console.error("Unable to verify OAuth profile", {
+      userId: authUser.id,
+      code: profileError?.code,
+    });
+    await supabase.auth.signOut();
+    const failedUrl = new URL("/LoginPage", request.url);
+    failedUrl.searchParams.set("auth", "error");
+    return redirectWithSessionCookies(failedUrl, response);
+  }
+
+  if (!profile.is_active) {
+    await supabase.auth.signOut();
+    const inactiveUrl = new URL("/LoginPage", request.url);
+    inactiveUrl.searchParams.set("auth", "inactive");
+    if (profile.status_reason) {
+      inactiveUrl.searchParams.set("reason", profile.status_reason);
+    }
+    return redirectWithSessionCookies(inactiveUrl, response);
+  }
+
+  const destination =
+    nextPath === "/LoginPage?mode=recovery"
+      ? nextPath
+      : getRoleDashboardRoute(profile.role);
+
+  return redirectWithSessionCookies(new URL(destination, request.url), response);
 }

@@ -59,9 +59,12 @@ export async function updateUserAccessAction(formData: FormData) {
   }
 
   const nextIsActive = formData.get("is_active");
+  const normalizedIsActive =
+    nextIsActive === null
+      ? null
+      : !["false", "0", ""].includes(String(nextIsActive).trim().toLowerCase());
   if (!accountStatusValue && nextIsActive !== null) {
-    const normalized = String(nextIsActive).trim().toLowerCase();
-    patch.is_active = normalized !== "false" && normalized !== "0" && normalized !== "";
+    patch.is_active = normalizedIsActive ?? false;
     patch.status_reason = patch.is_active ? null : "Suspended from admin panel";
   }
 
@@ -109,7 +112,7 @@ export async function updateUserAccessAction(formData: FormData) {
             : "User placed under review"
       : nextIsActive === null
         ? "User profile updated"
-        : nextIsActive
+        : normalizedIsActive
           ? "User reactivated"
           : "User suspended",
     body:
@@ -123,7 +126,7 @@ export async function updateUserAccessAction(formData: FormData) {
               : "An account was placed under review."
         : nextIsActive === null
           ? "A platform profile was updated."
-          : nextIsActive
+          : normalizedIsActive
             ? "A suspended account was reactivated."
             : "An account was suspended.",
     href: `/AdminUsers?user=${targetId}`,
@@ -155,7 +158,7 @@ export async function updateUserAccessAction(formData: FormData) {
                 : "Account under review"
           : nextIsActive === null
             ? "Profile updated"
-            : nextIsActive
+            : normalizedIsActive
               ? "Account reactivated"
               : "Account suspended",
       body:
@@ -169,7 +172,7 @@ export async function updateUserAccessAction(formData: FormData) {
                 : "Your account is under review."
           : nextIsActive === null
             ? "Your profile was updated by an admin."
-            : nextIsActive
+            : normalizedIsActive
               ? "Your account is active again."
               : "Your account has been suspended by an admin.",
       href: getRoleDashboardRoute((targetProfile.role as string | null | undefined) ?? "traveler"),

@@ -56,11 +56,9 @@ export function HeroCarousel({ slides, trustSummary }: HeroCarouselProps) {
             <Image
               alt={slide.title}
               className="hero-img"
-              loading={index === 0 ? "eager" : "lazy"}
-              priority={index === 0}
+              preload={index === 0}
               fill
-              quality={100}
-              unoptimized
+              unoptimized={slide.imageUrl.startsWith("data:") || slide.imageUrl.startsWith("blob:")}
               sizes="100vw"
               src={slide.imageUrl}
             />

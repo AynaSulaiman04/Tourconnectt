@@ -245,6 +245,8 @@ export function ListingEditor({
   async function saveListing(mode: "save" | "publish") {
     setSaving(true);
     setNotice(null);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
 
     try {
       const formData = new FormData();
@@ -276,7 +278,6 @@ export function ListingEditor({
 
       if (imagePreview.startsWith("data:")) {
         formData.set("image_base64", imagePreview);
-        formData.set("image_url", imagePreview);
       } else if (imageCleared) {
         formData.set("clear_image", "1");
       } else if (initialDraft?.image_base64 && !imagePreview) {
@@ -290,6 +291,7 @@ export function ListingEditor({
       const response = await fetch("/api/operator/listings", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
 
       const result = (await response.json()) as {
@@ -352,14 +354,20 @@ export function ListingEditor({
       }
 
       return true;
-    } catch {
+    } catch (error) {
       setNotice({
         type: "error",
-        message: "We could not save this listing. Please try again.",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "Saving took too long. Check your connection and try again."
+            : error instanceof Error && error.message
+              ? error.message
+              : "We could not save this listing. Please try again.",
       });
 
       return false;
     } finally {
+      window.clearTimeout(timeoutId);
       setSaving(false);
     }
   }
@@ -438,7 +446,7 @@ export function ListingEditor({
             )}
 
             <div className="mt-auto pt-8 flex flex-col sm:flex-row justify-between gap-4 items-center border-t border-outline-variant/20">
-              <Link className="btn-ghost btn-sm" href="/OperatorDashboard">
+              <Link className="btn-ghost btn-sm" href="/OperatorListings">
                 Back to Listings
               </Link>
 
@@ -481,7 +489,7 @@ export function ListingEditor({
             <div className="glass-panel p-gutter">
               <h3 className="font-label-caps text-primary mb-3">Curation Tip</h3>
               <p className="text-body-md text-on-surface-variant font-light italic">
-                &ldquo;Use evocative language that describes the light, stillness, exclusivity, and access provided.&rdquo;
+                &ldquo;Describe the local people, culture, landscape, access, and distinctive value of the experience.&rdquo;
               </p>
             </div>
 
@@ -525,7 +533,6 @@ export function ListingEditor({
                   fill
                   alt="Listing preview"
                   className="object-cover"
-                  quality={100}
                   unoptimized={heroImage.startsWith("data:")}
                   sizes="(max-width: 768px) 100vw, 33vw"
                   src={heroImage}
@@ -570,7 +577,7 @@ function CoreNarrativeSection({
           <FieldLabel label="Experience Title" />
           <input
             className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 text-3xl px-0 py-3 placeholder:text-on-surface-variant"
-            placeholder="e.g. Whispering Sands Sunset Retreat"
+            placeholder="e.g. Tobago Reef and Heritage Escape"
             type="text"
             value={formState.title}
             onChange={(event) => onChange("title", event.target.value)}
@@ -626,7 +633,7 @@ function CoreNarrativeSection({
             <FieldLabel label="Primary Category" />
             <input
               className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 placeholder:text-on-surface-variant"
-              placeholder="e.g. Desert Expedition"
+              placeholder="e.g. Rainforest and Waterfall Adventure"
               type="text"
               value={formState.category}
               onChange={(event) => onChange("category", event.target.value)}
@@ -653,6 +660,9 @@ function CoreNarrativeSection({
             <input
               className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 placeholder:text-on-surface-variant"
               placeholder="e.g. 8"
+              max={100000}
+              min={1}
+              step={1}
               type="number"
               value={formState.capacity}
               onChange={(event) => onChange("capacity", event.target.value)}
@@ -724,7 +734,6 @@ function VisualGallerySection({
                 fill
                 alt="Hero cover preview"
                 className="object-cover opacity-80"
-                quality={100}
                 sizes="(max-width: 768px) 100vw, 66vw"
                 src={imagePreview}
               />

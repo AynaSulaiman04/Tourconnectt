@@ -59,7 +59,14 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
   return (
     <PageShell variant="admin">
       <main className="px-margin-mobile md:px-margin-desktop py-8 pb-10">
+        <style>{`
+          .admin-settings-toggle:focus-visible {
+            outline: 2px solid var(--secondary);
+            outline-offset: 4px;
+          }
+        `}</style>
         <SectionHeader
+          level={1}
           eyebrow="Admin settings"
           title="Configure the administrator workspace."
           description="Manage identity, access, moderation rules, and alert routing from one clean admin control surface."
@@ -119,11 +126,16 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
 
                   <form action={updateAdminProfileAction} className="mt-5 grid gap-3">
                     <div>
-                      <div className="label-caps text-secondary mb-1">Name</div>
+                      <label className="label-caps text-secondary mb-1 block" htmlFor="admin-full-name">
+                        Name
+                      </label>
                       <input
-                        className="w-full rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
+                        autoComplete="name"
+                        className="tc-filter-input"
                         defaultValue={workspace.profile.full_name}
+                        id="admin-full-name"
                         name="full_name"
+                        required
                         type="text"
                       />
                     </div>
@@ -174,6 +186,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                       min={1}
                       max={168}
                       name="moderation_window_hours"
+                      required
                       type="number"
                     />
                   </label>
@@ -200,6 +213,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                     >
                       <span className="font-body-md text-on-background">{label}</span>
                       <input
+                        className="admin-settings-toggle"
                         defaultChecked={Boolean(enabled)}
                         name={String(key)}
                         type="checkbox"
@@ -211,14 +225,11 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                 </div>
 
                 <div className="tc-filter-actions">
-                  <Button href="/AdminAnalytics" variant="outline" className="tc-filter-pill">
-                    Feature Controls
-                  </Button>
                   <Button href="/AdminListings" variant="outline" className="tc-filter-pill">
                     Review Listings
                   </Button>
                   <Button type="submit" variant="primary" className="tc-filter-primary">
-                    Save Policy
+                    Save Policy &amp; Alerts
                   </Button>
                 </div>
               </form>
@@ -277,35 +288,41 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                         className="flex items-center justify-between gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
                       >
                         <div className="font-body-md text-on-background">{item}</div>
-                        <form action={toggleAdminWorkspaceAlertAction}>
-                          <input
-                            name="setting_name"
-                            type="hidden"
-                            value={
-                              item === "Critical approvals"
-                                ? "critical_approvals_enabled"
-                                : item === "Listing rejects"
-                                  ? "listing_rejects_enabled"
-                                  : item === "Booking escalations"
-                                    ? "booking_escalations_enabled"
-                                    : "system_alerts_enabled"
-                            }
-                          />
-                          <input name="next_value" type="hidden" value={enabled ? "false" : "true"} />
-                          <Button type="submit" variant={enabled ? "primary" : "outline"}>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <Badge tone={enabled ? "accent" : "soft"}>
                             {enabled ? "Enabled" : "Disabled"}
-                          </Button>
-                        </form>
+                          </Badge>
+                          <form action={toggleAdminWorkspaceAlertAction}>
+                            <input
+                              name="setting_name"
+                              type="hidden"
+                              value={
+                                item === "Critical approvals"
+                                  ? "critical_approvals_enabled"
+                                  : item === "Listing rejects"
+                                    ? "listing_rejects_enabled"
+                                    : item === "Booking escalations"
+                                      ? "booking_escalations_enabled"
+                                      : "system_alerts_enabled"
+                              }
+                            />
+                            <input name="next_value" type="hidden" value={enabled ? "false" : "true"} />
+                            <Button
+                              aria-label={`${enabled ? "Disable" : "Enable"} ${String(item).toLowerCase()} alerts`}
+                              type="submit"
+                              variant={enabled ? "outline" : "primary"}
+                            >
+                              {enabled ? "Turn off" : "Turn on"}
+                            </Button>
+                          </form>
+                        </div>
                       </div>
                     ))}
                   </div>
 
                   <div className="mt-5 admin-action-group">
                     <Button href="/AdminAnalytics" variant="outline">
-                      Audit Log
-                    </Button>
-                    <Button href="/AdminDashboard" variant="primary">
-                      Save Changes
+                      View Platform Analytics
                     </Button>
                   </div>
                 </div>
@@ -348,11 +365,13 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                         key={image.path}
                         className="overflow-hidden rounded-[24px] border border-outline-variant/20 bg-surface-container-low/70"
                       >
-                        <div className="aspect-[4/3] w-full overflow-hidden bg-surface-container-low">
-                          <img
+                        <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-container-low">
+                          <Image
                             alt={image.name}
                             className="h-full w-full object-cover"
+                            fill
                             loading="lazy"
+                            sizes="(min-width: 1280px) 20vw, (min-width: 640px) 40vw, 100vw"
                             src={image.publicUrl}
                           />
                         </div>

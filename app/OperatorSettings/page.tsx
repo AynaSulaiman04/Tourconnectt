@@ -41,6 +41,28 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
     { label: "Customer records", value: settings.customer_records },
     { label: "Communication mode", value: settings.communication_mode },
   ];
+  const notificationPreferences = [
+    {
+      name: "inquiry_received_enabled",
+      label: "Inquiry received",
+      enabled: settings.inquiry_received_enabled,
+    },
+    {
+      name: "booking_approved_enabled",
+      label: "Booking approved",
+      enabled: settings.booking_approved_enabled,
+    },
+    {
+      name: "guest_message_enabled",
+      label: "Guest message",
+      enabled: settings.guest_message_enabled,
+    },
+    {
+      name: "customer_note_enabled",
+      label: "Customer note",
+      enabled: settings.customer_note_enabled,
+    },
+  ];
 
   const operatorSessions = [
     {
@@ -129,6 +151,12 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
             border-bottom-color: var(--secondary);
           }
 
+          .operator-settings-form select:focus-visible,
+          .operator-notification-toggle:focus-visible {
+            outline: 2px solid var(--secondary);
+            outline-offset: 3px;
+          }
+
           .operator-settings-form label {
             display: block;
             margin-bottom: 8px;
@@ -143,26 +171,29 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
         <div className="section-shell">
           <div className="flex flex-col gap-3">
             <p className="label-caps text-secondary">Operator settings</p>
-            <h2 className="font-display text-[48px] leading-14 tracking-[-0.02em] font-light text-on-background">
+            <h1 className="font-display text-[48px] leading-14 tracking-[-0.02em] font-light text-on-background">
               Configure the operator workspace.
-            </h2>
+            </h1>
             <p className="max-w-[720px] text-[18px] leading-7 font-light text-on-surface-variant">
               Manage operator identity, customer communication preferences, inquiry handling, and availability routing without touching traveler or admin settings.
             </p>
           </div>
         </div>
 
-        <section className="section-shell grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-          <div className="lg:col-span-7 space-y-gutter">
-            <form action={updateOperatorSettingsAction}>
+        <section className="section-shell grid min-w-0 grid-cols-1 gap-gutter lg:grid-cols-12">
+          <div className="min-w-0 space-y-gutter lg:col-span-7">
+            <GlassCardProfile profile={profile} />
+            <form action={updateOperatorSettingsAction} className="mt-gutter">
               <input name="return_to" type="hidden" value="/OperatorSettings" />
-              <GlassCardProfile profile={profile} />
-              <WorkflowCard preferences={operatorPreferences} />
+              <WorkflowCard
+                notificationPreferences={notificationPreferences}
+                preferences={operatorPreferences}
+              />
             </form>
           </div>
 
-          <div className="lg:col-span-5 space-y-gutter">
-            <GlassPanel className="p-gutter">
+          <div className="min-w-0 space-y-gutter lg:col-span-5">
+            <GlassPanel className="min-w-0 overflow-hidden p-gutter">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="eyebrow" style={{ marginBottom: 6 }}>Security</p>
@@ -179,15 +210,15 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
               <div className="mt-6 space-y-4">
                 {operatorSessions.map((session) => (
                   <div key={`${session.device}-${session.location}`} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
+                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0">
                         <div className="font-body-md text-on-background">{session.device}</div>
-                        <div className="text-sm text-on-surface-variant">{session.location}</div>
+                        <div className="break-all text-sm text-on-surface-variant">{session.location}</div>
                         <div className="text-xs uppercase tracking-[0.15em] text-on-surface-variant/70 mt-2">
                           {session.note}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
                         <div className="rounded-full border border-outline-variant/20 px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-secondary">
                           {session.status}
                         </div>
@@ -254,63 +285,6 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
               </div>
             </GlassPanel>
 
-            <GlassPanel className="p-gutter">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="eyebrow" style={{ marginBottom: 6 }}>Communication routing</p>
-                  <h3 className="font-display text-[30px] leading-9 font-light text-on-background">
-                    Operator inbox preferences
-                  </h3>
-                  <p className="mt-2 text-sm text-on-surface-variant">
-                    Keep traveler communication grouped in the main operator inbox without extra portal screens.
-                  </p>
-                </div>
-                <span className="material-symbols-outlined text-tertiary">tune</span>
-              </div>
-
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 operator-settings-form">
-                {operatorPreferences.map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
-                    <label htmlFor={item.label}>{item.label}</label>
-                    <select id={item.label} name={settingsKeyForLabel(item.label)} defaultValue={item.value}>
-                      <option value="fast_turnaround">Fast turnaround</option>
-                      <option value="same_day">Same day</option>
-                      <option value="daily">Daily</option>
-                      <option value="inquiry_first">Inquiry first</option>
-                      <option value="review_then_confirm">Review then confirm</option>
-                      <option value="manual_hold">Manual hold</option>
-                      <option value="documented">Documented</option>
-                      <option value="concierge_notes">Concierge notes</option>
-                      <option value="shared_vault">Shared vault</option>
-                      <option value="email">Email</option>
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="email_whatsapp">Email + WhatsApp</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 space-y-4">
-                {[
-                  ["inquiry_received_enabled", "Inquiry received", settings.inquiry_received_enabled],
-                  ["booking_approved_enabled", "Booking approved", settings.booking_approved_enabled],
-                  ["guest_message_enabled", "Guest message", settings.guest_message_enabled],
-                  ["customer_note_enabled", "Customer note", settings.customer_note_enabled],
-                ].map(([key, label, enabled]) => (
-                  <label key={String(key)} className="flex items-center justify-between rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4 cursor-pointer">
-                    <div className="font-body-md text-on-background">{label}</div>
-                    <input name={String(key)} type="checkbox" defaultChecked={Boolean(enabled)} value="true" />
-                  </label>
-                ))}
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button variant="primary" type="submit">
-                  Save Operator Settings
-                </Button>
-              </div>
-            </GlassPanel>
-
             <form action={revokeOperatorSessionAction}>
               <GlassPanel className="p-gutter">
                 <div className="flex items-center justify-between gap-4">
@@ -338,7 +312,7 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
 
 function GlassCardProfile({ profile }: { profile: Awaited<ReturnType<typeof requireOperatorProfile>> }) {
   return (
-    <div className="glass-panel p-gutter">
+    <div className="glass-panel min-w-0 overflow-hidden p-gutter">
       <div className="flex items-start justify-between gap-6">
         <div>
           <div className="eyebrow" style={{ marginBottom: 6 }}>Operator identity</div>
@@ -366,7 +340,7 @@ function GlassCardProfile({ profile }: { profile: Awaited<ReturnType<typeof requ
         </div>
         <div>
           <div className="label-caps text-secondary mb-1">Email</div>
-          <div className="font-body-md text-on-background">{profile.email}</div>
+          <div className="break-all font-body-md text-on-background">{profile.email}</div>
         </div>
         <div>
           <div className="label-caps text-secondary mb-1">Status</div>
@@ -384,12 +358,14 @@ function GlassCardProfile({ profile }: { profile: Awaited<ReturnType<typeof requ
 }
 
 function WorkflowCard({
+  notificationPreferences,
   preferences,
 }: {
+  notificationPreferences: { name: string; label: string; enabled: boolean }[];
   preferences: { label: string; value: string }[];
 }) {
   return (
-    <div className="glass-panel p-gutter mt-gutter">
+    <div className="glass-panel p-gutter">
       <div className="eyebrow" style={{ marginBottom: 6 }}>Workflow policy</div>
       <h3 className="font-display text-[30px] leading-9 font-light text-on-background">
         Control inquiry and booking behavior.
@@ -399,18 +375,59 @@ function WorkflowCard({
       </p>
 
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 operator-settings-form">
-        {preferences.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
-            <label htmlFor={item.label}>{item.label}</label>
-            <select id={item.label} name={settingsKeyForLabel(item.label)} defaultValue={item.value}>
-              {optionsForLabel(item.label).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
+        {preferences.map((item) => {
+          const fieldName = settingsKeyForLabel(item.label);
+          const fieldId = `operator-${fieldName}`;
+
+          return (
+            <div key={item.label} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
+              <label htmlFor={fieldId}>{item.label}</label>
+              <select id={fieldId} name={fieldName} defaultValue={item.value} required>
+                {optionsForLabel(item.label).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+
+      <fieldset className="mt-6">
+        <legend className="label-caps text-secondary">Notification routing</legend>
+        <p className="mt-2 text-sm text-on-surface-variant">
+          Choose which operator workspace events create inbox alerts.
+        </p>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {notificationPreferences.map((item) => {
+            const fieldId = `operator-${item.name}`;
+
+            return (
+              <label
+                key={item.name}
+                htmlFor={fieldId}
+                className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4"
+              >
+                <span className="font-body-md text-on-background">{item.label}</span>
+                <input
+                  className="operator-notification-toggle h-[18px] w-[18px] shrink-0 accent-secondary"
+                  defaultChecked={item.enabled}
+                  id={fieldId}
+                  name={item.name}
+                  type="checkbox"
+                  value="true"
+                />
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button variant="primary" type="submit">
+          Save Operator Settings
+        </Button>
       </div>
     </div>
   );

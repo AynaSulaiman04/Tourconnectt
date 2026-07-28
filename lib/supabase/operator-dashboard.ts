@@ -55,6 +55,7 @@ export type OperatorDashboardData = {
   unreadNotificationsCount: number;
   directMessageState: Awaited<ReturnType<typeof getDirectMessagePageState>>;
   recentListings: OperatorDashboardListingSummary[];
+  bookings: OperatorDashboardInquirySummary[];
   recentInquiries: OperatorDashboardInquirySummary[];
   payments: OperatorPaymentRecord[];
   recentPayments: OperatorPaymentRecord[];
@@ -88,7 +89,7 @@ function normalizeListingImageSource(listing: { image_url: string | null; image_
   return normalizeMediaSource(listing.image_base64) ?? normalizeMediaSource(listing.image_url) ?? null;
 }
 
-async function loadOperatorListings(profileId: string, operatorName: string) {
+async function loadOperatorListings(profileId: string) {
   const admin = createSupabaseServiceRoleClient();
   const { data, error } = await admin
     .from("tour_listings")
@@ -100,21 +101,7 @@ async function loadOperatorListings(profileId: string, operatorName: string) {
     throw new Error(error.message);
   }
 
-  let listings = (data ?? []) as TourListing[];
-
-  if (!listings.length && operatorName.trim().length > 0) {
-    const fallback = await admin
-      .from("tour_listings")
-      .select(listingSelect)
-      .ilike("operator_name", operatorName.trim())
-      .order("updated_at", { ascending: false });
-
-    if (fallback.error) {
-      throw new Error(fallback.error.message);
-    }
-
-    listings = (fallback.data ?? []) as TourListing[];
-  }
+  const listings = (data ?? []) as TourListing[];
 
   return listings.map((listing) => ({
     ...listing,
@@ -122,7 +109,7 @@ async function loadOperatorListings(profileId: string, operatorName: string) {
   }));
 }
 
-async function loadOperatorInquiries(profileId: string, operatorName: string) {
+async function loadOperatorInquiries(profileId: string) {
   const admin = createSupabaseServiceRoleClient();
   const { data, error } = await admin
     .from("inquiries")
@@ -134,23 +121,7 @@ async function loadOperatorInquiries(profileId: string, operatorName: string) {
     throw new Error(error.message);
   }
 
-  let inquiries = (data ?? []) as TravelerInquiry[];
-
-  if (!inquiries.length && operatorName.trim().length > 0) {
-    const fallback = await admin
-      .from("inquiries")
-      .select(inquirySelect)
-      .ilike("operator_name", operatorName.trim())
-      .order("created_at", { ascending: false });
-
-    if (fallback.error) {
-      throw new Error(fallback.error.message);
-    }
-
-    inquiries = (fallback.data ?? []) as TravelerInquiry[];
-  }
-
-  return inquiries;
+  return (data ?? []) as TravelerInquiry[];
 }
 
 async function loadDraftLookup(profileId: string) {
@@ -217,11 +188,10 @@ async function loadTravelerProfiles(userIds: string[]) {
 
 export async function getOperatorDashboardData(): Promise<OperatorDashboardData> {
   const profile = await requireOperatorProfile();
-  const operatorName = profile.full_name.trim();
 
   const [listings, inquiries, drafts, draftLookup, unreadNotificationsCount, directMessageState] = await Promise.all([
-    loadOperatorListings(profile.id, operatorName),
-    loadOperatorInquiries(profile.id, operatorName),
+    loadOperatorListings(profile.id),
+    loadOperatorInquiries(profile.id),
     loadOperatorDrafts(profile.id),
     loadDraftLookup(profile.id),
     countUnreadPlatformNotifications(profile.id).catch(() => 0),
@@ -279,7 +249,7 @@ export async function getOperatorDashboardData(): Promise<OperatorDashboardData>
     draft_id: draftLookup.get(listing.id) ?? null,
   }));
 
-  const recentInquiries = inquiries
+  const bookings = inquiries
     .map((inquiry) => {
     const travelerProfile = inquiry.user_id ? travelerProfiles.get(inquiry.user_id) ?? null : null;
     const listing = inquiry.listing_id ? listingById.get(inquiry.listing_id) ?? null : null;
@@ -300,8 +270,8 @@ export async function getOperatorDashboardData(): Promise<OperatorDashboardData>
       payment: paymentByInquiryId.get(inquiry.id) ?? null,
     };
     })
-    .sort((left, right) => new Date(right.latest_activity_at).getTime() - new Date(left.latest_activity_at).getTime())
-    .slice(0, 4);
+    .sort((left, right) => new Date(right.latest_activity_at).getTime() - new Date(left.latest_activity_at).getTime());
+  const recentInquiries = bookings.slice(0, 4);
 
   const liveListingsCount = listings.length + drafts.length;
   const pendingInquiriesCount = inquiries.filter((inquiry) => pendingInquiryStatuses.has(inquiry.status)).length;
@@ -322,6 +292,7 @@ export async function getOperatorDashboardData(): Promise<OperatorDashboardData>
     unreadNotificationsCount,
     directMessageState,
     recentListings,
+    bookings,
     recentInquiries,
     payments: paymentRecords,
     recentPayments,

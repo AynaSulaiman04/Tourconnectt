@@ -28,7 +28,12 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
   return (
     <PageShell variant="admin">
       <main className="px-margin-mobile md:px-margin-desktop py-8 pb-12">
-        <SectionHeader eyebrow="Admin content" title="Manage public pages and reviews." description="Update approved site copy and moderate traveler reviews without changing the website layout." />
+        <SectionHeader
+          level={1}
+          eyebrow="Admin content"
+          title="Manage public pages and reviews."
+          description="Update approved site copy and moderate traveler reviews without changing the website layout."
+        />
         {saved ? <div className="mt-6"><StatusMessage tone="success">Changes saved successfully.</StatusMessage></div> : null}
         {hasError ? <div className="mt-6"><StatusMessage tone="error">That change could not be saved. Check the fields and try again.</StatusMessage></div> : null}
 

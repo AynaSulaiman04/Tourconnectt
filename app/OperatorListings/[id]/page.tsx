@@ -151,8 +151,8 @@ export default async function OperatorListingViewPage({ params }: OperatorListin
       <main className="listing-view-page">
         <div className="listing-view-wrap">
           <div className="back-row mb-8">
-            <Link className="btn-ghost btn-sm" href="/OperatorBookings">
-              Back to Bookings
+            <Link className="btn-ghost btn-sm" href="/OperatorListings">
+              Back to Listings
             </Link>
           </div>
 

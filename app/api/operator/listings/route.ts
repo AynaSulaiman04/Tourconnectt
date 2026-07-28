@@ -2,18 +2,13 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { calculateListingCompletion, normalizeDraftValue } from "@/lib/operator-listing-completion";
+import { calculateListingCompletion } from "@/lib/operator-listing-completion";
+import {
+  OperatorListingInputError,
+  readValidatedOperatorListingInput,
+} from "@/lib/operator-listing-input";
 import { getOperatorListingDraftById } from "@/lib/supabase/operator-listings";
 import { recordAdminNotifications, recordPlatformNotification } from "@/lib/supabase/notifications";
-
-function toNullableInteger(value: FormDataEntryValue | null) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const parsed = Number.parseInt(value.trim(), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
 
 function isMissingTableOrSchemaError(error: { code?: string | null; message?: string | null } | null) {
   return Boolean(
@@ -74,41 +69,60 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Operator access required." }, { status: 403 });
   }
 
-  const formData = await request.formData();
-  const mode = String(formData.get("mode") ?? "save").trim();
-  const draftId = normalizeDraftValue(formData.get("draft_id"));
-  const publishedListingId = normalizeDraftValue(formData.get("published_listing_id"));
+  let input;
+
+  try {
+    input = await readValidatedOperatorListingInput(request);
+  } catch (error) {
+    if (error instanceof OperatorListingInputError) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: error.status });
+    }
+
+    console.error("Unable to parse operator listing input", error);
+    return NextResponse.json(
+      { ok: false, error: "We could not read that listing request. Please try again." },
+      { status: 400 },
+    );
+  }
+
+  const { mode, draftId, publishedListingId: requestedPublishedListingId } = input;
   const admin = createSupabaseServiceRoleClient();
   const currentDraft = draftId ? await getOperatorListingDraftById(profileContext.profile.id, draftId) : null;
+  let verifiedPublishedListingId = currentDraft?.published_listing_id ?? null;
+
+  if (!verifiedPublishedListingId && requestedPublishedListingId) {
+    const { data: ownedListing, error: ownedListingError } = await admin
+      .from("tour_listings")
+      .select("id")
+      .eq("id", requestedPublishedListingId)
+      .eq("operator_id", profileContext.profile.id)
+      .maybeSingle();
+
+    if (ownedListingError || !ownedListing) {
+      return NextResponse.json(
+        { ok: false, error: "That published listing is unavailable or is not owned by this account." },
+        { status: 403 },
+      );
+    }
+
+    verifiedPublishedListingId = ownedListing.id;
+  }
 
   const payload = {
     operator_id: profileContext.profile.id,
-    title: normalizeDraftValue(formData.get("title")),
-    location: normalizeDraftValue(formData.get("location")),
-    country: normalizeDraftValue(formData.get("country")),
-    duration: normalizeDraftValue(formData.get("duration")),
-    summary: normalizeDraftValue(formData.get("summary")),
-    category: normalizeDraftValue(formData.get("category")),
-    price: normalizeDraftValue(formData.get("price")),
-    availability: normalizeDraftValue(formData.get("availability")),
-    capacity: toNullableInteger(formData.get("capacity")),
-    itinerary: normalizeDraftValue(formData.get("itinerary")),
-    inclusions: normalizeDraftValue(formData.get("inclusions")),
-    exclusions: normalizeDraftValue(formData.get("exclusions")),
-    contact_name: normalizeDraftValue(formData.get("contact_name")),
-    contact_email: normalizeDraftValue(formData.get("contact_email")),
-    contact_phone: normalizeDraftValue(formData.get("contact_phone")),
-    image_url: normalizeDraftValue(formData.get("image_url")),
-    image_base64: normalizeDraftValue(formData.get("image_base64")),
+    ...input.values,
     is_published: false,
-    published_listing_id: currentDraft?.published_listing_id ?? publishedListingId ?? null,
+    published_listing_id: verifiedPublishedListingId,
   };
 
-  const clearImage = String(formData.get("clear_image") ?? "").trim() === "1";
-  const uploadedImageBase64 = clearImage ? null : payload.image_base64 ?? currentDraft?.image_base64 ?? null;
-  const uploadedImageUrl = clearImage
+  const uploadedImageBase64 = input.clearImage
     ? null
-    : uploadedImageBase64 ?? currentDraft?.image_url ?? payload.image_url ?? null;
+    : input.imageBase64 ?? currentDraft?.image_base64 ?? null;
+  const uploadedImageUrl = input.clearImage
+    ? null
+    : uploadedImageBase64
+      ? null
+      : input.imageUrl ?? currentDraft?.image_url ?? null;
 
   const draftPayload = {
     ...payload,
@@ -185,7 +199,7 @@ export async function POST(request: Request) {
     contact_name: draftRecord.contact_name,
     contact_email: draftRecord.contact_email,
     contact_phone: draftRecord.contact_phone,
-    image_url: draftRecord.image_url,
+    image_url: draftRecord.image_base64 ?? draftRecord.image_url,
   });
 
   if (mode === "publish") {
@@ -202,7 +216,7 @@ export async function POST(request: Request) {
       country: draftRecord.country ?? "",
       duration: draftRecord.duration ?? "",
       summary: draftRecord.summary ?? "",
-      image_url: draftRecord.image_base64 ?? draftRecord.image_url,
+      image_url: draftRecord.image_base64 ? null : draftRecord.image_url,
       image_base64: draftRecord.image_base64,
       price: draftRecord.price,
       operator_id: profileContext.profile.id,
@@ -212,19 +226,21 @@ export async function POST(request: Request) {
       status: "under_review",
     };
 
-    let listingId = draftRecord.published_listing_id ?? publishedListingId;
+    let listingId = draftRecord.published_listing_id;
 
     if (listingId) {
-      const { error: updateListingError } = await admin
+      const { data: updatedListing, error: updateListingError } = await admin
         .from("tour_listings")
         .update(publishPayload)
         .eq("id", listingId)
-        .eq("operator_id", profileContext.profile.id);
+        .eq("operator_id", profileContext.profile.id)
+        .select("id")
+        .maybeSingle();
 
-      if (updateListingError) {
+      if (updateListingError || !updatedListing) {
         return NextResponse.json(
-          { ok: false, error: "We could not publish that listing. Please try again." },
-          { status: 400 },
+          { ok: false, error: "That published listing is unavailable or is not owned by this account." },
+          { status: 403 },
         );
       }
     } else {
@@ -336,7 +352,7 @@ export async function POST(request: Request) {
   revalidatePath("/OperatorDashboard");
   revalidatePath("/OperatorBookings");
   revalidatePath("/OperatorListings");
-  const editListingId = draftRecord.published_listing_id ?? publishedListingId;
+  const editListingId = draftRecord.published_listing_id;
   if (editListingId) {
     revalidatePath(`/OperatorListings/${editListingId}/edit`);
   }

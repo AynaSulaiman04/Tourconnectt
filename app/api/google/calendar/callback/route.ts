@@ -5,22 +5,37 @@ import {
   getOperatorCalendarIntegration,
   upsertGoogleCalendarConnection,
 } from "@/lib/calendar/google";
+import { verifyGoogleCalendarOAuthState } from "@/lib/calendar/google-oauth-state";
 
 const OAUTH_STATE_COOKIE = "ttc-google-calendar-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function clearOAuthStateCookie(response: NextResponse) {
+  response.cookies.set(OAUTH_STATE_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(0),
+    secure: process.env.NODE_ENV === "production",
+  });
+
+  return response;
+}
+
 function redirectWithError(request: NextRequest, error: string) {
-  return NextResponse.redirect(
+  const response = NextResponse.redirect(
     new URL(`/OperatorSettings?calendar_error=${encodeURIComponent(error)}`, request.url),
   );
+
+  return clearOAuthStateCookie(response);
 }
 
 export async function GET(request: NextRequest) {
   const profileContext = await getOptionalCurrentUserProfile();
 
-  if (!profileContext?.profile) {
+  if (!profileContext?.profile || !profileContext.profile.is_active) {
     return NextResponse.redirect(new URL("/LoginPage", request.url));
   }
 
@@ -29,9 +44,19 @@ export async function GET(request: NextRequest) {
   }
 
   const code = request.nextUrl.searchParams.get("code")?.trim();
-  const returnedState = request.nextUrl.searchParams.get("state")?.trim();
+  const returnedState = request.nextUrl.searchParams.get("state")?.trim() || null;
   const error = request.nextUrl.searchParams.get("error")?.trim();
   const expectedState = request.cookies.get(OAUTH_STATE_COOKIE)?.value ?? null;
+
+  if (
+    !verifyGoogleCalendarOAuthState({
+      cookieState: expectedState,
+      currentOperatorId: profileContext.profile.id,
+      returnedState,
+    })
+  ) {
+    return redirectWithError(request, "Google Calendar connection could not be verified.");
+  }
 
   if (error) {
     return redirectWithError(request, "Google Calendar connection was not completed.");
@@ -39,10 +64,6 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return redirectWithError(request, "Google Calendar connection was not completed.");
-  }
-
-  if (!returnedState || !expectedState || returnedState !== expectedState) {
-    return redirectWithError(request, "Google Calendar connection could not be verified.");
   }
 
   try {
@@ -69,16 +90,9 @@ export async function GET(request: NextRequest) {
       syncToken: existingIntegration?.sync_token ?? null,
     });
 
-    const response = NextResponse.redirect(new URL("/OperatorSettings?calendar=connected", request.url));
-    response.cookies.set(OAUTH_STATE_COOKIE, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      expires: new Date(0),
-      secure: process.env.NODE_ENV === "production",
-    });
-
-    return response;
+    return clearOAuthStateCookie(
+      NextResponse.redirect(new URL("/OperatorSettings?calendar=connected", request.url)),
+    );
   } catch (error) {
     console.error("Unable to complete Google Calendar connect flow", error);
     return redirectWithError(

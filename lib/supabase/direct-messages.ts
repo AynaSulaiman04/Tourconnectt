@@ -89,6 +89,7 @@ const LISTING_COLUMNS = "id,title,location,operator_id,operator_name";
 const INQUIRY_COLUMNS =
   "id,user_id,listing_id,traveler_name,traveler_email,operator_id,operator_name,destination,destination_country,status,created_at,updated_at";
 const FALLBACK_CHAT_PREFIX = "__operator_chat__:";
+const FALLBACK_CHAT_VERSION = "v2";
 
 type FallbackConversationMeta = {
   travelerId: string;
@@ -142,7 +143,7 @@ function encodeFallbackConversationTitle(meta: Omit<FallbackConversationMeta, "t
     "utf8",
   ).toString("base64url");
 
-  return `${FALLBACK_CHAT_PREFIX}${payload}`;
+  return `${FALLBACK_CHAT_PREFIX}${FALLBACK_CHAT_VERSION}:${meta.operatorId}:${payload}`;
 }
 
 function decodeFallbackConversationTitle(title: string | null) {
@@ -151,10 +152,25 @@ function decodeFallbackConversationTitle(title: string | null) {
   }
 
   try {
-    const payload = title.slice(FALLBACK_CHAT_PREFIX.length);
+    const encodedValue = title.slice(FALLBACK_CHAT_PREFIX.length);
+    const versionedPrefix = `${FALLBACK_CHAT_VERSION}:`;
+    const versionedParts = encodedValue.startsWith(versionedPrefix)
+      ? encodedValue.slice(versionedPrefix.length).split(":", 2)
+      : null;
+    const scopedOperatorId = versionedParts?.[0] ?? null;
+    const payload = versionedParts?.[1] ?? encodedValue;
+
+    if (!payload || (versionedParts && !scopedOperatorId)) {
+      return null;
+    }
+
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Partial<FallbackConversationMeta>;
 
-    if (!parsed.operatorId || !parsed.travelerId) {
+    if (
+      !parsed.operatorId ||
+      !parsed.travelerId ||
+      (scopedOperatorId && parsed.operatorId !== scopedOperatorId)
+    ) {
       return null;
     }
 
@@ -302,6 +318,16 @@ async function notifyDirectMessageRecipient(params: {
   }
 }
 
+function fallbackOperatorTitlePattern(operatorId: string) {
+  return `${FALLBACK_CHAT_PREFIX}${FALLBACK_CHAT_VERSION}:${operatorId}:%`;
+}
+
+function assertDirectMessageAccess(profile: TravelerProfile, role: DirectMessageRouteRole) {
+  if (!profile.is_active || profile.role !== role) {
+    throw new Error("You do not have access to direct messages.");
+  }
+}
+
 export async function ensureConversationForInquiry(params: {
   travelerId: string | null;
   operatorId: string;
@@ -356,39 +382,6 @@ export async function ensureConversationForInquiry(params: {
   }
 
   return (data ?? null) as DirectConversationRecord | null;
-}
-
-async function resolveOperatorProfileByName(
-  admin: ReturnType<typeof createSupabaseServiceRoleClient>,
-  names: Array<string | null | undefined>,
-) {
-  const operatorNames = [...new Set(names.map((value) => value?.trim()).filter((value): value is string => Boolean(value && value.length > 0)))];
-
-  for (const operatorName of operatorNames) {
-    const queries = [
-      admin.from("profiles").select("id,email,full_name,role,avatar_base64,profile_image_url").eq("role", "operator").eq("full_name", operatorName),
-      admin.from("profiles").select("id,email,full_name,role,avatar_base64,profile_image_url").eq("role", "operator").eq("email", operatorName),
-    ] as const;
-
-    for (const query of queries) {
-      const { data, error } = await query;
-
-      if (error) {
-        if (isMissingRelationOrSchemaError(error)) {
-          return null;
-        }
-
-        throw new Error(error.message);
-      }
-
-      const profile = (data ?? []).find((entry) => entry.role === "operator");
-      if (profile) {
-        return normalizeProfile(profile);
-      }
-    }
-  }
-
-  return null;
 }
 
 async function resolveOperatorContextFromListing(
@@ -451,30 +444,6 @@ async function resolveOperatorContextFromPublishedDraft(
   };
 }
 
-async function resolveFallbackOperatorProfile(admin: ReturnType<typeof createSupabaseServiceRoleClient>) {
-  const { data, error } = await admin
-    .from("profiles")
-    .select("id,email,full_name,role,avatar_base64,profile_image_url")
-    .eq("role", "operator")
-    .order("created_at", { ascending: true })
-    .limit(2);
-
-  if (error) {
-    if (isMissingRelationOrSchemaError(error)) {
-      return null;
-    }
-
-    throw new Error(error.message);
-  }
-
-  const operators = (data ?? []).filter((entry) => entry.role === "operator");
-  if (operators.length !== 1) {
-    return null;
-  }
-
-  return normalizeProfile(operators[0]);
-}
-
 async function touchProfileLastSeen(profileId: string) {
   const admin = createSupabaseServiceRoleClient();
   const { error } = await admin.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("id", profileId);
@@ -489,7 +458,12 @@ async function loadFallbackConversationRecords(profileId: string, role: DirectMe
   let query = admin
     .from("concierge_conversations")
     .select("id,user_id,title,created_at,updated_at")
-    .ilike("title", `${FALLBACK_CHAT_PREFIX}%`)
+    .like(
+      "title",
+      role === "operator"
+        ? fallbackOperatorTitlePattern(profileId)
+        : `${FALLBACK_CHAT_PREFIX}%`,
+    )
     .order("updated_at", { ascending: false });
 
   if (role === "traveler") {
@@ -514,6 +488,14 @@ async function loadFallbackConversationRecords(profileId: string, role: DirectMe
         return null;
       }
 
+      if (
+        meta.travelerId !== conversation.user_id ||
+        (role === "traveler" && conversation.user_id !== profileId) ||
+        (role === "operator" && meta.operatorId !== profileId)
+      ) {
+        return null;
+      }
+
       return {
         id: conversation.id,
         traveler_id: conversation.user_id,
@@ -529,16 +511,27 @@ async function loadFallbackConversationRecords(profileId: string, role: DirectMe
     .filter(Boolean) as DirectConversationRecord[];
 }
 
-async function loadFallbackConversationMessages(conversationIds: string[]) {
+async function loadFallbackConversationMessages(
+  conversationIds: string[],
+  profileId: string,
+  role: DirectMessageRouteRole,
+) {
   if (!conversationIds.length) {
     return [] as DirectMessageRecord[];
   }
 
   const admin = createSupabaseServiceRoleClient();
-  const { data: conversationsData, error: conversationsError } = await admin
+  let conversationsQuery = admin
     .from("concierge_conversations")
     .select("id,user_id,title")
     .in("id", conversationIds);
+
+  conversationsQuery =
+    role === "traveler"
+      ? conversationsQuery.eq("user_id", profileId).like("title", `${FALLBACK_CHAT_PREFIX}%`)
+      : conversationsQuery.like("title", fallbackOperatorTitlePattern(profileId));
+
+  const { data: conversationsData, error: conversationsError } = await conversationsQuery;
 
   if (conversationsError) {
     if (isMissingRelationOrSchemaError(conversationsError)) {
@@ -549,13 +542,29 @@ async function loadFallbackConversationMessages(conversationIds: string[]) {
   }
 
   const conversationById = new Map(
-    ((conversationsData ?? []) as FallbackConciergeConversation[]).map((conversation) => [conversation.id, conversation]),
+    ((conversationsData ?? []) as FallbackConciergeConversation[])
+      .filter((conversation) => {
+        const meta = decodeFallbackConversationTitle(conversation.title);
+        return Boolean(
+          meta &&
+            meta.travelerId === conversation.user_id &&
+            (role === "traveler"
+              ? conversation.user_id === profileId
+              : meta.operatorId === profileId),
+        );
+      })
+      .map((conversation) => [conversation.id, conversation]),
   );
+  const authorizedConversationIds = [...conversationById.keys()];
+
+  if (!authorizedConversationIds.length) {
+    return [] as DirectMessageRecord[];
+  }
 
   const { data, error } = await admin
     .from("concierge_messages")
     .select("id,conversation_id,role,content,sources,created_at")
-    .in("conversation_id", conversationIds)
+    .in("conversation_id", authorizedConversationIds)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -591,24 +600,76 @@ async function loadFallbackConversationByContext(params: {
   listingId?: string | null;
   inquiryId?: string | null;
 }) {
-  const records = await loadFallbackConversationRecords(params.travelerId, "traveler");
+  const admin = createSupabaseServiceRoleClient();
+  const { data, error } = await admin
+    .from("concierge_conversations")
+    .select("id,user_id,title,created_at,updated_at")
+    .eq("user_id", params.travelerId)
+    .like("title", fallbackOperatorTitlePattern(params.operatorId))
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    if (isMissingRelationOrSchemaError(error)) {
+      return null;
+    }
+
+    throw new Error(error.message);
+  }
 
   return (
-    records.find((record) => {
-      const listingMatches = params.listingId ? record.listing_id === params.listingId : record.listing_id === null;
-      const inquiryMatches = params.inquiryId ? record.inquiry_id === params.inquiryId : record.inquiry_id === null;
-      return record.traveler_id === params.travelerId && record.operator_id === params.operatorId && listingMatches && inquiryMatches;
-    }) ?? null
+    ((data ?? []) as FallbackConciergeConversation[])
+      .map((conversation) => {
+        const meta = decodeFallbackConversationTitle(conversation.title);
+
+        if (
+          !meta ||
+          conversation.user_id !== params.travelerId ||
+          meta.travelerId !== params.travelerId ||
+          meta.operatorId !== params.operatorId
+        ) {
+          return null;
+        }
+
+        const listingMatches = params.listingId
+          ? meta.listingId === params.listingId
+          : meta.listingId === null;
+        const inquiryMatches = params.inquiryId
+          ? meta.inquiryId === params.inquiryId
+          : meta.inquiryId === null;
+
+        if (!listingMatches || !inquiryMatches) {
+          return null;
+        }
+
+        return {
+          id: conversation.id,
+          traveler_id: conversation.user_id,
+          operator_id: meta.operatorId,
+          listing_id: meta.listingId,
+          inquiry_id: meta.inquiryId,
+          status: "open" as const,
+          last_message_at: conversation.updated_at,
+          created_at: conversation.created_at,
+          updated_at: conversation.updated_at,
+        } satisfies DirectConversationRecord;
+      })
+      .find(Boolean) ?? null
   );
 }
 
 async function loadFallbackConversationById(conversationId: string, profileId: string, role: DirectMessageRouteRole) {
   const admin = createSupabaseServiceRoleClient();
-  const { data, error } = await admin
+  let query = admin
     .from("concierge_conversations")
     .select("id,user_id,title,created_at,updated_at")
-    .eq("id", conversationId)
-    .maybeSingle();
+    .eq("id", conversationId);
+
+  query =
+    role === "traveler"
+      ? query.eq("user_id", profileId).like("title", `${FALLBACK_CHAT_PREFIX}%`)
+      : query.like("title", fallbackOperatorTitlePattern(profileId));
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     if (isMissingRelationOrSchemaError(error)) {
@@ -626,6 +687,10 @@ async function loadFallbackConversationById(conversationId: string, profileId: s
   const meta = decodeFallbackConversationTitle(conversation.title);
 
   if (!meta) {
+    return null;
+  }
+
+  if (meta.travelerId !== conversation.user_id) {
     return null;
   }
 
@@ -704,6 +769,13 @@ async function saveFallbackConversationMessage(params: {
   role: DirectMessageRouteRole;
   message: string;
 }) {
+  if (
+    (params.role === "traveler" && params.conversation.traveler_id !== params.profile.id) ||
+    (params.role === "operator" && params.conversation.operator_id !== params.profile.id)
+  ) {
+    throw new Error("You do not have access to this conversation.");
+  }
+
   const admin = createSupabaseServiceRoleClient();
   const { data, error } = await admin
     .from("concierge_messages")
@@ -850,28 +922,7 @@ async function loadInboxInquiries(profile: TravelerProfile, role: DirectMessageR
     throw new Error(error.message);
   }
 
-  let inquiries = (data ?? []) as InboxInquiryRow[];
-
-  if (!inquiries.length && role === "operator" && profile.full_name.trim()) {
-    const { data: fallbackData, error: fallbackError } = await admin
-      .from("inquiries")
-      .select(INQUIRY_COLUMNS)
-      .ilike("operator_name", profile.full_name.trim())
-      .order("updated_at", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    if (fallbackError) {
-      if (isMissingRelationOrSchemaError(fallbackError)) {
-        return [] as InboxInquiryRow[];
-      }
-
-      throw new Error(fallbackError.message);
-    }
-
-    inquiries = (fallbackData ?? []) as InboxInquiryRow[];
-  }
-
-  return inquiries;
+  return (data ?? []) as InboxInquiryRow[];
 }
 
 async function loadConversationRecords(profileId: string, role: DirectMessageRouteRole) {
@@ -895,7 +946,11 @@ async function loadConversationRecords(profileId: string, role: DirectMessageRou
   return (data ?? []) as DirectConversationRecord[];
 }
 
-async function loadConversationMessages(conversationIds: string[]) {
+async function loadConversationMessages(
+  conversationIds: string[],
+  profileId: string,
+  role: DirectMessageRouteRole,
+) {
   if (!conversationIds.length) {
     return [] as DirectMessageRecord[];
   }
@@ -909,7 +964,7 @@ async function loadConversationMessages(conversationIds: string[]) {
 
   if (error) {
     if (isMissingRelationOrSchemaError(error)) {
-      return loadFallbackConversationMessages(conversationIds);
+      return loadFallbackConversationMessages(conversationIds, profileId, role);
     }
 
     throw new Error(error.message);
@@ -1081,7 +1136,7 @@ async function buildLaunchContext(params: {
     datesLabel: null,
     inquiryStatus: null,
     travelerName: params.profile.full_name,
-    travelerId: params.profile.id,
+    travelerId: params.profile.role === "traveler" ? params.profile.id : null,
   };
 
   if (context.inquiryId) {
@@ -1129,12 +1184,6 @@ async function buildLaunchContext(params: {
       }
     }
 
-    if (!context.operatorId && context.operatorName) {
-      const operatorProfile = await resolveOperatorProfileByName(admin, [context.operatorName, inquiry.operator_name]);
-      context.operatorId = operatorProfile?.id ?? null;
-      context.operatorName = operatorProfile?.full_name ?? context.operatorName;
-    }
-
     if (!context.operatorId && context.listingId) {
       const relatedContext = await resolveOperatorContextFromListing(admin, context.listingId);
       context.operatorId = relatedContext.operatorId ?? context.operatorId;
@@ -1147,10 +1196,12 @@ async function buildLaunchContext(params: {
       context.operatorName = relatedDraftContext.operatorName ?? context.operatorName;
     }
 
-    if (!context.operatorId) {
-      const fallbackOperator = await resolveFallbackOperatorProfile(admin);
-      context.operatorId = fallbackOperator?.id ?? null;
-      context.operatorName = fallbackOperator?.full_name ?? context.operatorName;
+    if (params.profile.role === "operator") {
+      if (context.operatorId !== params.profile.id) {
+        return null;
+      }
+
+      context.operatorName = params.profile.full_name;
     }
 
     return context;
@@ -1185,16 +1236,12 @@ async function buildLaunchContext(params: {
       context.operatorName = relatedDraftContext.operatorName ?? context.operatorName;
     }
 
-    if (!context.operatorId && context.operatorName) {
-      const operatorProfile = await resolveOperatorProfileByName(admin, [context.operatorName, listing.operator_name]);
-      context.operatorId = operatorProfile?.id ?? null;
-      context.operatorName = operatorProfile?.full_name ?? context.operatorName;
-    }
+    if (params.profile.role === "operator") {
+      if (context.operatorId !== params.profile.id) {
+        return null;
+      }
 
-    if (!context.operatorId) {
-      const fallbackOperator = await resolveFallbackOperatorProfile(admin);
-      context.operatorId = fallbackOperator?.id ?? null;
-      context.operatorName = fallbackOperator?.full_name ?? context.operatorName;
+      context.operatorName = params.profile.full_name;
     }
 
     return context;
@@ -1284,6 +1331,8 @@ export async function getDirectMessagePageState(params: {
   inquiryId?: string | null;
   markAsSeen?: boolean;
 }): Promise<DirectMessagePageState> {
+  assertDirectMessageAccess(params.profile, params.role);
+
   let conversations = await loadConversationRecords(params.profile.id, params.role);
   const context = await buildLaunchContext({
     profile: params.profile,
@@ -1295,7 +1344,10 @@ export async function getDirectMessagePageState(params: {
 
   if (params.conversationId) {
     activeConversationRecord = conversations.find((conversation) => conversation.id === params.conversationId) ?? null;
-  } else if (context?.operatorId) {
+  } else if (
+    context?.operatorId &&
+    (params.role === "traveler" || Boolean(context.inquiryId && context.travelerId))
+  ) {
     const ensuredConversation =
       (await ensureConversationByContext({
         travelerId: params.profile.role === "traveler" ? params.profile.id : context.travelerId ?? params.profile.id,
@@ -1309,6 +1361,14 @@ export async function getDirectMessagePageState(params: {
     }
   } else if (conversations.length) {
     activeConversationRecord = conversations[0] ?? null;
+  }
+
+  if (
+    activeConversationRecord &&
+    ((params.role === "traveler" && activeConversationRecord.traveler_id !== params.profile.id) ||
+      (params.role === "operator" && activeConversationRecord.operator_id !== params.profile.id))
+  ) {
+    activeConversationRecord = null;
   }
 
   const inboxInquiries = await loadInboxInquiries(params.profile, params.role);
@@ -1340,7 +1400,7 @@ export async function getDirectMessagePageState(params: {
     ),
   ];
   const [messages, profiles, listings, inquiries] = await Promise.all([
-    loadConversationMessages(conversationIds),
+    loadConversationMessages(conversationIds, params.profile.id, params.role),
     loadProfilesByIds([...new Set([...allRelatedIds, ...inboxProfileIds])]),
     loadListingsByIds(listingIds),
     loadInquiriesByIds([...new Set(conversations.map((conversation) => conversation.inquiry_id).filter((value): value is string => Boolean(value)))]),
@@ -1407,6 +1467,8 @@ export async function sendDirectMessage(params: {
   listingId?: string | null;
   inquiryId?: string | null;
 }) {
+  assertDirectMessageAccess(params.profile, params.role);
+
   const admin = createSupabaseServiceRoleClient();
   const message = params.message.trim();
 
@@ -1428,9 +1490,7 @@ export async function sendDirectMessage(params: {
       throw new Error(error?.message ?? "Unable to load this inquiry.");
     }
 
-    const assignedToOperator = inquiry.operator_id
-      ? inquiry.operator_id === params.profile.id
-      : inquiry.operator_name?.trim().toLowerCase() === params.profile.full_name.trim().toLowerCase();
+    const assignedToOperator = inquiry.operator_id === params.profile.id;
 
     if (!assignedToOperator) {
       throw new Error("You do not have access to this inquiry.");
@@ -1474,6 +1534,10 @@ export async function sendDirectMessage(params: {
 
       conversation = record;
     }
+  }
+
+  if (!conversation && params.role === "operator") {
+    throw new Error("Operators can reply from an existing conversation only.");
   }
 
   if (!conversation && (params.listingId || params.inquiryId)) {

@@ -344,9 +344,9 @@ export default async function SignUpPage() {
 
         @media (max-width: 767px) {
           .signup-page {
-            height: calc(100dvh - 4.75rem);
-            min-height: 0;
-            overflow: hidden;
+            min-height: calc(100dvh - 4.75rem);
+            height: auto;
+            overflow: visible;
           }
 
           .image-section {
@@ -355,9 +355,11 @@ export default async function SignUpPage() {
 
           .form-section {
             width: 100%;
-            min-height: 0;
-            height: 100%;
-            padding: 16px 20px;
+            min-height: calc(100dvh - 4.75rem);
+            height: auto;
+            overflow: visible;
+            align-items: flex-start;
+            padding: 24px 20px max(32px, env(safe-area-inset-bottom));
           }
 
           .floating-line {
@@ -421,13 +423,13 @@ export default async function SignUpPage() {
         <section className="image-section cinematic-zoom">
           <Image
             className="desert-image"
-            alt="A 4K desert landscape at sunrise."
+            alt="A sheltered Caribbean bay in Tobago"
             loading="eager"
             fetchPriority="high"
             fill
-            quality={100}
+            quality={85}
             sizes="50vw"
-            src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=3840&q=95"
+            src="/landing/slideshow/01-tobago-bay.webp"
           />
 
           <div className="image-gradient" />
@@ -437,7 +439,7 @@ export default async function SignUpPage() {
           </div>
 
           <div className="image-copy">
-            <h2>Serenity found in the vastness of the dunes.</h2>
+            <h2>Discover the people, culture, and coastlines of Trinidad and Tobago.</h2>
             <div className="image-copy-line" />
           </div>
         </section>

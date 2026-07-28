@@ -88,8 +88,8 @@ export default async function OperatorListingEditPage({ params }: OperatorListin
                 We could not find this listing for your operator account.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link className="btn-primary btn-sm" href="/OperatorBookings">
-                  Back to Bookings
+                <Link className="btn-primary btn-sm" href="/OperatorListings">
+                  Back to Listings
                 </Link>
                 <Link className="btn-outline btn-sm" href="/OperatorListings">
                   Back to Listings

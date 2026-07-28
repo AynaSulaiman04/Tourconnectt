@@ -50,7 +50,7 @@ function isMissingColumnError(error: { code?: string | null; message?: string | 
   return Boolean(error && (error.code === "42703" || error.message?.includes("column") || error.message?.includes("does not exist")));
 }
 
-async function fetchOperatorBookings(admin: ReturnType<typeof createSupabaseServiceRoleClient>, operatorId: string, operatorName: string | null) {
+async function fetchOperatorBookings(admin: ReturnType<typeof createSupabaseServiceRoleClient>, operatorId: string) {
   const columns =
     "id,listing_id,traveler_name,traveler_email,traveler_phone,destination,destination_country,operator_name,operator_id,preferred_start_date,preferred_end_date,notes,status,ical_uid,created_at";
   const reducedColumns =
@@ -70,16 +70,6 @@ async function fetchOperatorBookings(admin: ReturnType<typeof createSupabaseServ
       .order("preferred_start_date", { ascending: true })
       .order("created_at", { ascending: false });
 
-  const queryByOperatorName = () =>
-    admin
-      .from("inquiries")
-      .select(columns)
-      .eq("operator_name", operatorName ?? "")
-      .eq("status", "confirmed")
-      .not("preferred_start_date", "is", null)
-      .order("preferred_start_date", { ascending: true })
-      .order("created_at", { ascending: false });
-
   let result = (await queryByOperatorId()) as InquiryQueryResult;
 
   if (result.error && isMissingColumnError(result.error)) {
@@ -91,30 +81,6 @@ async function fetchOperatorBookings(admin: ReturnType<typeof createSupabaseServ
       .not("preferred_start_date", "is", null)
       .order("preferred_start_date", { ascending: true })
       .order("created_at", { ascending: false })) as InquiryQueryResult;
-  }
-
-  if ((!result.data || result.data.length === 0) && operatorName) {
-    const fallback = await queryByOperatorName();
-    if (fallback.error && isMissingColumnError(fallback.error)) {
-      const reducedFallback = (await admin
-        .from("inquiries")
-        .select(reducedColumns)
-        .eq("operator_name", operatorName)
-        .eq("status", "confirmed")
-        .not("preferred_start_date", "is", null)
-        .order("preferred_start_date", { ascending: true })
-        .order("created_at", { ascending: false })) as InquiryQueryResult;
-
-      if (!reducedFallback.error && reducedFallback.data && reducedFallback.data.length > 0) {
-        result = reducedFallback;
-      } else if (!result.data) {
-        result = reducedFallback;
-      }
-    } else if (!fallback.error && fallback.data && fallback.data.length > 0) {
-      result = fallback;
-    } else if (!result.data) {
-      result = fallback;
-    }
   }
 
   return result;
@@ -145,15 +111,20 @@ export async function GET(request: NextRequest) {
 
     const { data: profileData, error: profileError } = await admin
       .from("profiles")
-      .select("id,email,full_name,role")
+      .select("id,full_name,role,is_active")
       .eq("id", operatorId)
       .maybeSingle();
 
-    if (profileError || !profileData || profileData.role !== "operator") {
+    if (
+      profileError ||
+      !profileData ||
+      profileData.role !== "operator" ||
+      profileData.is_active !== true
+    ) {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    const inquiriesResult = await fetchOperatorBookings(admin, operatorId, profileData.full_name ?? null);
+    const inquiriesResult = await fetchOperatorBookings(admin, operatorId);
 
     const { data: inquiriesData, error: inquiriesError } = inquiriesResult;
 

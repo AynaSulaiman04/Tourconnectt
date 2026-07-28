@@ -1,14 +1,26 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { processGoogleCalendarSync } from "@/lib/calendar/sync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getCronSecret(request: NextRequest) {
+function getProvidedSecrets(request: NextRequest) {
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authorization);
+  const bearerSecret = bearerMatch?.[1]?.trim() ?? "";
+  const headerSecret = request.headers.get("x-cron-secret")?.trim() ?? "";
+
+  return [bearerSecret, headerSecret].filter(Boolean);
+}
+
+function secretsMatch(providedSecret: string, expectedSecret: string) {
+  const providedBuffer = Buffer.from(providedSecret, "utf8");
+  const expectedBuffer = Buffer.from(expectedSecret, "utf8");
+
   return (
-    request.headers.get("x-cron-secret")?.trim() ||
-    request.nextUrl.searchParams.get("secret")?.trim() ||
-    null
+    providedBuffer.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(providedBuffer, expectedBuffer)
   );
 }
 
@@ -19,7 +31,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "CRON_SECRET is not configured." }, { status: 401 });
   }
 
-  if (getCronSecret(request) !== cronSecret) {
+  if (
+    !getProvidedSecrets(request).some((providedSecret) =>
+      secretsMatch(providedSecret, cronSecret),
+    )
+  ) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

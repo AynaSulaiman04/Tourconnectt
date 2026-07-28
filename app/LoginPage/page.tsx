@@ -5,7 +5,6 @@ import { LoginForm } from "./login-form";
 import { ForgotPasswordForm } from "./forgot-password-form";
 import { RecoveryForm } from "./recovery-form";
 import { PageShell } from "@/components/layout/PageShell";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 
 type LoginPageProps = {
@@ -15,6 +14,7 @@ type LoginPageProps = {
     auth?: string | string[];
     redirect?: string | string[];
     expected_role?: string | string[];
+    reason?: string | string[];
   }>;
 };
 
@@ -40,14 +40,10 @@ function normalizeExpectedRole(value?: string | string[]) {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
-  const supabase = await createSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser();
+  const profileContext = await getOptionalCurrentUserProfile();
 
-  if (authData.user) {
-    const profileContext = await getOptionalCurrentUserProfile();
-    if (profileContext?.profile) {
-      redirect(getRoleDashboardRoute(profileContext.profile.role));
-    }
+  if (profileContext?.profile) {
+    redirect(getRoleDashboardRoute(profileContext.profile.role));
   }
 
   const isRecoveryMode = resolvedSearchParams.mode === "recovery";
@@ -62,17 +58,37 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const authStatus = Array.isArray(resolvedSearchParams.auth)
     ? resolvedSearchParams.auth[0]
     : resolvedSearchParams.auth;
+  const inactiveReason = Array.isArray(resolvedSearchParams.reason)
+    ? resolvedSearchParams.reason[0]
+    : resolvedSearchParams.reason;
   const initialBanner =
     signupStatus === "success"
       ? {
           message: "Your account is ready. Sign in with your email and password.",
           success: true,
         }
+      : signupStatus === "check-email"
+        ? {
+            message: "Account created. Check your email and confirm your address before signing in.",
+            success: true,
+          }
+      : signupStatus === "invite-only"
+        ? {
+            message: `${isOperatorMode ? "Operator" : "Administrator"} accounts are invite-only. Ask an administrator for access.`,
+            success: false,
+          }
       : authStatus === "error"
         ? {
             message: "We could not complete the secure sign-in link. Please try again.",
             success: false,
           }
+        : authStatus === "inactive"
+          ? {
+              message:
+                inactiveReason?.trim() ||
+                "This account is not currently active. Contact an administrator.",
+              success: false,
+            }
         : null;
 
   return (
@@ -582,8 +598,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         }
 
         @media (max-width: 767px) {
-          .login-page { height: calc(100dvh - 4.75rem); min-height: 0; overflow: hidden; }
-          .form-section { min-height: 0; height: 100%; overflow: hidden; padding: 14px 20px; }
+          .login-page { min-height: calc(100dvh - 4.75rem); height: auto; overflow: visible; }
+          .form-section {
+            min-height: calc(100dvh - 4.75rem);
+            height: auto;
+            overflow: visible;
+            align-items: flex-start;
+            padding: 24px 20px max(32px, env(safe-area-inset-bottom));
+          }
           .mobile-brand { display: none; }
           .form-header { margin-bottom: 14px; }
           .form-header h1 { font-size: 36px; line-height: 40px; }
@@ -624,13 +646,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <section className="image-section cinematic-zoom">
           <Image
             className="desert-image"
-            alt="Cinematic desert landscape"
+            alt="A sheltered Caribbean bay in Tobago"
             loading="eager"
             fetchPriority="high"
             fill
-            quality={100}
+            quality={85}
             sizes="(max-width: 1024px) 100vw, 60vw"
-            src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=3840&q=95"
+            src="/landing/slideshow/01-tobago-bay.webp"
           />
           <div className="image-gradient" />
 
@@ -639,7 +661,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <div className="image-copy">
-            <h2>Return to the vast silence of the dunes.</h2>
+            <h2>Return to the warmth, culture, and coastlines of the Caribbean.</h2>
             <div className="image-copy-line" />
           </div>
         </section>

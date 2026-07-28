@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { getDirectMessagePageState } from "@/lib/supabase/direct-messages";
 import { getInquiryConfirmation } from "@/lib/supabase/inquiry";
-import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
+import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { ReviewForm } from "./review-form";
 import { initialReviewFormState, type ReviewFormState } from "./actions";
 import { revalidatePath } from "next/cache";
@@ -153,23 +153,26 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
   if (!inquiry) {
     return (
       <PageShell variant="public">
-        <main className="wrap">
-          <section className="grid">
-            <div className="panel">
-              <p className="eyebrow">Inquiry confirmed</p>
-              <h1 className="title">submitted</h1>
-              <p className="copy">
-                We could not find the inquiry record. You can return to the inquiry page and submit again.
+        <main className="mx-auto grid min-h-[calc(100dvh-4.75rem)] w-full max-w-5xl place-items-center px-5 py-12 md:px-10">
+          <section className="w-full max-w-2xl rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-6 shadow-sm md:p-10">
+              <p className="font-label-caps text-secondary">Inquiry status</p>
+              <h1 className="mt-3 font-headline text-4xl font-light text-on-surface md:text-6xl">Submitted</h1>
+              <p className="mt-5 max-w-xl text-base leading-7 text-on-surface-variant">
+                {inquiryId
+                  ? "Your inquiry was submitted. We sent the next steps to the email address you provided. Private trip and contact details are only shown to signed-in account holders."
+                  : "Choose an inquiry from your traveler profile, or submit a new request."}
               </p>
-              <div className="actions">
-                <Link className="button primary" href="/Inquiry">
-                  Return to inquiry
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link className="btn-primary" href="/Inquiry">
+                  Explore experiences
                 </Link>
-                <Link className="button" href="/LoginPage">
-                  Log in
+                <Link
+                  className="btn-outline"
+                  href={profile ? getRoleDashboardRoute(profile.role) : "/LoginPage"}
+                >
+                  {profile ? "Open dashboard" : "Log in"}
                 </Link>
               </div>
-            </div>
           </section>
         </main>
       </PageShell>

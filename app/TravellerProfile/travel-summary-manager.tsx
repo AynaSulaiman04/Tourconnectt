@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addTravelerCountryAction, deleteTravelerCountryAction } from "./actions";
 import { initialTravelSummaryFormState } from "./types";
@@ -8,7 +8,6 @@ import type { TravelerCountry } from "@/lib/supabase/profile-types";
 
 type TravelSummaryManagerProps = {
   countries: TravelerCountry[];
-  userId: string;
 };
 
 const COUNTRY_SUGGESTIONS = [
@@ -151,68 +150,17 @@ function normalizeCountryName(value: string) {
     .join(" ");
 }
 
-function readStoredCountries(storageKey: string) {
-  if (typeof window === "undefined") {
-    return [] as TravelerCountry[];
-  }
-
-  try {
-    const storedValue = window.localStorage.getItem(storageKey);
-
-    if (!storedValue) {
-      return [] as TravelerCountry[];
-    }
-
-    const parsed = JSON.parse(storedValue) as TravelerCountry[];
-    return Array.isArray(parsed) ? parsed : ([] as TravelerCountry[]);
-  } catch {
-    return [] as TravelerCountry[];
-  }
-}
-
-function mergeCountries(baseCountries: TravelerCountry[], storedCountries: TravelerCountry[]) {
-  return [
-    ...baseCountries,
-    ...storedCountries.filter(
-      (country) =>
-        !baseCountries.some(
-          (item) => item.country_name.toLowerCase() === country.country_name.toLowerCase(),
-        ),
-    ),
-  ];
-}
-
-export function TravelSummaryManager({ countries, userId }: TravelSummaryManagerProps) {
+export function TravelSummaryManager({ countries }: TravelSummaryManagerProps) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
     addTravelerCountryAction,
     initialTravelSummaryFormState,
   );
-  const [storedCountries, setStoredCountries] = useState<TravelerCountry[]>([]);
   const [showSummary, setShowSummary] = useState(false);
   const [localMessage, setLocalMessage] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
-  const storageKey = `tt-connect-travel-summary:${userId}`;
-  const visibleCountries = useMemo(() => mergeCountries(countries, storedCountries), [countries, storedCountries]);
-
-  useEffect(() => {
-    setStoredCountries(readStoredCountries(storageKey));
-  }, [storageKey]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(storedCountries));
-      window.dispatchEvent(new Event("tt-connect-travel-summary-changed"));
-    } catch {
-      // Ignore local storage failures; the UI still stays functional in memory.
-    }
-  }, [storageKey, storedCountries]);
-
-  function syncVisibleCountries(nextCountries: TravelerCountry[]) {
-    setStoredCountries(nextCountries);
-  }
+  const visibleCountries = countries;
 
   const generatedSummary = useMemo(() => {
     if (!visibleCountries.length) {
@@ -262,15 +210,15 @@ export function TravelSummaryManager({ countries, userId }: TravelSummaryManager
   useEffect(() => {
     if (state.success) {
       router.refresh();
-      return;
     }
   }, [router, state.success]);
 
-  function addCountryToSummary(countryName: string) {
+  function validateCountry(countryName: string) {
     const normalizedCountry = normalizeCountryName(countryName);
 
     if (!normalizedCountry) {
-      return false;
+      setLocalMessage("Please add a country name.");
+      return null;
     }
 
     if (
@@ -279,35 +227,35 @@ export function TravelSummaryManager({ countries, userId }: TravelSummaryManager
       )
     ) {
       setLocalMessage("That country is already in your travel summary.");
-      return false;
+      return null;
     }
 
-    const nextCountry: TravelerCountry = {
-      id: `local-${crypto.randomUUID()}`,
-      user_id: userId,
-      country_name: normalizedCountry,
-      created_at: new Date().toISOString(),
-    };
-
-    syncVisibleCountries([...visibleCountries, nextCountry]);
-    setLocalMessage("Country added.");
-
-    window.setTimeout(() => {
-      setQuery("");
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
-    }, 0);
-
-    return true;
+    return normalizedCountry;
   }
 
   function handleSuggestionSelect(countryName: string) {
-    addCountryToSummary(countryName);
+    const normalizedCountry = validateCountry(countryName);
+    if (!normalizedCountry) {
+      return;
+    }
+
+    setLocalMessage("");
+    setQuery(normalizedCountry);
+    window.requestAnimationFrame(() => formRef.current?.requestSubmit());
   }
 
-  function handleFormSubmit() {
-    addCountryToSummary(query);
+  function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!validateCountry(query)) {
+      event.preventDefault();
+      return;
+    }
+
+    setLocalMessage("");
+  }
+
+  function handleCountryAction(formData: FormData) {
+    setQuery("");
+    formAction(formData);
   }
 
   return (
@@ -327,14 +275,13 @@ export function TravelSummaryManager({ countries, userId }: TravelSummaryManager
         </div>
       </div>
 
-      <form className="travel-summary-form" action={formAction} ref={formRef} onSubmit={handleFormSubmit}>
+      <form className="travel-summary-form" action={handleCountryAction} ref={formRef} onSubmit={handleFormSubmit}>
         <label className="travel-summary-label" htmlFor="country_name">
           Add a country
         </label>
         <div className="travel-summary-row">
           <div className="travel-summary-input-shell">
             <input
-              ref={inputRef}
               id="country_name"
               name="country_name"
               placeholder="Search and add a country"
@@ -402,12 +349,6 @@ export function TravelSummaryManager({ countries, userId }: TravelSummaryManager
                   className="travel-summary-delete"
                   aria-label={`Delete ${country.country_name}`}
                   type="submit"
-                  onClick={() => {
-                    setStoredCountries((current) =>
-                      current.filter((item) => item.id !== country.id),
-                    );
-                    setLocalMessage("Country removed.");
-                  }}
                 >
                   <span className="material-symbols-outlined" aria-hidden="true">
                     delete

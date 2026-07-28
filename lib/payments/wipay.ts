@@ -14,10 +14,19 @@ export type WiPayPaymentStatus =
   | "error"
   | "cancelled"
   | "refunded";
+export type WiPayCanonicalPaymentStatus =
+  | "pending"
+  | "initiated"
+  | "paid"
+  | "failed"
+  | "cancelled"
+  | "refunded";
 export type { WiPayPaymentSummary } from "@/lib/supabase/inquiry-types";
 
 export const PLATFORM_ADMIN_COMMISSION_RATE = 0.2;
 export const OPERATOR_PAYOUT_RATE = 0.8;
+const WIPAY_REQUEST_TIMEOUT_MS = 20_000;
+export const WIPAY_WEBHOOK_REPLAY_TOLERANCE_SECONDS = 5 * 60;
 
 export type PaymentSettlementBreakdown = {
   grossAmount: number;
@@ -27,23 +36,14 @@ export type PaymentSettlementBreakdown = {
   operatorPayoutRate: number;
 };
 
-type WiPayCheckoutOptions = {
+type WiPayHostedCheckoutOptions = {
   inquiryId: string;
   orderId: string;
   amount: string;
   currency: string;
   countryCode: string;
-  returnUrl: string;
-  cancelUrl: string;
-  webhookUrl: string;
-};
-
-type WiPayHostedCheckoutOptions = {
-  orderId: string;
-  amount: string;
-  currency: string;
-  countryCode: string;
   responseUrl: string;
+  travelerEmail: string;
 };
 
 type WiPayCheckoutResponse = {
@@ -88,14 +88,16 @@ function getAppUrl() {
   return appUrl.replace(/\/+$/, "");
 }
 
-function getRequiredEnv(name: string) {
-  const value = process.env[name]?.trim();
+function getFirstConfiguredEnv(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
 
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    if (value) {
+      return value;
+    }
   }
 
-  return value;
+  return null;
 }
 
 function getOptionalEnv(name: string, fallback: string) {
@@ -106,12 +108,32 @@ function getWiPayApiBaseUrl() {
   return getOptionalEnv("WIPAY_API_BASE_URL", "https://tt.wipayfinancial.com/plugins/payments/request").replace(/\/+$/, "");
 }
 
-function getWiPayDeveloperId() {
-  return getRequiredEnv("WIPAY_DEVELOPER_ID");
+function getWiPayAccountNumber() {
+  const value = getFirstConfiguredEnv("WIPAY_ACCOUNT_NUMBER", "WIPAY_DEVELOPER_ID");
+
+  if (!value) {
+    throw new Error("Missing required environment variable: WIPAY_ACCOUNT_NUMBER");
+  }
+
+  if (!/^\d+$/.test(value)) {
+    throw new Error("WIPAY_ACCOUNT_NUMBER must contain digits only.");
+  }
+
+  return value;
 }
 
-function getWiPayBusinessKey() {
-  return getRequiredEnv("WIPAY_BUSINESS_KEY");
+function getWiPayApiKey() {
+  const value = getFirstConfiguredEnv("WIPAY_API_KEY", "WIPAY_BUSINESS_KEY");
+
+  if (!value) {
+    throw new Error("Missing required environment variable: WIPAY_API_KEY");
+  }
+
+  return value;
+}
+
+export function getWiPayWebhookSecret() {
+  return getFirstConfiguredEnv("WIPAY_WEBHOOK_SECRET");
 }
 
 function getWiPayCurrency() {
@@ -123,7 +145,14 @@ function getWiPayCountryCode() {
 }
 
 export function getWiPayConfigStatus() {
-  const missingKeys = ["WIPAY_DEVELOPER_ID", "WIPAY_BUSINESS_KEY"].filter((key) => !process.env[key]?.trim());
+  const missingKeys = [
+    !getFirstConfiguredEnv("WIPAY_ACCOUNT_NUMBER", "WIPAY_DEVELOPER_ID")
+      ? "WIPAY_ACCOUNT_NUMBER (or WIPAY_DEVELOPER_ID)"
+      : null,
+    !getFirstConfiguredEnv("WIPAY_API_KEY", "WIPAY_BUSINESS_KEY")
+      ? "WIPAY_API_KEY (or WIPAY_BUSINESS_KEY)"
+      : null,
+  ].filter((key): key is string => Boolean(key));
 
   if (missingKeys.length > 0) {
     return {
@@ -140,7 +169,7 @@ export function getWiPayConfigStatus() {
   };
 }
 
-function normalizeStatus(value: string | null | undefined): WiPayPaymentStatus {
+function normalizeStatus(value: string | null | undefined): WiPayCanonicalPaymentStatus | null {
   const status = value?.trim().toLowerCase() ?? "";
 
   if (["paid", "completed", "success"].includes(status)) {
@@ -163,7 +192,11 @@ function normalizeStatus(value: string | null | undefined): WiPayPaymentStatus {
     return "refunded";
   }
 
-  return "pending";
+  if (status === "pending") {
+    return "pending";
+  }
+
+  return null;
 }
 
 function normalizeAmount(value: string | number) {
@@ -221,7 +254,7 @@ export function resolveWiPayInquiryAmount(inquiry: {
 
 export function generateWiPayOrderId(inquiryId: string) {
   const seed = `${inquiryId}:${Date.now().toString(36)}:${crypto.randomBytes(6).toString("hex")}`;
-  return `wp${crypto.createHash("sha256").update(seed).digest("hex").slice(0, 28)}`;
+  return `wp${crypto.createHash("sha256").update(seed).digest("hex").slice(0, 14)}`;
 }
 
 export function buildWiPayCheckoutUrls(params: { inquiryId: string; orderId: string; outcome: "success" | "cancelled" }) {
@@ -253,77 +286,23 @@ export function buildWiPayResponseUrl(params: { inquiryId: string; orderId: stri
   return `${appUrl}/api/payments/wipay/callback?${searchParams.toString()}`;
 }
 
-export function buildWiPayCheckoutPayload(options: WiPayCheckoutOptions) {
-  return {
-    developer_id: getWiPayDeveloperId(),
-    business_key: getWiPayBusinessKey(),
-    total: options.amount,
-    currency: options.currency,
-    country_code: options.countryCode,
-    order_id: options.orderId,
-    return_url: options.returnUrl,
-    cancel_url: options.cancelUrl,
-    webhook_url: options.webhookUrl,
-  };
-}
-
-export async function createWiPayCheckoutSession(options: WiPayCheckoutOptions) {
-  const response = await fetch(`${getWiPayApiBaseUrl()}/checkout`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(buildWiPayCheckoutPayload(options)),
-    cache: "no-store",
-  });
-
-  const responseText = await response.text();
-  let data: WiPayCheckoutResponse | null = null;
-
-  try {
-    data = responseText ? (JSON.parse(responseText) as WiPayCheckoutResponse) : null;
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      (data && typeof data === "object" && "message" in data && typeof data.message === "string"
-        ? data.message
-        : responseText) || `WiPay checkout request failed with status ${response.status}.`,
-    );
-  }
-
-  const checkoutUrl = data?.url ?? data?.checkout_url ?? null;
-
-  if (!checkoutUrl || typeof checkoutUrl !== "string") {
-    throw new Error("WiPay did not return a checkout URL.");
-  }
-
-  return {
-    checkoutUrl,
-    transactionId:
-      (data?.transaction_id && typeof data.transaction_id === "string" ? data.transaction_id : null) ??
-      (data?.transactionId && typeof data.transactionId === "string" ? data.transactionId : null) ??
-      null,
-    responsePayload: data ?? {},
-  };
-}
-
 export function buildWiPayHostedCheckoutPayload(options: WiPayHostedCheckoutOptions) {
   return {
-    account_number: getWiPayDeveloperId(),
+    account_number: getWiPayAccountNumber(),
     country_code: options.countryCode,
     currency: options.currency,
     environment: getOptionalEnv("WIPAY_ENVIRONMENT", "sandbox"),
     fee_structure: "customer_pay",
-    method: "credit_card",
+    method: "credit_card_co",
     order_id: options.orderId,
-    origin: "TT-Connect",
-    cancel_url: options.responseUrl,
+    origin: "TTConnect",
     response_url: options.responseUrl,
     total: options.amount,
+    email: options.travelerEmail,
+    data: JSON.stringify({
+      inquiry_id: options.inquiryId,
+    }),
+    version: "1.0.0",
   };
 }
 
@@ -343,14 +322,16 @@ function extractCheckoutUrl(data: WiPayCheckoutResponse | null) {
 }
 
 export async function createWiPayHostedCheckoutSession(options: WiPayHostedCheckoutOptions) {
+  const payload = buildWiPayHostedCheckoutPayload(options);
   const response = await fetch(getWiPayApiBaseUrl(), {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
     },
-    body: JSON.stringify(buildWiPayHostedCheckoutPayload(options)),
+    body: new URLSearchParams(payload).toString(),
     cache: "no-store",
+    signal: AbortSignal.timeout(WIPAY_REQUEST_TIMEOUT_MS),
   });
 
   const responseText = await response.text();
@@ -386,21 +367,18 @@ export async function createWiPayHostedCheckoutSession(options: WiPayHostedCheck
   };
 }
 
-export function verifyWiPayWebhookSignature(payload: Record<string, unknown>, signatureHeader: string | null) {
-  const businessKey = getWiPayBusinessKey();
-
-  if (!signatureHeader) {
+export function verifyWiPayWebhookSignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  webhookSecret: string,
+) {
+  const match = signatureHeader?.trim().match(/^sha256=([a-f0-9]{64})$/i);
+  if (!match) {
     return false;
   }
 
-  const orderId = typeof payload.order_id === "string" ? payload.order_id : "";
-  const amount = typeof payload.amount === "string" || typeof payload.amount === "number" ? String(payload.amount) : "";
-  const status = typeof payload.status === "string" ? payload.status : "";
-  const verificationString = `${orderId}${amount}${status}${businessKey}`;
-  const expectedSignature = crypto.createHash("sha256").update(verificationString).digest("hex");
-
-  const signatureBuffer = Buffer.from(signatureHeader.trim().toLowerCase(), "utf8");
-  const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+  const signatureBuffer = Buffer.from(match[1], "hex");
+  const expectedBuffer = crypto.createHmac("sha256", webhookSecret).update(rawBody, "utf8").digest();
 
   if (signatureBuffer.length !== expectedBuffer.length) {
     return false;
@@ -409,19 +387,47 @@ export function verifyWiPayWebhookSignature(payload: Record<string, unknown>, si
   return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 }
 
-export function verifyWiPayCallbackHash(payload: WiPayCallbackPayload, hashValue: string | null) {
-  if (!hashValue) {
+export function isWiPayWebhookTimestampFresh(
+  timestampHeader: string | null,
+  nowMilliseconds = Date.now(),
+) {
+  if (!timestampHeader || !/^\d+$/.test(timestampHeader.trim())) {
     return false;
   }
 
-  const amount = payload.total ?? "";
-  const verificationString = `${payload.order_id}${amount}${payload.status}${getWiPayBusinessKey()}`;
-  const expectedHash = crypto.createHash("sha256").update(verificationString).digest("hex");
+  const timestampSeconds = Number(timestampHeader);
+  if (!Number.isSafeInteger(timestampSeconds)) {
+    return false;
+  }
 
-  return expectedHash === hashValue.trim().toLowerCase();
+  const ageSeconds = Math.abs(Math.floor(nowMilliseconds / 1000) - timestampSeconds);
+  return ageSeconds <= WIPAY_WEBHOOK_REPLAY_TOLERANCE_SECONDS;
 }
 
-export function normalizeWiPayCallbackStatus(value: string | null | undefined): WiPayPaymentStatus {
+export function verifyWiPayCallbackHash(
+  payload: Pick<WiPayCallbackPayload, "transaction_id" | "hash">,
+  originalStoredTotal: string,
+) {
+  const receivedHash = payload.hash?.trim().toLowerCase() ?? "";
+  const transactionId = payload.transaction_id?.trim() ?? "";
+  if (!transactionId || !/^[a-f0-9]{32}$/.test(receivedHash)) {
+    return false;
+  }
+
+  const expectedHash = crypto
+    .createHash("md5")
+    .update(`${transactionId}${originalStoredTotal}${getWiPayApiKey()}`, "utf8")
+    .digest();
+  const receivedBuffer = Buffer.from(receivedHash, "hex");
+
+  if (receivedBuffer.length !== expectedHash.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(receivedBuffer, expectedHash);
+}
+
+export function normalizeWiPayCallbackStatus(value: string | null | undefined): WiPayCanonicalPaymentStatus | null {
   return normalizeStatus(value);
 }
 
@@ -573,28 +579,159 @@ export async function createWiPayPaymentAttempt(params: {
   return data as WiPayPaymentSummary;
 }
 
-export async function updateWiPayPaymentByOrderId(
-  orderId: string,
-  fields: Partial<{
-    transaction_id: string | null;
-    status: WiPayPaymentStatus;
-    checkout_url: string | null;
-    response_payload: Record<string, unknown> | null;
-    webhook_payload: Record<string, unknown> | null;
-    paid_at: string | null;
-    cancelled_at: string | null;
-    refunded_at: string | null;
-    failed_at: string | null;
-  }>,
-) {
-  const admin = createSupabaseServiceRoleClient();
-  const { error } = await admin
-    .from("wipay_payments")
-    .update(fields)
-    .eq("order_id", orderId)
-    .eq("provider", "wipay");
+export type WiPayPaymentTransitionResult = {
+  payment: WiPayPaymentSummary;
+  transitionApplied: boolean;
+  paidClaimed: boolean;
+  previousStatus: WiPayCanonicalPaymentStatus;
+  currentStatus: WiPayCanonicalPaymentStatus;
+};
 
-  if (error) {
-    throw new Error(error.message);
+function canApplyWiPayTransition(
+  currentStatus: WiPayCanonicalPaymentStatus,
+  targetStatus: WiPayCanonicalPaymentStatus,
+  allowDirectRefund: boolean,
+) {
+  if (currentStatus === targetStatus) {
+    return false;
   }
+
+  if (targetStatus === "refunded" && allowDirectRefund) {
+    return true;
+  }
+
+  if (currentStatus === "pending") {
+    return ["initiated", "paid", "failed", "cancelled"].includes(targetStatus);
+  }
+
+  if (currentStatus === "initiated") {
+    return ["paid", "failed", "cancelled"].includes(targetStatus);
+  }
+
+  if (currentStatus === "failed" || currentStatus === "cancelled") {
+    return targetStatus === "paid";
+  }
+
+  if (currentStatus === "paid") {
+    return targetStatus === "refunded";
+  }
+
+  return false;
+}
+
+function getCanonicalStoredWiPayStatus(status: string): WiPayCanonicalPaymentStatus {
+  const canonicalStatus = normalizeStatus(status);
+
+  if (!canonicalStatus) {
+    throw new Error(`Unsupported stored WiPay payment status: ${status}`);
+  }
+
+  return canonicalStatus;
+}
+
+/**
+ * Applies a provider/admin payment transition with a database compare-and-set.
+ *
+ * The update predicate includes the exact status that was read. If two
+ * callbacks race, only one UPDATE can match; the loser reloads the winning
+ * state and receives `paidClaimed: false`. Callers must gate all one-time paid
+ * side effects (email and notifications) on that flag.
+ */
+export async function transitionWiPayPaymentByOrderId(params: {
+  orderId: string;
+  status: WiPayCanonicalPaymentStatus;
+  transactionId?: string | null;
+  checkoutUrl?: string | null;
+  responsePayload?: Record<string, unknown> | null;
+  webhookPayload?: Record<string, unknown> | null;
+  knownPayment?: WiPayPaymentSummary | null;
+  allowDirectRefund?: boolean;
+}) {
+  const admin = createSupabaseServiceRoleClient();
+  let currentPayment = params.knownPayment ?? null;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    currentPayment = currentPayment ?? (await getWiPayPaymentByOrderId(params.orderId));
+
+    if (!currentPayment) {
+      throw new Error("Unable to find the WiPay payment for this order.");
+    }
+
+    const previousStatus = getCanonicalStoredWiPayStatus(currentPayment.status);
+    const transitionApplied = canApplyWiPayTransition(
+      previousStatus,
+      params.status,
+      params.allowDirectRefund === true,
+    );
+
+    if (!transitionApplied) {
+      return {
+        payment: currentPayment,
+        transitionApplied: false,
+        paidClaimed: false,
+        previousStatus,
+        currentStatus: previousStatus,
+      } satisfies WiPayPaymentTransitionResult;
+    }
+
+    const now = new Date().toISOString();
+    const preserveSettledIdentifiers = previousStatus === "paid" || previousStatus === "refunded";
+    const { data, error } = await admin
+      .from("wipay_payments")
+      .update({
+        status: params.status,
+        transaction_id: preserveSettledIdentifiers
+          ? currentPayment.transaction_id
+          : params.transactionId?.trim() || currentPayment.transaction_id,
+        checkout_url:
+          previousStatus === "pending" || previousStatus === "initiated"
+            ? params.checkoutUrl?.trim() || currentPayment.checkout_url
+            : currentPayment.checkout_url,
+        response_payload: params.responsePayload
+          ? {
+              ...(currentPayment.response_payload ?? {}),
+              ...params.responsePayload,
+            }
+          : currentPayment.response_payload,
+        webhook_payload: params.webhookPayload
+          ? {
+              ...(currentPayment.webhook_payload ?? {}),
+              ...params.webhookPayload,
+            }
+          : currentPayment.webhook_payload,
+        paid_at: params.status === "paid" ? currentPayment.paid_at ?? now : currentPayment.paid_at,
+        cancelled_at:
+          params.status === "cancelled" ? currentPayment.cancelled_at ?? now : currentPayment.cancelled_at,
+        refunded_at: params.status === "refunded" ? currentPayment.refunded_at ?? now : currentPayment.refunded_at,
+        failed_at: params.status === "failed" ? currentPayment.failed_at ?? now : currentPayment.failed_at,
+      })
+      .eq("order_id", params.orderId)
+      .eq("provider", "wipay")
+      .eq("status", currentPayment.status)
+      .select(
+        "id,inquiry_id,provider,order_id,transaction_id,status,amount,currency,country_code,checkout_url,response_payload,webhook_payload,paid_at,cancelled_at,refunded_at,failed_at,created_at,updated_at",
+      )
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data) {
+      const payment = data as WiPayPaymentSummary;
+      return {
+        payment,
+        transitionApplied: true,
+        paidClaimed: params.status === "paid" && previousStatus !== "paid" && previousStatus !== "refunded",
+        previousStatus,
+        currentStatus: getCanonicalStoredWiPayStatus(payment.status),
+      } satisfies WiPayPaymentTransitionResult;
+    }
+
+    // Another request won the compare-and-set. Reload and evaluate its state;
+    // this caller must never inherit the winner's first-paid claim.
+    currentPayment = null;
+  }
+
+  throw new Error("WiPay payment state changed too frequently. Please retry.");
 }

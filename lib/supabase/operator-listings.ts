@@ -191,49 +191,13 @@ export async function getOperatorCustomerDirectory(profile: TravelerProfile) {
 
   if (error) {
     if (isMissingColumnError(error) || isMissingRelationError(error) || isSchemaCacheMiss(error)) {
-      const fallback = await admin
-        .from("inquiries")
-        .select(
-          "id,user_id,listing_id,traveler_name,traveler_email,traveler_phone,destination,destination_country,operator_name,preferred_start_date,preferred_end_date,availability,notes,status,created_at,updated_at",
-        )
-        .eq("operator_name", profile.full_name.trim())
-        .order("created_at", { ascending: false });
-
-      if (fallback.error) {
-        if (isMissingColumnError(fallback.error) || isMissingRelationError(fallback.error) || isSchemaCacheMiss(fallback.error)) {
-          return buildOperatorCustomers([], [], new Map());
-        }
-
-        throw new Error(fallback.error.message);
-      }
-
-      return buildOperatorCustomers((fallback.data ?? []) as TravelerInquiry[], [], new Map());
+      return buildOperatorCustomers([], [], new Map());
     }
 
     throw new Error(error.message);
   }
 
-  let inquiries = (inquiriesData ?? []) as (TravelerInquiry & { operator_id: string | null })[];
-
-  if (!inquiries.length) {
-    const { data: fallbackInquiries, error: fallbackInquiriesError } = await admin
-      .from("inquiries")
-      .select(
-        "id,user_id,listing_id,traveler_name,traveler_email,traveler_phone,destination,destination_country,operator_name,preferred_start_date,preferred_end_date,availability,notes,status,created_at,updated_at",
-      )
-      .eq("operator_name", profile.full_name.trim())
-      .order("created_at", { ascending: false });
-
-    if (fallbackInquiriesError) {
-      if (isMissingColumnError(fallbackInquiriesError) || isMissingRelationError(fallbackInquiriesError) || isSchemaCacheMiss(fallbackInquiriesError)) {
-        return buildOperatorCustomers([], [], new Map());
-      }
-
-      throw new Error(fallbackInquiriesError.message);
-    }
-
-    inquiries = (fallbackInquiries ?? []) as TravelerInquiry[];
-  }
+  const inquiries = (inquiriesData ?? []) as (TravelerInquiry & { operator_id: string | null })[];
 
   const listingIds = [...new Set(inquiries.map((item) => item.listing_id).filter((value): value is string => Boolean(value)))];
   const directMessageState = await getDirectMessagePageState({
@@ -509,7 +473,7 @@ export async function getOperatorCustomerDirectory(profile: TravelerProfile) {
     .sort((left, right) => new Date(right.latest_activity_at).getTime() - new Date(left.latest_activity_at).getTime());
 }
 
-export async function getOperatorListings(profileId: string, operatorName: string) {
+export async function getOperatorListings(profileId: string) {
   const admin = createSupabaseServiceRoleClient();
 
   const { data, error } = await admin
@@ -521,57 +485,13 @@ export async function getOperatorListings(profileId: string, operatorName: strin
 
   if (error) {
     if (isMissingColumnError(error) || isMissingRelationError(error) || isSchemaCacheMiss(error)) {
-      const fallback = await admin
-        .from("tour_listings")
-        .select(
-          "id,title,location,country,duration,summary,image_url,image_base64,operator_name,featured,is_active,created_at,updated_at",
-        )
-        .eq("operator_name", operatorName)
-        .order("featured", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (fallback.error) {
-        if (isMissingColumnError(fallback.error) || isMissingRelationError(fallback.error) || isSchemaCacheMiss(fallback.error)) {
-          return [];
-        }
-
-        throw new Error(fallback.error.message);
-      }
-
-      return ((fallback.data ?? []) as Array<TourListing & { image_base64?: string | null }>).map(
-        normalizeListingRecord,
-      );
+      return [];
     }
 
     throw new Error(error.message);
   }
 
-  let listings = (data ?? []) as TourListing[];
-
-  if (!listings.length) {
-    const { data: fallbackListings, error: fallbackListingsError } = await admin
-      .from("tour_listings")
-      .select(
-        "id,title,location,country,duration,summary,image_url,image_base64,operator_name,featured,is_active,created_at,updated_at",
-      )
-      .eq("operator_name", operatorName)
-      .order("featured", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    if (fallbackListingsError) {
-      if (isMissingColumnError(fallbackListingsError) || isMissingRelationError(fallbackListingsError) || isSchemaCacheMiss(fallbackListingsError)) {
-      return [];
-      }
-
-      throw new Error(fallbackListingsError.message);
-    }
-
-    listings = ((fallbackListings ?? []) as Array<TourListing & { image_base64?: string | null }>).map(
-      normalizeListingRecord,
-    );
-  }
-
-  return listings;
+  return (data ?? []) as TourListing[];
 }
 
 export async function getOperatorListingById(profileId: string, listingId: string) {
@@ -599,7 +519,7 @@ export async function getOperatorListingById(profileId: string, listingId: strin
   return data ? (normalizeListingRecord(data as TourListing & { image_base64?: string | null }) as TourListing) : null;
 }
 
-export async function getOperatorInquiries(profileId: string, operatorName: string) {
+export async function getOperatorInquiries(profileId: string) {
   const admin = createSupabaseServiceRoleClient();
 
   const { data, error } = await admin
@@ -610,51 +530,13 @@ export async function getOperatorInquiries(profileId: string, operatorName: stri
 
   if (error) {
     if (isMissingColumnError(error) || isMissingRelationError(error) || isSchemaCacheMiss(error)) {
-      const fallback = await admin
-        .from("inquiries")
-        .select(
-          "id,user_id,listing_id,traveler_name,traveler_email,traveler_phone,destination,destination_country,operator_name,preferred_start_date,preferred_end_date,availability,notes,status,created_at,updated_at",
-        )
-        .eq("operator_name", operatorName)
-        .order("created_at", { ascending: false });
-
-      if (fallback.error) {
-        if (isMissingColumnError(fallback.error) || isMissingRelationError(fallback.error) || isSchemaCacheMiss(fallback.error)) {
-          return [];
-        }
-
-        throw new Error(fallback.error.message);
-      }
-
-      return (fallback.data ?? []) as TravelerInquiry[];
+      return [];
     }
 
     throw new Error(error.message);
   }
 
-  let inquiries = (data ?? []) as TravelerInquiry[];
-
-  if (!inquiries.length) {
-    const { data: fallbackInquiries, error: fallbackInquiriesError } = await admin
-      .from("inquiries")
-      .select(
-        "id,user_id,listing_id,traveler_name,traveler_email,traveler_phone,destination,destination_country,operator_name,preferred_start_date,preferred_end_date,availability,notes,status,created_at,updated_at",
-      )
-      .eq("operator_name", operatorName)
-      .order("created_at", { ascending: false });
-
-    if (fallbackInquiriesError) {
-      if (isMissingColumnError(fallbackInquiriesError) || isMissingRelationError(fallbackInquiriesError) || isSchemaCacheMiss(fallbackInquiriesError)) {
-        return [];
-      }
-
-      throw new Error(fallbackInquiriesError.message);
-    }
-
-    inquiries = (fallbackInquiries ?? []) as TravelerInquiry[];
-  }
-
-  return inquiries;
+  return (data ?? []) as TravelerInquiry[];
 }
 
 function buildOperatorCustomers(

@@ -6,8 +6,9 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
+  const workspace = await getAdminWorkspaceData();
+
   try {
-    const workspace = await getAdminWorkspaceData();
     const format = (request.nextUrl.searchParams.get("format") ?? "pdf").toLowerCase();
 
     if (format === "excel" || format === "xlsx" || format === "csv") {

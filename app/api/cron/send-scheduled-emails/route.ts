@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { processScheduledEmails } from "@/lib/email/scheduled";
 
@@ -5,19 +6,33 @@ function getExpectedSecret() {
   return process.env.CRON_SECRET?.trim() ?? "";
 }
 
-function getProvidedSecret(request: Request) {
+function getProvidedSecrets(request: Request) {
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authorization);
+  const bearerSecret = bearerMatch?.[1]?.trim() ?? "";
   const headerSecret = request.headers.get("x-cron-secret")?.trim() ?? "";
-  const url = new URL(request.url);
-  const querySecret = url.searchParams.get("secret")?.trim() ?? "";
 
-  return headerSecret || querySecret;
+  return [bearerSecret, headerSecret].filter(Boolean);
+}
+
+function secretsMatch(providedSecret: string, expectedSecret: string) {
+  const providedBuffer = Buffer.from(providedSecret, "utf8");
+  const expectedBuffer = Buffer.from(expectedSecret, "utf8");
+
+  return (
+    providedBuffer.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(providedBuffer, expectedBuffer)
+  );
 }
 
 function authorizeCronRequest(request: Request) {
   const expectedSecret = getExpectedSecret();
-  const providedSecret = getProvidedSecret(request);
+  const providedSecrets = getProvidedSecrets(request);
 
-  if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
+  if (
+    !expectedSecret ||
+    !providedSecrets.some((providedSecret) => secretsMatch(providedSecret, expectedSecret))
+  ) {
     return false;
   }
 

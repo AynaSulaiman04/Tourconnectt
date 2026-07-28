@@ -19,6 +19,8 @@ type NotificationCenterProps = {
   role: TravelerProfile["role"] | null;
 };
 
+const FALLBACK_POLL_INTERVAL_MS = 120_000;
+
 function formatRelativeTime(value: string | null | undefined) {
   if (!value) {
     return "Just now";
@@ -65,20 +67,20 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
 
   useEffect(() => {
     if (!profileId) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setLoading(false);
       return;
     }
 
     let active = true;
+    let requestInFlight = false;
+    let realtimeConnected = false;
     const supabase = createSupabaseBrowserClient();
 
     async function loadNotifications() {
-      if (!active) {
+      if (!active || requestInFlight) {
         return;
       }
 
+      requestInFlight = true;
       setLoading(true);
 
       try {
@@ -107,11 +109,10 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
         setNotifications((data ?? []) as NotificationRecord[]);
         setUnreadCount(unreadResult.error ? (data ?? []).filter((notification) => !notification.read_at).length : unreadResult.count ?? 0);
       } catch {
-        if (active) {
-          setNotifications([]);
-          setUnreadCount(0);
-        }
+        // Keep the last known state. Realtime reconnection or the slow fallback
+        // poll can reconcile it without making the menu flash empty.
       } finally {
+        requestInFlight = false;
         if (active) {
           setLoading(false);
         }
@@ -132,21 +133,38 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
         },
         () => {
           void loadNotifications();
-          router.refresh();
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        const wasConnected = realtimeConnected;
+        realtimeConnected = status === "SUBSCRIBED";
+
+        if (active && realtimeConnected && !wasConnected) {
+          void loadNotifications();
+        }
+      });
 
     const interval = window.setInterval(() => {
-      void loadNotifications();
-    }, 30000);
+      if (document.visibilityState === "visible" && !realtimeConnected) {
+        void loadNotifications();
+      }
+    }, FALLBACK_POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !realtimeConnected) {
+        void loadNotifications();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       active = false;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       void supabase.removeChannel(channel);
     };
-  }, [profileId, router]);
+  }, [profileId]);
 
   async function markAllRead() {
     if (!profileId) {
@@ -164,7 +182,6 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
       return;
     }
 
-    router.refresh();
     setUnreadCount(0);
     setNotifications((current) =>
       current.map((notification) =>
@@ -197,7 +214,6 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
       ),
     );
     setUnreadCount((current) => Math.max(0, current - 1));
-    router.refresh();
   }
 
   async function handleNotificationClick(notification: NotificationRecord) {

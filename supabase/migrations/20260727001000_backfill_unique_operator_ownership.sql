@@ -1,0 +1,5 @@
+-- Intentionally no automatic name-based ownership backfill.
+--
+-- Operator display names are editable and non-unique, so they cannot safely
+-- establish ownership. Legacy rows with a null operator_id must be reviewed and
+-- assigned by an administrator using an audited immutable profile ID.

@@ -43,7 +43,6 @@ export type InboxShellProps = {
   onSelectConversation: (conversationId: string) => void;
   title: string;
   copy?: string | null;
-  sidebarTitle?: string;
   sidebarCopy?: string | null;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -89,7 +88,6 @@ export function InboxShell({
   onSelectConversation,
   title,
   copy = null,
-  sidebarTitle = "Messages",
   sidebarCopy = null,
   searchValue = "",
   onSearchChange,
