@@ -1,21 +1,42 @@
 "use client";
 
 import Image from "next/image";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
+import { dedupeSlideshowImageUrls, shouldServeImageUnoptimized } from "@/lib/landing-slideshow-images";
 
 type LandingImageSlideshowProps = {
   images: string[];
+  intervalMs?: number;
 };
 
-export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const safeImages = useMemo(
-    () => Array.from(new Set(images.map((image) => image.trim()).filter((image) => image.length > 0))),
-    [images],
-  );
+const DEFAULT_SLIDESHOW_INTERVAL_MS = 2000;
+
+export function LandingImageSlideshow({ images, intervalMs = DEFAULT_SLIDESHOW_INTERVAL_MS }: LandingImageSlideshowProps) {
+  const safeImages = useMemo(() => dedupeSlideshowImageUrls(images), [images]);
   const [activeIndex, setActiveIndex] = useState(0);
   const normalizedIndex = safeImages.length ? activeIndex % safeImages.length : 0;
+
+  useEffect(() => {
+    if (!safeImages.length) {
+      return;
+    }
+
+    const preloadIndexes = new Set([
+      normalizedIndex,
+      (normalizedIndex + 1) % safeImages.length,
+    ]);
+
+    preloadIndexes.forEach((index) => {
+      const imageUrl = safeImages[index];
+      if (!imageUrl) {
+        return;
+      }
+
+      const preload = new window.Image();
+      preload.decoding = "async";
+      preload.src = imageUrl;
+    });
+  }, [normalizedIndex, safeImages]);
 
   useEffect(() => {
     if (safeImages.length < 2) {
@@ -24,10 +45,10 @@ export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
 
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % safeImages.length);
-    }, 4000);
+    }, intervalMs);
 
     return () => window.clearInterval(timer);
-  }, [safeImages.length]);
+  }, [intervalMs, safeImages.length]);
 
   if (!safeImages.length) {
     return (
@@ -47,30 +68,28 @@ export function LandingImageSlideshow({ images }: LandingImageSlideshowProps) {
     );
   }
 
-  const currentImage = safeImages[normalizedIndex] ?? safeImages[0];
-
   return (
     <section className="lp-showcase" aria-label="Featured destinations slideshow">
       <div className="lp-showcase-frame">
-        <AnimatePresence mode="sync" initial={false}>
-          <motion.div
-            key={currentImage}
-            className="lp-showcase-slide"
-            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 1.025 }}
-            animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-            exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 1.01 }}
-            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        {safeImages.map((image, index) => (
+          <div
+            key={image}
+            className={`lp-showcase-slide ${index === normalizedIndex ? "is-active" : ""}`}
+            aria-hidden={index !== normalizedIndex}
           >
             <Image
               fill
-              alt={`Featured Trinidad and Tobago destination ${normalizedIndex + 1}`}
+              alt={`Featured Trinidad and Tobago destination ${index + 1}`}
               className="lp-showcase-image"
-              unoptimized={currentImage.startsWith("data:") || currentImage.startsWith("blob:")}
-              sizes="100vw"
-              src={currentImage}
+              priority={index === 0}
+              quality={75}
+              sizes="(max-width: 768px) 100vw, min(80rem, 100vw)"
+              src={image}
+              loading={index <= 1 ? "eager" : "lazy"}
+              unoptimized={shouldServeImageUnoptimized(image)}
             />
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        ))}
       </div>
 
       {safeImages.length > 1 ? (

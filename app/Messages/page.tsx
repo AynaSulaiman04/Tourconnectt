@@ -75,8 +75,8 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
           .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
           .join(":") || "traveler-direct-messages"}
         aiLink="/ConciergeChat"
-        pageCopy="Choose a listing or inquiry to speak with the operator directly, or switch to Concierge for travel ideas and recommendations."
-        pageTitle="Traveler inbox"
+        pageCopy="Choose a listing or enquiry to speak with the operator directly, or switch to Concierge for travel ideas and recommendations."
+        pageTitle="Traveller inbox"
         returnTo="/TravellerProfile"
         role="traveler"
         state={state}

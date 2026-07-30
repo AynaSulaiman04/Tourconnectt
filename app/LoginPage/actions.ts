@@ -186,10 +186,10 @@ export async function loginAction(
 
     return {
       ...initialLoginFormState,
-      message: "This sign-in is reserved for traveler accounts. Please use the traveler login.",
+      message: "This sign-in is reserved for traveller accounts. Please use the traveller login.",
       fieldErrors: {
-        email: ["Please use the traveler login."],
-        password: ["Please use the traveler login."],
+        email: ["Please use the traveller login."],
+        password: ["Please use the traveller login."],
       },
     };
   }

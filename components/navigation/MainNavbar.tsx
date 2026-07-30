@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import type { TravelerProfile } from "@/lib/supabase/profile-types";
 import { NAVBAR_CONFIG, type NavbarVariant } from "./nav-config";
 import { getRoleDashboardRoute } from "@/lib/supabase/role-route";
@@ -12,6 +13,7 @@ import { SignOutButton } from "./SignOutButton";
 
 type MainNavbarProps = {
   variant?: NavbarVariant;
+  authResolved?: boolean;
   travelerProfile?: {
     id?: string;
     full_name: string;
@@ -26,7 +28,7 @@ function isActive(pathname: string, href: string) {
 
 const MAX_INLINE_ITEMS = 4;
 
-export function MainNavbar({ variant = "public", travelerProfile = null }: MainNavbarProps) {
+export function MainNavbar({ variant = "public", authResolved = false, travelerProfile = null }: MainNavbarProps) {
   const pathname = usePathname();
   const config = NAVBAR_CONFIG[variant];
   const moreRef = useRef<HTMLDetailsElement | null>(null);
@@ -38,15 +40,19 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
   const isLoggedIn = Boolean(profile);
   const currentUserId = profile?.id ?? null;
   const currentRole = profile?.role ?? (variant === "traveler" && profile ? "traveler" : null);
-  const visibleItems =
-    variant === "public" && isLoggedIn && currentRole === "traveler"
-      ? config.items.filter((item) => item.label !== "Profile")
-      : config.items;
+  const dashboardHref = isLoggedIn ? getRoleDashboardRoute(currentRole ?? "traveler") : "/SignUp";
+  const visibleItems = config.items.map((item) =>
+    variant === "public" && item.label === "Profile"
+      ? { ...item, href: dashboardHref }
+      : item,
+  );
   const inlineItems = visibleItems.slice(0, MAX_INLINE_ITEMS);
   const overflowItems = visibleItems.slice(MAX_INLINE_ITEMS);
   const showTravelerPanel = Boolean(
-    profile && (variant === "traveler" || currentRole === "traveler" || pathname === "/ConciergeChat"),
+    profile &&
+      (variant === "traveler" || currentRole === "traveler" || pathname === "/ConciergeChat"),
   );
+  const showPublicDashboardLink = Boolean(isLoggedIn && variant === "public" && !showTravelerPanel);
   const publicAction = variant === "public" && !isLoggedIn ? config.action : null;
 
   useEffect(() => {
@@ -64,7 +70,7 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
   }, []);
 
   useEffect(() => {
-    if (travelerProfile) {
+    if (authResolved || travelerProfile) {
       return;
     }
 
@@ -91,23 +97,16 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
     return () => {
       cancelled = true;
     };
-  }, [travelerProfile]);
+  }, [authResolved, travelerProfile]);
 
   return (
     <header className={`top-nav top-nav-${variant}`}>
       <div className="page-shell-inner top-nav-inner">
-        <Link href="/" className="brand-lockup" aria-label="Tour ConnecTT home">
-          <span className="brand-lockup-title">Tour ConnecTT</span>
-        </Link>
+        <BrandLogo href="/LandingPage" priority variant="header" />
 
         <nav className="top-nav-links" aria-label="Primary navigation">
           {inlineItems.map((item) => {
-            const href =
-              variant === "public" && item.label === "Profile"
-                ? isLoggedIn
-                  ? getRoleDashboardRoute(currentRole ?? "traveler")
-                  : "/SignUp"
-                : item.href;
+            const href = item.href;
             const active = isActive(pathname, href);
             return (
               <Link
@@ -131,12 +130,7 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
               </summary>
               <div className="nav-more-menu" role="menu">
                 {overflowItems.map((item) => {
-                  const href =
-                    variant === "public" && item.label === "Profile"
-                      ? isLoggedIn
-                        ? getRoleDashboardRoute(currentRole ?? "traveler")
-                        : "/SignUp"
-                      : item.href;
+                  const href = item.href;
                   const active = isActive(pathname, href);
                   return (
                     <Link
@@ -170,13 +164,8 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
               </span>
             </summary>
             <nav className="mobile-nav-menu" aria-label="Mobile navigation">
-              {config.items.map((item) => {
-                const href =
-                  variant === "public" && item.label === "Profile"
-                    ? isLoggedIn
-                      ? getRoleDashboardRoute(currentRole ?? "traveler")
-                      : "/SignUp"
-                    : item.href;
+              {visibleItems.map((item) => {
+                const href = item.href;
                 const active = isActive(pathname, href);
 
                 return (
@@ -214,7 +203,14 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
             </nav>
           </details>
           {variant === "admin" ? (
-            <Link className="btn-icon" href="/AdminSettings" aria-label="Admin settings">
+            <Link className="btn-icon portal-settings-icon" href="/AdminSettings" aria-label="Admin settings">
+              <span className="material-symbols-outlined" aria-hidden="true">
+                settings
+              </span>
+            </Link>
+          ) : null}
+          {variant === "operator" ? (
+            <Link className="btn-icon portal-settings-icon" href="/OperatorSettings" aria-label="Operator settings">
               <span className="material-symbols-outlined" aria-hidden="true">
                 settings
               </span>
@@ -223,7 +219,7 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
           {currentUserId && currentRole ? <NotificationCenter profileId={currentUserId} role={currentRole} /> : null}
           {showTravelerPanel ? (
             <div className="traveler-nav-panel">
-              <Link className="traveler-nav-user" href="/TravellerProfile" aria-label="Traveler profile">
+              <Link className="traveler-nav-user" href="/TravellerProfile" aria-label="Traveller profile">
                 <span className="traveler-nav-avatar" aria-hidden="true">
                   {profile?.profile_image_url ? (
                     <Image
@@ -259,6 +255,10 @@ export function MainNavbar({ variant = "public", travelerProfile = null }: MainN
                   <span>Sign out</span>
               </SignOutButton>
             </div>
+          ) : showPublicDashboardLink ? (
+            <Link className="btn-outline top-nav-dashboard-link" href={dashboardHref}>
+              {currentRole === "admin" ? "Admin" : currentRole === "operator" ? "Operator" : "Profile"}
+            </Link>
           ) : isLoggedIn && variant !== "public" ? (
             <SignOutButton className="btn-outline">Sign out</SignOutButton>
           ) : publicAction ? (

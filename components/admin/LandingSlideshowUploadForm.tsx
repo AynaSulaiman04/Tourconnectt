@@ -2,15 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = 10;
-const MAX_BATCH_SIZE = 25 * 1024 * 1024;
+const MAX_BATCH_SIZE = 150 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 
 export function LandingSlideshowUploadForm() {
   const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -18,33 +19,33 @@ export function LandingSlideshowUploadForm() {
     const files = Array.from(inputRef.current?.files ?? []);
 
     if (!files.length) {
-      setStatus("Choose one or more image files first.");
+      setStatus({ tone: "error", message: "Choose one or more image files first." });
       return;
     }
 
     if (files.length > MAX_FILES_PER_UPLOAD) {
-      setStatus(`Upload up to ${MAX_FILES_PER_UPLOAD} images at a time.`);
+      setStatus({ tone: "error", message: `Upload up to ${MAX_FILES_PER_UPLOAD} images at a time.` });
       return;
     }
 
     if (files.some((file) => file.size === 0)) {
-      setStatus("One of the selected image files is empty. Choose a different file.");
+      setStatus({ tone: "error", message: "One of the selected image files is empty. Choose a different file." });
       return;
     }
 
     if (files.some((file) => !ALLOWED_MIME_TYPES.has(file.type))) {
-      setStatus("Only JPG, PNG, WEBP, or AVIF images are supported.");
+      setStatus({ tone: "error", message: "Only JPG, PNG, WEBP, or AVIF images are supported." });
       return;
     }
 
     if (files.some((file) => file.size > MAX_FILE_SIZE)) {
-      setStatus("Each slideshow image must be 5 MB or smaller.");
+      setStatus({ tone: "error", message: "Each slideshow image must be 15 MB or smaller." });
       return;
     }
 
     const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
     if (totalBytes > MAX_BATCH_SIZE) {
-      setStatus("This upload batch is too large. Please keep the total under 25 MB.");
+      setStatus({ tone: "error", message: "This upload batch is too large. Please keep the total under 150 MB." });
       return;
     }
 
@@ -72,16 +73,21 @@ export function LandingSlideshowUploadForm() {
       if (inputRef.current) {
         inputRef.current.value = "";
       }
-      setStatus(payload?.message || "Slideshow images uploaded.");
+      setStatus({
+        tone: "success",
+        message: payload?.message || "Slideshow images uploaded.",
+      });
       router.refresh();
     } catch (error) {
-      setStatus(
-        error instanceof Error && error.name === "AbortError"
-          ? "The upload timed out. Check your connection and try again."
-          : error instanceof Error
-            ? error.message
-            : "We could not upload the slideshow images.",
-      );
+      setStatus({
+        tone: "error",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "The upload timed out. Check your connection and try again."
+            : error instanceof Error
+              ? error.message
+              : "We could not upload the slideshow images.",
+      });
     } finally {
       window.clearTimeout(timeoutId);
       setIsUploading(false);
@@ -102,19 +108,23 @@ export function LandingSlideshowUploadForm() {
           onChange={() => setStatus(null)}
         />
         <span className="text-xs leading-5 text-on-surface-variant">
-          JPG, PNG, WEBP, or AVIF. Up to 10 images, 5 MB each and 25 MB total.
+          JPG, PNG, WEBP, or AVIF. Up to 10 images, 15 MB each and 150 MB total. Use 4K source files for best quality.
         </span>
       </label>
 
       <div className="flex flex-wrap gap-3">
-        <button className="btn-primary" disabled={isUploading} type="button" onClick={handleUpload}>
-          {isUploading ? "Uploading..." : "Upload Images"}
-        </button>
+        <Button disabled={isUploading} type="button" variant="primary" onClick={handleUpload}>
+          {isUploading ? "Uploading..." : "Upload images"}
+        </Button>
       </div>
 
       {status ? (
-        <p className="text-sm leading-6 text-on-surface-variant" role="status" aria-live="polite">
-          {status}
+        <p
+          className={`text-sm leading-6 ${status.tone === "error" ? "text-error" : "text-on-surface-variant"}`}
+          role="status"
+          aria-live="polite"
+        >
+          {status.message}
         </p>
       ) : null}
     </div>

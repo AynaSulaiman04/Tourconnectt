@@ -21,6 +21,25 @@ type NotificationCenterProps = {
 
 const FALLBACK_POLL_INTERVAL_MS = 120_000;
 
+async function loadPortalPollIntervalMs() {
+  try {
+    const response = await fetch("/api/portal-settings", { cache: "no-store" });
+    if (!response.ok) {
+      return FALLBACK_POLL_INTERVAL_MS;
+    }
+
+    const payload = (await response.json()) as { notificationPollSeconds?: number };
+    const seconds = Number(payload.notificationPollSeconds);
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return FALLBACK_POLL_INTERVAL_MS;
+    }
+
+    return Math.min(Math.max(seconds, 15), 600) * 1000;
+  } catch {
+    return FALLBACK_POLL_INTERVAL_MS;
+  }
+}
+
 function formatRelativeTime(value: string | null | undefined) {
   if (!value) {
     return "Just now";
@@ -121,6 +140,22 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
 
     void loadNotifications();
 
+    let pollIntervalMs = FALLBACK_POLL_INTERVAL_MS;
+    let pollTimer: number | null = null;
+
+    void loadPortalPollIntervalMs().then((nextInterval) => {
+      if (!active) {
+        return;
+      }
+
+      pollIntervalMs = nextInterval;
+      pollTimer = window.setInterval(() => {
+        if (document.visibilityState === "visible" && !realtimeConnected) {
+          void loadNotifications();
+        }
+      }, pollIntervalMs);
+    });
+
     const channel = supabase
       .channel(`platform_notifications:${profileId}`)
       .on(
@@ -144,12 +179,6 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
         }
       });
 
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible" && !realtimeConnected) {
-        void loadNotifications();
-      }
-    }, FALLBACK_POLL_INTERVAL_MS);
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && !realtimeConnected) {
         void loadNotifications();
@@ -160,7 +189,9 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
 
     return () => {
       active = false;
-      window.clearInterval(interval);
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       void supabase.removeChannel(channel);
     };

@@ -1,7 +1,8 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { getOperatorCustomerDirectory, requireOperatorProfile } from "@/lib/supabase/operator";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 
 type OperatorUserManagePageProps = {
   searchParams: Promise<{
@@ -83,10 +84,10 @@ function formatPresenceDetail(profile: {
   }
 
   if (profile.last_seen_at) {
-    return `Last seen ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(profile.last_seen_at))}`;
+    return `Last seen ${formatDateTime(profile.last_seen_at)}`;
   }
 
-  return `Created ${new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(profile.created_at))}`;
+  return `Created ${formatDate(profile.created_at)}`;
 }
 
 function buildHref(params: { q?: string; role?: DirectoryRole; status?: DirectoryStatus; page?: number }) {
@@ -811,7 +812,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           <header className="page-header">
             <div>
               <h1>Customers</h1>
-              <p>Travelers who have already interacted with this operator through inquiries, messages, or bookings.</p>
+              <p>Travellers who have already interacted with this operator through enquiries, messages, or bookings.</p>
             </div>
             <form className="search-wrap tc-filter-panel" method="get">
               <span aria-hidden="true" className="material-symbols-outlined">search</span>
@@ -839,7 +840,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                 <label className="tc-filter-label" htmlFor="customer-role-filter">Scope</label>
                 <select id="customer-role-filter" name="role" defaultValue={role}>
                   <option value="all">ALL CUSTOMERS</option>
-                  <option value="traveler">TRAVELERS</option>
+                  <option value="traveler">TRAVELLERS</option>
                   <option value="operator">OPERATORS</option>
                   <option value="admin">ADMINS</option>
                 </select>
@@ -948,7 +949,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                                   <summary className="cursor-pointer font-semibold text-secondary">Guest care details</summary>
                                   <div className="mt-3 grid gap-2 text-on-surface-variant">
                                     <p><strong>Phone:</strong> {profile.care_profile.phone_number || profile.traveler_phone || "Not provided"}</p>
-                                    <p><strong>Pickup:</strong> {[profile.care_profile.default_pickup_location, profile.care_profile.preferred_pickup_time].filter(Boolean).join(" · ") || "Not provided"}</p>
+                                    <p><strong>Pickup:</strong> {[profile.care_profile.default_pickup_location, profile.care_profile.preferred_pickup_time].filter(Boolean).join(" ? ") || "Not provided"}</p>
                                     <p><strong>15-minute walk:</strong> {profile.care_profile.can_walk_15_minutes === true ? "Yes" : profile.care_profile.can_walk_15_minutes === false ? "No" : "Unsure"}</p>
                                     <p><strong>Allergies:</strong> {profile.care_profile.allergies || "None provided"}</p>
                                     <p><strong>Dietary restrictions:</strong> {profile.care_profile.dietary_restrictions || "None provided"}</p>
@@ -971,14 +972,14 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                             }`}
                           >
                             {profile.role === "traveler"
-                              ? "Elite Traveler"
+                              ? "Elite Traveller"
                               : profile.role === "operator"
                                 ? "Certified Operator"
                                 : "Administrator"}
                           </span>
                           <p className="presence-sub" style={{ marginTop: 8 }}>
-                            {profile.latest_inquiry_status ? profile.latest_inquiry_status.toUpperCase() : "DIRECT CHAT"} ·{" "}
-                            {profile.inquiry_count} {profile.inquiry_count === 1 ? "inquiry" : "inquiries"}
+                            {profile.latest_inquiry_status ? profile.latest_inquiry_status.toUpperCase() : "DIRECT CHAT"} ?{" "}
+                            {profile.inquiry_count} {profile.inquiry_count === 1 ? "enquiry" : "enquiries"}
                           </p>
                           <p className="presence-sub" style={{ marginTop: 6 }}>
                             {profile.confirmed_booking_count} confirmed booking
@@ -989,13 +990,10 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                           <p className="presence-main">{profile.is_active ? relativeStatus(profile) : "Suspended"}</p>
                           <p className={`presence-sub ${!profile.is_active ? "error" : ""}`}>
                             {formatPresenceDetail(profile)}
-                            {profile.preferred_start_date ? ` · Preferred ${profile.preferred_start_date}` : ""}
+                            {profile.preferred_start_date ? ` ? Preferred ${formatDate(profile.preferred_start_date)}` : ""}
                           </p>
                           <p className="presence-sub" style={{ marginTop: 6 }}>
-                            Last activity{" "}
-                            {new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
-                              new Date(profile.latest_activity_at),
-                            )}
+                            Last activity {formatDateTime(profile.latest_activity_at)}
                           </p>
                         </td>
                         <td data-label="Operations">
@@ -1003,7 +1001,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                             {profile.latest_inquiry_id ? (
                               <Link className="btn-outline btn-sm" href={`/ConfirmationPage?inquiryId=${profile.latest_inquiry_id}`}>
                                 <span aria-hidden="true" className="material-symbols-outlined">description</span>
-                                Open Inquiry
+                                Open enquiry
                               </Link>
                             ) : null}
                             {profile.latest_conversation_id ? (

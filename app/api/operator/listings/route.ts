@@ -289,7 +289,7 @@ export async function POST(request: Request) {
     if (listingId) {
       revalidatePath(`/OperatorListings/${listingId}/edit`);
     }
-    revalidatePath("/Inquiry");
+    revalidatePath("/Enquiry");
     revalidatePath("/AdminDashboard");
     revalidatePath("/AdminListings");
     revalidatePath("/AdminAnalytics");

@@ -9,6 +9,7 @@ import type { TravelerCareProfile } from "@/lib/supabase/traveler-care";
 type ProfileEditorProps = {
   profile: TravelerProfile;
   careProfile: TravelerCareProfile | null;
+  defaultProfileImageUrl?: string | null;
 };
 
 const MAX_PROFILE_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -27,17 +28,19 @@ function preferredAreaLabel(value: TravelerProfile["preferred_inquiry_area"]) {
   }
 }
 
-export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
+export function ProfileEditor({ profile, careProfile, defaultProfileImageUrl = null }: ProfileEditorProps) {
   const profileImageInputRef = useRef<HTMLInputElement | null>(null);
   const [state, formAction, pending] = useActionState(
     updateProfileAction,
     initialProfileFormState,
   );
-  const [localPhoto, setLocalPhoto] = useState(profile.profile_image_url);
+  const [localPhoto, setLocalPhoto] = useState(profile.profile_image_url ?? defaultProfileImageUrl);
   const [clientMessage, setClientMessage] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
-  const visibleMessage = state.message || clientMessage;
-  const showFormError = Boolean(visibleMessage && !state.success);
+  const profileImageError = state.fieldErrors.profileImage?.[0] ?? clientMessage;
+  const hasFieldErrors = Object.values(state.fieldErrors).some((errors) => errors?.length);
+  const generalError = !state.success && state.message && !hasFieldErrors ? state.message : null;
+  const successMessage = state.success ? state.message : null;
 
   useEffect(
     () => () => {
@@ -48,14 +51,14 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
     [],
   );
 
-  const profilePhoto = state.profileImageUrl ?? localPhoto ?? profile.profile_image_url;
+  const profilePhoto = state.profileImageUrl ?? localPhoto ?? profile.profile_image_url ?? defaultProfileImageUrl;
 
   function handleProfileImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
 
     if (!file) {
       setClientMessage(null);
-      setLocalPhoto(profile.profile_image_url);
+      setLocalPhoto(profile.profile_image_url ?? defaultProfileImageUrl);
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
         objectUrlRef.current = null;
@@ -66,7 +69,7 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
     if (!ALLOWED_PROFILE_IMAGE_TYPES.has(file.type)) {
       setClientMessage("Please upload a JPG, PNG, or WEBP image.");
       event.currentTarget.value = "";
-      setLocalPhoto(profile.profile_image_url);
+      setLocalPhoto(profile.profile_image_url ?? defaultProfileImageUrl);
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
         objectUrlRef.current = null;
@@ -77,7 +80,7 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
     if (file.size > MAX_PROFILE_IMAGE_SIZE) {
       setClientMessage("Profile images must be 2MB or smaller.");
       event.currentTarget.value = "";
-      setLocalPhoto(profile.profile_image_url);
+      setLocalPhoto(profile.profile_image_url ?? defaultProfileImageUrl);
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
         objectUrlRef.current = null;
@@ -130,15 +133,15 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
           type="file"
           disabled={pending}
           onChange={handleProfileImageChange}
-          aria-invalid={Boolean(state.fieldErrors.profileImage?.length)}
-          aria-describedby={state.fieldErrors.profileImage?.length ? "profile_image_error" : "profile_image_help"}
+          aria-invalid={Boolean(profileImageError)}
+          aria-describedby={profileImageError ? "profile_image_error" : "profile_image_help"}
         />
         <p className="profile-photo-help" id="profile_image_help">
           Choose a JPG, PNG, or WEBP image, then select Save Profile. Maximum size 2MB.
         </p>
-        {state.fieldErrors.profileImage?.length ? (
+        {profileImageError ? (
           <p className="field-error" id="profile_image_error" role="alert">
-            {state.fieldErrors.profileImage[0]}
+            {profileImageError}
           </p>
         ) : null}
       </div>
@@ -162,7 +165,7 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
       </div>
 
       <div className="field select-field">
-        <label htmlFor="profile_preferred_inquiry_area">Preferred Inquiry Areas</label>
+        <label htmlFor="profile_preferred_inquiry_area">Preferred enquiry areas</label>
         <select
           id="profile_preferred_inquiry_area"
           name="preferred_inquiry_area"
@@ -182,6 +185,9 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
           <option value="coastal">Beaches &amp; Marine</option>
           <option value="arctic">Rainforest &amp; Nature</option>
         </select>
+        <span className="material-symbols-outlined select-icon" aria-hidden="true">
+          expand_more
+        </span>
         {state.fieldErrors.preferredInquiryArea?.length ? (
           <p className="field-error" id="profile_preferred_inquiry_area_error" role="alert">
             {state.fieldErrors.preferredInquiryArea[0]}
@@ -201,41 +207,158 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
         <div className="profile-care-grid">
           <div className="field">
             <label htmlFor="profile_phone_number">Phone Number</label>
-            <input id="profile_phone_number" name="phone_number" defaultValue={careProfile?.phone_number ?? ""} type="tel" autoComplete="tel" />
+            <input
+              id="profile_phone_number"
+              name="phone_number"
+              defaultValue={careProfile?.phone_number ?? ""}
+              type="tel"
+              autoComplete="tel"
+              aria-invalid={Boolean(state.fieldErrors.phoneNumber?.length)}
+              aria-describedby={state.fieldErrors.phoneNumber?.length ? "profile_phone_number_error" : undefined}
+            />
+            {state.fieldErrors.phoneNumber?.length ? (
+              <p className="field-error" id="profile_phone_number_error" role="alert">
+                {state.fieldErrors.phoneNumber[0]}
+              </p>
+            ) : null}
           </div>
-          <div className="field">
+          <div className="field select-field">
             <label htmlFor="profile_can_walk">Can You Manage a 15-Minute Walk?</label>
-            <select id="profile_can_walk" name="can_walk_15_minutes" defaultValue={careProfile?.can_walk_15_minutes === true ? "yes" : careProfile?.can_walk_15_minutes === false ? "no" : "unsure"}>
+            <select
+              id="profile_can_walk"
+              name="can_walk_15_minutes"
+              defaultValue={careProfile?.can_walk_15_minutes === true ? "yes" : careProfile?.can_walk_15_minutes === false ? "no" : "unsure"}
+              aria-invalid={Boolean(state.fieldErrors.canWalk15Minutes?.length)}
+              aria-describedby={state.fieldErrors.canWalk15Minutes?.length ? "profile_can_walk_error" : undefined}
+            >
               <option value="yes">Yes</option>
               <option value="no">No</option>
               <option value="unsure">Unsure</option>
             </select>
+            <span className="material-symbols-outlined select-icon" aria-hidden="true">
+              expand_more
+            </span>
+            {state.fieldErrors.canWalk15Minutes?.length ? (
+              <p className="field-error" id="profile_can_walk_error" role="alert">
+                {state.fieldErrors.canWalk15Minutes[0]}
+              </p>
+            ) : null}
           </div>
           <div className="field">
             <label htmlFor="profile_pickup_location">Default Pickup Location</label>
-            <input id="profile_pickup_location" name="default_pickup_location" defaultValue={careProfile?.default_pickup_location ?? ""} placeholder="Hotel, address, or meeting point" type="text" />
+            <input
+              id="profile_pickup_location"
+              name="default_pickup_location"
+              defaultValue={careProfile?.default_pickup_location ?? ""}
+              placeholder="Hotel, address, or meeting point"
+              type="text"
+              aria-invalid={Boolean(state.fieldErrors.defaultPickupLocation?.length)}
+              aria-describedby={
+                state.fieldErrors.defaultPickupLocation?.length ? "profile_pickup_location_error" : undefined
+              }
+            />
+            {state.fieldErrors.defaultPickupLocation?.length ? (
+              <p className="field-error" id="profile_pickup_location_error" role="alert">
+                {state.fieldErrors.defaultPickupLocation[0]}
+              </p>
+            ) : null}
           </div>
           <div className="field">
             <label htmlFor="profile_pickup_time">Preferred Pickup Time</label>
-            <input id="profile_pickup_time" name="preferred_pickup_time" defaultValue={careProfile?.preferred_pickup_time ?? ""} placeholder="For example, 8:30 AM or flexible" type="text" />
+            <input
+              id="profile_pickup_time"
+              name="preferred_pickup_time"
+              defaultValue={careProfile?.preferred_pickup_time ?? ""}
+              placeholder="For example, 8:30 AM or flexible"
+              type="text"
+              aria-invalid={Boolean(state.fieldErrors.preferredPickupTime?.length)}
+              aria-describedby={
+                state.fieldErrors.preferredPickupTime?.length ? "profile_pickup_time_error" : undefined
+              }
+            />
+            {state.fieldErrors.preferredPickupTime?.length ? (
+              <p className="field-error" id="profile_pickup_time_error" role="alert">
+                {state.fieldErrors.preferredPickupTime[0]}
+              </p>
+            ) : null}
           </div>
         </div>
 
         <div className="field">
           <label htmlFor="profile_allergies">Allergies</label>
-          <textarea id="profile_allergies" name="allergies" defaultValue={careProfile?.allergies ?? ""} maxLength={1000} rows={3} placeholder="Food, medication, environmental, or other relevant allergies" />
+          <textarea
+            id="profile_allergies"
+            name="allergies"
+            defaultValue={careProfile?.allergies ?? ""}
+            maxLength={1000}
+            rows={3}
+            placeholder="Food, medication, environmental, or other relevant allergies"
+            aria-invalid={Boolean(state.fieldErrors.allergies?.length)}
+            aria-describedby={state.fieldErrors.allergies?.length ? "profile_allergies_error" : undefined}
+          />
+          {state.fieldErrors.allergies?.length ? (
+            <p className="field-error" id="profile_allergies_error" role="alert">
+              {state.fieldErrors.allergies[0]}
+            </p>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="profile_dietary_restrictions">Dietary Restrictions</label>
-          <textarea id="profile_dietary_restrictions" name="dietary_restrictions" defaultValue={careProfile?.dietary_restrictions ?? ""} maxLength={1000} rows={3} placeholder="Dietary needs, preferences, or meal restrictions" />
+          <textarea
+            id="profile_dietary_restrictions"
+            name="dietary_restrictions"
+            defaultValue={careProfile?.dietary_restrictions ?? ""}
+            maxLength={1000}
+            rows={3}
+            placeholder="Dietary needs, preferences, or meal restrictions"
+            aria-invalid={Boolean(state.fieldErrors.dietaryRestrictions?.length)}
+            aria-describedby={
+              state.fieldErrors.dietaryRestrictions?.length ? "profile_dietary_restrictions_error" : undefined
+            }
+          />
+          {state.fieldErrors.dietaryRestrictions?.length ? (
+            <p className="field-error" id="profile_dietary_restrictions_error" role="alert">
+              {state.fieldErrors.dietaryRestrictions[0]}
+            </p>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="profile_mobility_requirements">Mobility Requirements</label>
-          <textarea id="profile_mobility_requirements" name="mobility_requirements" defaultValue={careProfile?.mobility_requirements ?? ""} maxLength={1000} rows={3} placeholder="Walking support, wheelchair access, pace, steps, or other needs" />
+          <textarea
+            id="profile_mobility_requirements"
+            name="mobility_requirements"
+            defaultValue={careProfile?.mobility_requirements ?? ""}
+            maxLength={1000}
+            rows={3}
+            placeholder="Walking support, wheelchair access, pace, steps, or other needs"
+            aria-invalid={Boolean(state.fieldErrors.mobilityRequirements?.length)}
+            aria-describedby={
+              state.fieldErrors.mobilityRequirements?.length ? "profile_mobility_requirements_error" : undefined
+            }
+          />
+          {state.fieldErrors.mobilityRequirements?.length ? (
+            <p className="field-error" id="profile_mobility_requirements_error" role="alert">
+              {state.fieldErrors.mobilityRequirements[0]}
+            </p>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="profile_medical_notes">Relevant Medical Notes</label>
-          <textarea id="profile_medical_notes" name="medical_notes" defaultValue={careProfile?.medical_notes ?? ""} maxLength={2000} rows={4} placeholder="Only information the operator should know to support your safety and comfort" />
+          <textarea
+            id="profile_medical_notes"
+            name="medical_notes"
+            defaultValue={careProfile?.medical_notes ?? ""}
+            maxLength={2000}
+            rows={4}
+            placeholder="Only information the operator should know to support your safety and comfort"
+            aria-invalid={Boolean(state.fieldErrors.medicalNotes?.length)}
+            aria-describedby={state.fieldErrors.medicalNotes?.length ? "profile_medical_notes_error" : undefined}
+          />
+          {state.fieldErrors.medicalNotes?.length ? (
+            <p className="field-error" id="profile_medical_notes_error" role="alert">
+              {state.fieldErrors.medicalNotes[0]}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -251,14 +374,14 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
       </div>
 
       <div className="submit-wrap">
-        {showFormError ? (
+        {generalError ? (
           <div className="profile-editor-alert" role="alert" aria-live="polite">
             <span className="material-symbols-outlined" aria-hidden="true">
               error
             </span>
             <div>
               <strong>Profile update needs attention.</strong>
-              <p>{visibleMessage}</p>
+              <p>{generalError}</p>
             </div>
           </div>
         ) : null}
@@ -267,9 +390,11 @@ export function ProfileEditor({ profile, careProfile }: ProfileEditorProps) {
           {pending ? "Saving Profile" : "Save Profile"}
         </button>
 
-        <p className={`form-status ${state.success ? "form-status-success" : "form-status-error"}`} aria-live="polite">
-          {visibleMessage}
-        </p>
+        {successMessage ? (
+          <p className="form-status form-status-success" aria-live="polite">
+            {successMessage}
+          </p>
+        ) : null}
       </div>
     </form>
   );

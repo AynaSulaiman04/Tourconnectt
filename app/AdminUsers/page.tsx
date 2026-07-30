@@ -131,11 +131,11 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
 
   return (
     <PageShell variant="admin">
-      <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+      <main className="portal-list-page">
         <SectionHeader
           level={1}
           eyebrow="Admin users"
-          title="Control platform access across travelers and operators."
+          title="Control platform access across travellers and operators."
           description="Review credentials, verify operators, manage access tiers, and keep the account surface aligned with Tour ConnecTT policy."
           action={
             <Button href="/AdminSettings" variant="outline">
@@ -202,7 +202,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                   className="tc-filter-select text-sm"
                 >
                   <option value="all">All roles</option>
-                  <option value="traveler">Traveler</option>
+                  <option value="traveler">Traveller</option>
                   <option value="operator">Operator</option>
                   <option value="admin">Admin</option>
                 </select>
@@ -325,7 +325,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                             ? "Full Platform"
                             : person.role === "operator"
                               ? "Listings + Inquiries"
-                              : "Traveler Profile"}
+                              : "Traveller Profile"}
                         </td>
                         <td className="align-middle">
                           <Badge tone={status === "active" ? "accent" : "soft"}>{getUserStatusLabel(status)}</Badge>
@@ -370,7 +370,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                 title={selectedUser ? selectedUser.full_name : "No users yet"}
                 description={
                   selectedUser
-                    ? `${selectedUser.listing_count} listings · ${selectedUser.inquiry_count} inquiries`
+                    ? `${selectedUser.listing_count} listings · ${selectedUser.inquiry_count} enquiries`
                     : "User detail will appear here automatically."
                 }
               />
@@ -391,7 +391,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                   </div>
                   <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
                     <div className="label-caps text-secondary mb-1">Activity</div>
-                    <div className="font-body-md text-on-background">{selectedUser.inquiry_count} inquiries</div>
+                    <div className="font-body-md text-on-background">{selectedUser.inquiry_count} enquiries</div>
                   </div>
                   {selectedUser.role === "traveler" ? (
                     <>
@@ -413,7 +413,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                         <input name="return_to" type="hidden" value={`/AdminUsers?user=${selectedUser.id}`} />
                         <div>
                           <div className="label-caps text-secondary mb-1">Guest care profile</div>
-                          <p className="text-sm text-on-surface-variant">Private details collected from the traveler or by staff over the phone.</p>
+                          <p className="text-sm text-on-surface-variant">Private details collected from the traveller or by staff over the phone.</p>
                         </div>
                         <div className="admin-filter-grid--2 grid gap-3">
                           <label className="grid gap-2 text-sm">Phone number<input className="admin-filter-control" name="phone_number" defaultValue={selectedUser.care_profile?.phone_number ?? ""} /></label>
@@ -458,7 +458,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                     <input name="return_to" type="hidden" value={`/AdminUsers?user=${selectedUser.id}`} />
                     <label className="label-caps text-secondary">Role</label>
                     <select name="role" defaultValue={selectedUser.role} className="admin-filter-control">
-                      <option value="traveler">traveler</option>
+                      <option value="traveler">traveller</option>
                       <option value="operator">operator</option>
                       <option value="admin">admin</option>
                     </select>

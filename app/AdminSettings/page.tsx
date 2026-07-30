@@ -8,6 +8,8 @@ import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getLandingSlideshowImages } from "@/lib/supabase/analytics";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
+import { formatDateTime } from "@/lib/format/date";
+import { getWiPayConfigStatus } from "@/lib/payments/wipay";
 import { LandingSlideshowUploadForm } from "@/components/admin/LandingSlideshowUploadForm";
 import {
   deleteLandingSlideshowImageAction,
@@ -47,18 +49,19 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
     enabledAlertCount > 0
       ? `${enabledAlertCount} of 4 admin alert routes are currently active, and session monitoring remains enabled.`
       : "All admin alert routes are currently paused, while session monitoring remains enabled.";
+  const wipayStatus = getWiPayConfigStatus();
   const adminSessions = [
     { device: "Current browser", location: workspace.profile.email, status: "Active now" },
     {
       device: "Last update",
-      location: workspace.profile.updated_at ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(workspace.profile.updated_at)) : "Unknown",
+      location: workspace.profile.updated_at ? formatDateTime(workspace.profile.updated_at) : "Unknown",
       status: "Profile record",
     },
   ];
 
   return (
     <PageShell variant="admin">
-      <main className="px-margin-mobile md:px-margin-desktop py-8 pb-10">
+      <main className="portal-list-page">
         <style>{`
           .admin-settings-toggle:focus-visible {
             outline: 2px solid var(--secondary);
@@ -71,11 +74,19 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
           title="Configure the administrator workspace."
           description="Manage identity, access, moderation rules, and alert routing from one clean admin control surface."
           action={
-            <form action={signOutAdminAction}>
-              <Button variant="outline" type="submit">
-                Sign out
+            <div className="flex flex-wrap gap-3">
+              <Button href="/AdminContent" variant="outline" className="gap-2">
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  home
+                </span>
+                Home & content
               </Button>
-            </form>
+              <form action={signOutAdminAction}>
+                <Button variant="outline" type="submit">
+                  Sign out
+                </Button>
+              </form>
+            </div>
           }
         />
         {statusMessage ? (
@@ -273,7 +284,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                     Admin inbox
                   </h2>
                   <p className="section-copy mt-2">
-                    Route platform alerts without touching traveler settings.
+                    Route platform alerts without touching traveller settings.
                   </p>
 
                   <div className="mt-4 grid gap-3">
@@ -350,6 +361,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             </GlassPanel>
 
             <GlassPanel className="mt-8 p-gutter">
+              <div id="landing-slideshow">
               <div className="label-caps text-secondary mb-2">Landing slideshow</div>
               <h2 className="font-display text-[30px] leading-[1.05] tracking-[-0.04em] text-on-background">
                 Upload destination images for the landing page
@@ -380,11 +392,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                             <div className="label-caps text-secondary mb-1">Current slide</div>
                             <p className="truncate text-sm text-on-background">{image.name}</p>
                             <p className="text-xs text-on-surface-variant">
-                              {image.createdAt
-                                ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
-                                    new Date(image.createdAt),
-                                  )
-                                : "Uploaded recently"}
+                              {image.createdAt ? formatDateTime(image.createdAt) : "Uploaded recently"}
                             </p>
                           </div>
                           <form action={deleteLandingSlideshowImageAction}>
@@ -405,6 +413,42 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               </div>
               <div className="mt-5">
                 <LandingSlideshowUploadForm />
+              </div>
+              </div>
+            </GlassPanel>
+
+            <GlassPanel className="mt-8 p-gutter">
+              <div className="label-caps text-secondary mb-2">Payments</div>
+              <h2 className="font-display text-[30px] leading-[1.05] tracking-[-0.04em] text-on-background">
+                WiPay checkout status
+              </h2>
+              <p className="section-copy mt-2">
+                Payment credentials are managed through deployment environment variables. This panel shows whether checkout is ready for travellers.
+              </p>
+              <div className="mt-5 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-body-md text-on-background">
+                      {wipayStatus.configured ? "WiPay is configured" : "WiPay is not configured"}
+                    </div>
+                    <p className="mt-2 text-sm text-on-surface-variant">
+                      {wipayStatus.configured
+                        ? `Environment: ${wipayStatus.environment} · Currency: ${wipayStatus.currency} · Country: ${wipayStatus.countryCode}`
+                        : wipayStatus.message}
+                    </p>
+                  </div>
+                  <Badge tone={wipayStatus.configured ? "accent" : "soft"}>
+                    {wipayStatus.configured ? "Live ready" : "Action required"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button href="/AdminBookings?tab=payments" variant="outline">
+                  Review payments
+                </Button>
+                <Button href="/AdminContent" variant="ghost">
+                  Adjust home page
+                </Button>
               </div>
             </GlassPanel>
           </div>

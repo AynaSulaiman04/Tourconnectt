@@ -21,7 +21,7 @@ type SignupFormProps = {
 const variantCopy: Record<SignupVariant, { title: string; description: string; loginHref: string; loginLabel: string }> = {
   traveler: {
     title: "Sign Up",
-    description: "Create your private traveler profile.",
+    description: "Create your private traveller profile.",
     loginHref: "/LoginPage",
     loginLabel: "Log in here",
   },

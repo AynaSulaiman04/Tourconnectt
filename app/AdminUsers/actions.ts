@@ -212,7 +212,7 @@ export async function updateTravelerCareProfileAction(formData: FormData) {
   const admin = createSupabaseServiceRoleClient();
   const { data: target } = await admin.from("profiles").select("role").eq("id", targetId).maybeSingle();
   if (!target || target.role !== "traveler") {
-    redirect(buildRedirectUrl(returnTo, { error: "Guest care information can only be saved for travelers." }));
+    redirect(buildRedirectUrl(returnTo, { error: "Guest care information can only be saved for travellers." }));
   }
 
   try {

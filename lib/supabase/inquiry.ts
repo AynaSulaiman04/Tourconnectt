@@ -100,6 +100,42 @@ async function loadListingDraftContactsByListingIds(
   return contacts;
 }
 
+export async function getFeaturedInquiryListings(limit = 3) {
+  try {
+    const admin = createSupabaseServiceRoleClient();
+    const { data, error } = await admin
+      .from("tour_listings")
+      .select(
+        "id,title,location,country,duration,summary,image_url,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at",
+      )
+      .eq("is_active", true)
+      .eq("status", "live")
+      .order("featured", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (isMissingRelationError(error) || error.message?.includes("terminated")) {
+        return [];
+      }
+
+      throw new Error(error.message);
+    }
+
+    return ((data ?? []) as TourListing[]).map((listing) => ({
+      ...listing,
+      image_url: normalizePublicListingImage(listing.image_url),
+    }));
+  } catch (error) {
+    if (isFetchFailedError(error)) {
+      return [];
+    }
+
+    console.error("Unable to load featured inquiry listings", error);
+    return [];
+  }
+}
+
 export async function getInquiryListings() {
   try {
     const admin = createSupabaseServiceRoleClient();

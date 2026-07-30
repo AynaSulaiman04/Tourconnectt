@@ -1,13 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdminProfile } from "@/lib/supabase/admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { DEFAULT_SITE_CONTENT, type SiteContent } from "@/lib/site-content";
 
-const contentSchema = z.object({
+const publicContentSchema = z.object({
   footerDescription: z.string().trim().min(10).max(240),
   howItWorks: z.string().trim().min(20).max(2000),
   aboutUs: z.string().trim().min(20).max(2000),
@@ -24,19 +24,81 @@ const reviewSchema = z.object({
   comment: z.string().trim().max(2000),
 });
 
+const homeSettingsSchema = z.object({
+  heroEyebrow: z.string().trim().min(3).max(160),
+  heroPrefix: z.string().trim().min(3).max(160),
+  heroPhrases: z.string().trim().min(3).max(2000),
+  heroDescription: z.string().trim().min(10).max(500),
+  slideshowIntervalMs: z.coerce.number().int().min(1500).max(15000),
+  heroRotationMs: z.coerce.number().int().min(1500).max(15000),
+  notificationPollSeconds: z.coerce.number().int().min(15).max(600),
+});
+
+export async function updateHomePageSettingsAction(formData: FormData) {
+  await requireAdminProfile();
+  const parsed = homeSettingsSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    redirect("/AdminContent?error=invalid-home-settings");
+  }
+
+  const admin = createSupabaseServiceRoleClient();
+  const { data: existingRow } = await admin
+    .from("admin_workspace_settings")
+    .select("site_content")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const existingContent = normalizeSiteContentForMerge(existingRow?.site_content);
+  const nextContent: SiteContent = {
+    ...existingContent,
+    ...parsed.data,
+  };
+
+  const { error } = await admin.from("admin_workspace_settings").upsert(
+    { id: 1, site_content: nextContent },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    console.error("Unable to update home page settings", error.message);
+    redirect("/AdminContent?error=home-settings-save-failed");
+  }
+
+  CONTENT_PATHS.forEach((path) => revalidatePath(path));
+  revalidateTag("site-content", "max");
+  redirect("/AdminContent?saved=home");
+}
+
 const CONTENT_PATHS = ["/LandingPage", "/HowItWorks", "/AboutUs", "/Partners", "/Careers", "/HelpCenter", "/ContactUs"];
+
+function normalizeSiteContentForMerge(value: unknown): SiteContent {
+  const candidate = value && typeof value === "object" ? (value as Partial<SiteContent>) : {};
+  return { ...DEFAULT_SITE_CONTENT, ...candidate };
+}
 
 export async function updateSiteContentAction(formData: FormData) {
   await requireAdminProfile();
-  const parsed = contentSchema.safeParse(Object.fromEntries(formData));
+  const parsed = publicContentSchema.safeParse(Object.fromEntries(formData));
 
   if (!parsed.success) {
     redirect("/AdminContent?error=invalid-content");
   }
 
   const admin = createSupabaseServiceRoleClient();
+  const { data: existingRow } = await admin
+    .from("admin_workspace_settings")
+    .select("site_content")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const nextContent: SiteContent = {
+    ...normalizeSiteContentForMerge(existingRow?.site_content),
+    ...parsed.data,
+  };
+
   const { error } = await admin.from("admin_workspace_settings").upsert(
-    { id: 1, site_content: parsed.data satisfies SiteContent },
+    { id: 1, site_content: nextContent },
     { onConflict: "id" },
   );
 
@@ -46,6 +108,7 @@ export async function updateSiteContentAction(formData: FormData) {
   }
 
   CONTENT_PATHS.forEach((path) => revalidatePath(path));
+  revalidateTag("site-content", "max");
   redirect("/AdminContent?saved=content");
 }
 
@@ -62,6 +125,7 @@ export async function resetSiteContentAction() {
   }
 
   CONTENT_PATHS.forEach((path) => revalidatePath(path));
+  revalidateTag("site-content", "max");
   redirect("/AdminContent?saved=reset");
 }
 
@@ -85,6 +149,7 @@ export async function updateReviewAction(formData: FormData) {
 
   revalidatePath("/AdminContent");
   revalidatePath("/LandingPage");
+  revalidateTag("site-content", "max");
   redirect("/AdminContent?saved=review");
 }
 
@@ -105,5 +170,6 @@ export async function deleteReviewAction(formData: FormData) {
 
   revalidatePath("/AdminContent");
   revalidatePath("/LandingPage");
+  revalidateTag("site-content", "max");
   redirect("/AdminContent?saved=review-deleted");
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 type AnimatedHeroHeadlineProps = {
@@ -8,6 +7,7 @@ type AnimatedHeroHeadlineProps = {
   prefix?: string;
   phrases?: string[];
   description?: string;
+  rotationIntervalMs?: number;
 };
 
 const defaultPhrases = [
@@ -23,21 +23,30 @@ export function AnimatedHeroHeadline({
   prefix = "Extraordinary places.",
   phrases = defaultPhrases,
   description = "Bespoke itineraries, handpicked stays, and seamless experiences crafted around you.",
+  rotationIntervalMs = 2000,
 }: AnimatedHeroHeadlineProps) {
-  const shouldReduceMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
-    if (shouldReduceMotion || phrases.length < 2) {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setPrefersReducedMotion(media.matches);
+    syncPreference();
+    media.addEventListener("change", syncPreference);
+    return () => media.removeEventListener("change", syncPreference);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion || phrases.length < 2) {
       return;
     }
 
     const interval = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % phrases.length);
-    }, 2000);
+    }, rotationIntervalMs);
 
     return () => window.clearInterval(interval);
-  }, [phrases.length, shouldReduceMotion]);
+  }, [phrases.length, prefersReducedMotion, rotationIntervalMs]);
 
   const normalizedIndex = phrases.length ? activeIndex % phrases.length : 0;
   const currentPhrase = phrases[normalizedIndex] ?? defaultPhrases[0];
@@ -48,21 +57,12 @@ export function AnimatedHeroHeadline({
       <h1 className="lp-title lp-animated-title">
         <span className="lp-title-prefix">{prefix}</span>
         <span className="lp-title-animated" aria-hidden="true">
-          {shouldReduceMotion ? (
+          {prefersReducedMotion ? (
             <span className="lp-title-animated-static">{currentPhrase}</span>
           ) : (
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={currentPhrase}
-                className="lp-title-animated-phrase"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {currentPhrase}
-              </motion.span>
-            </AnimatePresence>
+            <span key={currentPhrase} className="lp-title-animated-phrase">
+              {currentPhrase}
+            </span>
           )}
         </span>
       </h1>

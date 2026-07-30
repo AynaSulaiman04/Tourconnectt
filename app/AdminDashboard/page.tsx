@@ -1,10 +1,12 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { PortalQuickLinks } from "@/components/admin/PortalQuickLinks";
 import { PageShell } from "@/components/layout/PageShell";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 import { getRecentPlatformNotifications } from "@/lib/supabase/notifications";
 import { isPendingWiPayPayment, isSuccessfulWiPayPayment } from "@/lib/payments/wipay";
 
@@ -64,7 +66,7 @@ function buildActivitySeries(events: Awaited<ReturnType<typeof getPlatformEvents
     });
 
     return {
-      labels: months.map((date) => new Intl.DateTimeFormat("en", { month: "short" }).format(date)),
+      labels: months.map((date) => formatDate(date)),
       counts: months.map((date) => buckets.get(date.toISOString().slice(0, 7)) ?? 0),
       total: filtered.length,
     };
@@ -87,11 +89,7 @@ function buildActivitySeries(events: Awaited<ReturnType<typeof getPlatformEvents
   });
 
   return {
-    labels: days.map((date) =>
-      range === "7d"
-        ? new Intl.DateTimeFormat("en", { weekday: "short" }).format(date)
-        : new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date),
-    ),
+    labels: days.map((date) => formatDate(date)),
     counts: days.map((date) => buckets.get(date.toISOString().slice(0, 10)) ?? 0),
     total: filtered.length,
   };
@@ -171,7 +169,6 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
   const recentAdminUpdates = await getRecentPlatformNotifications(workspace.profile.id, 3);
   const activitySeries = buildActivitySeries(platformEvents, selectedRange);
   const activityBreakdown = buildActivityBreakdown(platformEvents, selectedRange);
-  const currentYear = new Date().getFullYear();
   const lastUpdated =
     workspace.recentListings[0]?.updated_at ??
     workspace.recentBookings[0]?.updated_at ??
@@ -226,513 +223,6 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
 
   return (
     <PageShell variant="admin">
-      <style>{`
-        .main {
-          min-height: 100vh;
-          padding: 40px var(--page-margin-desktop, 32px) 72px;
-        }
-
-        .page-header {
-          margin-bottom: 56px;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          gap: 32px;
-        }
-
-        .admin-label {
-          color: var(--secondary);
-          font-size: 12px;
-          line-height: 16px;
-          letter-spacing: 0.3em;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-
-        .page-header h1 {
-          margin: 8px 0 0;
-          font-family: 'Raleway', sans-serif;
-          font-size: clamp(38px, 5vw, 56px);
-          line-height: 1.08;
-          letter-spacing: -0.03em;
-          font-weight: 300;
-          color: var(--on-background);
-        }
-
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 24px;
-        }
-
-        .updated-text {
-          text-align: right;
-        }
-
-        .updated-text p {
-          margin: 0;
-        }
-
-        .updated-text p:first-child,
-        .stat-card p,
-        .section-title,
-        .approval-company,
-        .update-item-meta {
-          color: rgba(75, 70, 61, 0.6);
-          font-size: 12px;
-          line-height: 16px;
-          letter-spacing: 0.15em;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-
-        .updated-text p:last-child {
-          font-size: 16px;
-          line-height: 24px;
-          font-weight: 300;
-        }
-
-        .avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 999px;
-          overflow: hidden;
-          border: 1px solid rgba(206, 197, 185, 0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255, 253, 251, 0.8);
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 32px;
-          margin-bottom: 72px;
-        }
-
-        .stat-card {
-          padding: 32px;
-          min-height: 148px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-
-        .stat-row {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 16px;
-        }
-
-        .stat-card h3 {
-          margin: 0;
-          font-family: 'Raleway', sans-serif;
-          font-size: 34px;
-          line-height: 40px;
-          letter-spacing: -0.02em;
-          font-weight: 300;
-          color: var(--on-background);
-        }
-
-        .stat-change {
-          color: var(--secondary);
-          font-size: 12px;
-          line-height: 16px;
-          letter-spacing: 0.15em;
-          font-weight: 600;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        .stat-change.error {
-          color: var(--error);
-        }
-
-        .content-grid {
-          display: grid;
-          grid-template-columns: repeat(12, minmax(0, 1fr));
-          gap: 32px;
-          align-items: stretch;
-        }
-
-        .activity-card {
-          grid-column: span 7;
-          min-height: 390px;
-          padding: 28px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .section-head {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 24px;
-          margin-bottom: 28px;
-        }
-
-        .section-title {
-          margin: 0;
-          color: var(--on-background);
-        }
-
-        .tabs {
-          display: flex;
-          gap: 0.6rem;
-          padding: 0.85rem;
-          border: 1px solid rgba(17, 19, 24, 0.12);
-          border-radius: 1.5rem;
-          background: rgba(255, 253, 248, 0.92);
-          box-shadow: 0 16px 42px rgba(53, 39, 33, 0.08);
-        }
-
-        .tabs a,
-        .tabs span {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 2.5rem;
-          padding: 0.62rem 1rem;
-          border-radius: 999px;
-          border: 1px solid rgba(197, 22, 29, 0.28);
-          background: rgba(255, 253, 248, 0.92);
-          color: var(--secondary);
-          font-size: 12px;
-          line-height: 16px;
-          letter-spacing: 0.15em;
-          font-weight: 600;
-          text-transform: uppercase;
-          transition: all 180ms ease;
-        }
-
-        .tabs a.active,
-        .tabs span.active {
-          background: linear-gradient(135deg, var(--tc-red), var(--tc-red-dark));
-          color: #fff;
-          border-color: rgba(197, 22, 29, 0.34);
-          box-shadow: 0 12px 26px rgba(197, 22, 29, 0.18);
-        }
-
-        .chart {
-          flex: 1;
-          min-height: 255px;
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 0 8px;
-        }
-
-        .bar {
-          width: 100%;
-          min-height: 120px;
-          background: var(--surface-container-high);
-          position: relative;
-          border-radius: 18px 18px 0 0;
-          overflow: hidden;
-        }
-
-        .bar-fill {
-          position: absolute;
-          left: 0;
-          bottom: 0;
-          width: 100%;
-          background: rgba(160, 64, 27, 0.1);
-        }
-
-        .bar-line {
-          position: absolute;
-          left: 0;
-          width: 100%;
-          height: 1px;
-          background: var(--secondary);
-        }
-
-        .right-column {
-          grid-column: span 5;
-          display: flex;
-          flex-direction: column;
-          gap: 32px;
-          min-height: 620px;
-        }
-
-        .approvals-card,
-        .updates-card {
-          padding: 40px;
-        }
-
-        .approval-badge {
-          padding: 4px 12px;
-          border-radius: 999px;
-          background: rgba(160, 64, 27, 0.1);
-          color: var(--secondary);
-          font-size: 10px;
-          line-height: 16px;
-          letter-spacing: 0.15em;
-          font-weight: 700;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        .approval-list {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .approval-top {
-          margin-bottom: 8px;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-        }
-
-        .approval-item h5 {
-          margin: 0;
-          font-size: 16px;
-          line-height: 24px;
-          font-weight: 600;
-          color: var(--on-background);
-        }
-
-        .approval-item p {
-          margin: 0;
-        }
-
-        .submitted {
-          color: rgba(75, 70, 61, 0.4);
-          font-size: 11px;
-        }
-
-        .approval-line {
-          width: 100%;
-          height: 1px;
-          margin-top: 20px;
-          background: rgba(206, 197, 185, 0.1);
-        }
-
-        .view-all-btn {
-          margin-top: auto;
-          width: 100%;
-          justify-content: center;
-        }
-
-        .updates-card {
-          position: relative;
-          overflow: hidden;
-          height: 230px;
-          flex-shrink: 0;
-          border-radius: inherit;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .payments-card {
-          padding: 40px;
-        }
-
-        .payment-list {
-          margin-top: 1rem;
-          display: grid;
-          gap: 0.75rem;
-        }
-
-        .payment-item {
-          display: flex;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 0.95rem 1rem;
-          border-radius: 1rem;
-          border: 1px solid rgba(206, 197, 185, 0.18);
-          background: rgba(255, 253, 251, 0.78);
-        }
-
-        .payment-item-title {
-          margin: 0;
-          color: var(--on-background);
-          font-size: 0.95rem;
-          line-height: 1.4;
-          font-weight: 600;
-        }
-
-        .payment-item-body {
-          margin: 0.2rem 0 0;
-          color: rgba(75, 70, 61, 0.62);
-          font-size: 0.82rem;
-          line-height: 1.45;
-        }
-
-        .payment-item-amount {
-          display: grid;
-          justify-items: end;
-          gap: 0.25rem;
-          white-space: nowrap;
-        }
-
-        .payment-item-amount strong {
-          color: var(--on-background);
-          font-size: 1rem;
-          line-height: 1.4;
-        }
-
-        .payment-item-pill {
-          display: inline-flex;
-          align-items: center;
-          padding: 0.3rem 0.7rem;
-          border-radius: 999px;
-          background: rgba(160, 64, 27, 0.1);
-          color: var(--secondary);
-          font-size: 10px;
-          line-height: 16px;
-          letter-spacing: 0.15em;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-
-        .updates-list {
-          margin-top: 1rem;
-          display: grid;
-          gap: 0.75rem;
-          flex: 1;
-          min-height: 0;
-          overflow: auto;
-        }
-
-        .update-item {
-          display: grid;
-          gap: 0.35rem;
-          padding: 0.9rem 1rem;
-          border-radius: 1rem;
-          border: 1px solid rgba(206, 197, 185, 0.18);
-          background: rgba(255, 253, 251, 0.78);
-        }
-
-        .update-item-top {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 0.75rem;
-        }
-
-        .update-item-title {
-          margin: 0;
-          color: var(--on-background);
-          font-size: 0.95rem;
-          line-height: 1.4;
-          font-weight: 600;
-        }
-
-        .update-item-body {
-          margin: 0;
-          color: rgba(75, 70, 61, 0.62);
-          font-size: 0.82rem;
-          line-height: 1.45;
-        }
-
-        .update-unread {
-          width: 0.7rem;
-          height: 0.7rem;
-          margin-top: 0.2rem;
-          border-radius: 999px;
-          color: var(--secondary);
-          background: var(--secondary);
-          flex-shrink: 0;
-        }
-
-        .page-footer {
-          margin-top: 72px;
-          width: 100%;
-          padding: 24px 0 0;
-          border-top: 1px solid rgba(206, 197, 185, 0.1);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 24px;
-        }
-
-        .page-footer p {
-          margin: 0;
-          color: rgba(75, 70, 61, 0.6);
-          font-size: 16px;
-          line-height: 24px;
-          font-weight: 300;
-        }
-
-        .footer-links {
-          display: flex;
-          gap: 32px;
-        }
-
-        .footer-links a {
-          color: rgba(75, 70, 61, 0.6);
-          font-size: 16px;
-          line-height: 24px;
-          font-weight: 300;
-          transition: all 0.2s ease;
-        }
-
-        @media (max-width: 1100px) {
-          .main {
-            padding: 32px 24px 56px;
-          }
-
-          .page-header,
-          .page-footer {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-
-          .header-right {
-            width: 100%;
-            justify-content: space-between;
-          }
-
-          .stats-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            margin-bottom: 56px;
-          }
-
-          .content-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .activity-card,
-          .right-column {
-            grid-column: auto;
-            min-height: auto;
-          }
-
-          .updates-card {
-            height: 280px;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .stats-grid {
-            grid-template-columns: 1fr;
-            gap: 20px;
-          }
-
-          .activity-card,
-          .approvals-card,
-          .updates-card {
-            padding: 28px;
-          }
-
-          .section-head,
-          .approval-top {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-
-          .chart {
-            min-height: 260px;
-          }
-        }
-      `}</style>
 
       <main className="main">
         <header className="page-header">
@@ -744,7 +234,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           <div className="header-right flex-wrap">
             <div className="updated-text">
               <p>Last Updated</p>
-              <p>{new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(new Date(lastUpdated))}</p>
+              <p>{formatDate(lastUpdated)}</p>
             </div>
 
             <div className="avatar relative">
@@ -769,6 +259,10 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
             </div>
           </div>
         </header>
+
+        <div style={{ marginBottom: 24 }}>
+          <PortalQuickLinks variant="admin" />
+        </div>
 
         {withdrawalMessage ? (
           <div className="mb-6">
@@ -872,7 +366,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                         </Button>
                       </div>
                       <p className="submitted">
-                        Submitted: {new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(listing.created_at))}
+                        Submitted: {formatDate(listing.created_at)}
                       </p>
                       <div className="approval-line" />
                     </div>
@@ -909,9 +403,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                         {!notification.read_at ? <span className="update-unread" aria-hidden="true" /> : null}
                       </div>
                       <p className="update-item-meta">
-                        {new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
-                          new Date(notification.created_at),
-                        )}
+                        {formatDateTime(notification.created_at)}
                       </p>
                     </Link>
                   ))}
@@ -1009,16 +501,6 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
             </div>
           </section>
         </div>
-
-        <footer className="page-footer">
-          <p>© {currentYear} Tour ConnecTT. All Rights Reserved.</p>
-          <div className="footer-links">
-            <Link href="/PrivacyPolicy">Privacy Policy</Link>
-            <Link href="/TermsOfService">Terms of Service</Link>
-            <Link href="/AdminAnalytics">Press</Link>
-            <Link href="/AdminSettings">Contact</Link>
-          </div>
-        </footer>
       </main>
     </PageShell>
   );

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdminProfile } from "@/lib/supabase/admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
@@ -7,9 +7,9 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const LANDING_SLIDESHOW_BUCKET = "landing-slideshow";
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = 10;
-const MAX_BATCH_SIZE = 25 * 1024 * 1024;
+const MAX_BATCH_SIZE = 150 * 1024 * 1024;
 const MAX_REQUEST_SIZE = MAX_BATCH_SIZE + 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     if (Number.isFinite(declaredContentLength) && declaredContentLength > MAX_REQUEST_SIZE) {
       return NextResponse.json(
-        { message: "This upload batch is too large. Please keep the total under 25 MB." },
+        { message: "This upload batch is too large. Please keep the total under 150 MB." },
         { status: 413 },
       );
     }
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
 
     if (totalBytes > MAX_BATCH_SIZE) {
       return NextResponse.json(
-        { message: "This upload batch is too large. Please keep the total under 25 MB." },
+        { message: "This upload batch is too large. Please keep the total under 150 MB." },
         { status: 413 },
       );
     }
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
 
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
-          { message: "Each slideshow image must be 5 MB or smaller." },
+          { message: "Each slideshow image must be 15 MB or smaller." },
           { status: 413 },
         );
       }
@@ -137,6 +137,7 @@ export async function POST(request: Request) {
     revalidatePath("/");
     revalidatePath("/LandingPage");
     revalidatePath("/AdminSettings");
+    revalidateTag("landing-slideshow", "max");
 
     return NextResponse.json({
       message: `${files.length} slideshow image${files.length === 1 ? "" : "s"} uploaded.`,

@@ -51,7 +51,7 @@ export default async function OperatorListingsPage() {
         role: profileContext.profile.role,
       }}
     >
-      <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+      <main className="portal-list-page">
         <div className="section-shell">
           <div className="flex flex-col gap-3">
             <p className="label-caps text-secondary">Operator listings</p>
@@ -118,7 +118,7 @@ export default async function OperatorListingsPage() {
                         </div>
                         <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                           <div className="label-caps text-secondary mb-1">Duration</div>
-                          <div className="text-sm text-on-background">{listing.duration || "Inquiry based"}</div>
+                          <div className="text-sm text-on-background">{listing.duration || "Enquiry based"}</div>
                         </div>
                         <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                           <div className="label-caps text-secondary mb-1">Price</div>

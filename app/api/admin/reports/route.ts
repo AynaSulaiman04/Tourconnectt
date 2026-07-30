@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 
 export async function GET(request: NextRequest) {
   const workspace = await getAdminWorkspaceData();
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
           experience: booking.listing?.title ?? booking.destination,
           operator: booking.operator_name,
           status: booking.status,
-          created: new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(booking.created_at)),
+          created: formatDate(booking.created_at),
         })),
       );
 
@@ -174,7 +175,7 @@ async function buildAdminPdfBuffer(workspace: Awaited<ReturnType<typeof getAdmin
     color: rgb(1, 1, 1),
   });
 
-  page.drawText(new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date()), {
+  page.drawText(formatDateTime(new Date()), {
     x: width - 184,
     y: height - 66,
     size: 9,

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { sendOperatorReplyNotificationForConversation } from "@/lib/email/workflows";
+import { formatDateRange } from "@/lib/format/date";
 import { createSupabaseServiceRoleClient } from "./server";
 import { normalizeProfileImageSource } from "./profile-image";
 import { recordAdminNotifications, recordPlatformNotification } from "./notifications";
@@ -1028,7 +1029,7 @@ function mergeConversationSummaries(
     const inquiry = conversation.inquiry_id ? inquiries.get(conversation.inquiry_id) ?? null : null;
     const latestMessage = latestMessageByConversation.get(conversation.id) ?? null;
 
-    const travelerName = traveler?.full_name ?? inquiry?.traveler_name ?? "Traveler";
+    const travelerName = traveler?.full_name ?? inquiry?.traveler_name ?? "Traveller";
     const operatorName = operator?.full_name ?? inquiry?.operator_name ?? listing?.operator_name ?? "Operator";
     const listingTitle = listing?.title ?? inquiry?.destination ?? null;
     const listingLocation = listing?.location ?? inquiry?.destination_country ?? null;
@@ -1069,7 +1070,7 @@ function buildInboxInquirySummaries(params: {
     .filter((inquiry) => !params.conversationKeys.has(inquiry.id))
     .map((inquiry) => {
       const listing = inquiry.listing_id ? params.listings.get(inquiry.listing_id) ?? null : null;
-      const travelerName = inquiry.traveler_name || "Traveler";
+      const travelerName = inquiry.traveler_name || "Traveller";
       const operatorName = inquiry.operator_name || listing?.operator_name || "Operator";
       const listingTitle = listing?.title ?? inquiry.destination ?? null;
       const listingLocation = listing?.location ?? inquiry.destination_country ?? null;
@@ -1086,7 +1087,7 @@ function buildInboxInquirySummaries(params: {
         params.role === "traveler"
           ? `/Messages?inquiry=${inquiry.id}`
           : `/OperatorMessages?inquiry=${inquiry.id}`;
-      const previewText = inquiry.notes?.trim() || (inquiry.destination ? `Inquiry for ${inquiry.destination}` : null);
+      const previewText = inquiry.notes?.trim() || (inquiry.destination ? `Enquiry for ${inquiry.destination}` : null);
       const travelerProfile = inquiry.user_id ? params.profiles.get(inquiry.user_id) ?? null : null;
       const operatorProfile = inquiry.operator_id ? params.profiles.get(inquiry.operator_id) ?? null : null;
 
@@ -1165,7 +1166,7 @@ async function buildLaunchContext(params: {
     context.travelerId = inquiry.user_id ?? null;
     context.datesLabel =
       inquiry.preferred_start_date && inquiry.preferred_end_date
-        ? `${new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(inquiry.preferred_start_date))} to ${new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(inquiry.preferred_end_date))}`
+        ? formatDateRange(inquiry.preferred_start_date, inquiry.preferred_end_date)
         : null;
     context.travelerName = inquiry.traveler_name;
 

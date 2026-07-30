@@ -1,12 +1,14 @@
+import { toBritishUserCopy } from "@/lib/copy/british-english";
+
 const MESSAGE_MAP: Record<string, string> = {
-  "missing-inquiry": "We could not find that inquiry. Please go back and try again.",
+  "missing-inquiry": "We could not find that enquiry. Please go back and try again.",
   "invalid-status": "That status is not available for this item.",
   "missing-file": "Please choose a document before uploading.",
   "invalid-file-type": "That file type is not supported here.",
   "file-too-large": "That file is too large. Please choose a smaller file.",
   "missing-details": "Please add the guest name and document type before uploading.",
   "documents-unavailable": "We could not access document storage. Please check the operator-documents bucket setup.",
-  "invalid-inquiry": "That inquiry could not be linked. Please refresh and try again.",
+  "invalid-inquiry": "That enquiry could not be linked. Please refresh and try again.",
   "missing-document": "We could not find that document.",
   "missing-share-target": "Choose who you want to share the document with.",
   "invalid-share-level": "That share level is not available.",
@@ -21,6 +23,8 @@ const MESSAGE_MAP: Record<string, string> = {
   "missing-listing": "We could not find that listing.",
   "admin-profile-save-failed": "We could not save the admin profile. Please try again.",
   "admin-settings-save-failed": "We could not save the admin settings. Please try again.",
+  "home-settings-save-failed": "We could not save the home page settings. Please try again.",
+  "invalid-home-settings": "Please check the home page fields and try again.",
 };
 
 export function getFriendlyFeedbackMessage(value: string | null | undefined, fallback: string) {
@@ -47,5 +51,5 @@ export function getFriendlyFeedbackMessage(value: string | null | undefined, fal
     return fallback;
   }
 
-  return trimmed;
+  return toBritishUserCopy(trimmed);
 }

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
+import { dedupeSlideshowImageUrls } from "@/lib/landing-slideshow-images";
 import { createSupabaseServiceRoleClient } from "./server";
 
 export type PlatformEventType =
@@ -182,7 +184,7 @@ export async function getAdminWorkspaceSettings() {
 export async function getLandingSlideshowImages() {
   const admin = createSupabaseServiceRoleClient();
   const { data, error } = await admin.storage.from(LANDING_SLIDESHOW_BUCKET).list(LANDING_SLIDESHOW_PREFIX, {
-    limit: 100,
+    limit: 12,
     sortBy: { column: "created_at", order: "desc" },
   });
 
@@ -190,27 +192,31 @@ export async function getLandingSlideshowImages() {
     return [] as LandingSlideshowImage[];
   }
 
-  return (data ?? [])
-    .filter((item) => {
-      if (typeof item.name !== "string" || !/\.(avif|jpe?g|png|webp)$/i.test(item.name)) {
-        return false;
-      }
-
-      // The client requested that the originally supplied sunrise image be removed.
-      return !item.name.includes("02_12_05-AM-8-") && !item.name.includes("02_12_05_AM_8_");
-    })
+  const images = (data ?? [])
+    .filter((item) => typeof item.name === "string" && /\.(avif|jpe?g|png|webp)$/i.test(item.name))
     .map((item) => ({
       name: item.name,
       path: `${LANDING_SLIDESHOW_PREFIX}/${item.name}`,
       publicUrl: admin.storage.from(LANDING_SLIDESHOW_BUCKET).getPublicUrl(`${LANDING_SLIDESHOW_PREFIX}/${item.name}`).data.publicUrl,
       createdAt: item.created_at ?? null,
     }));
+
+  const uniqueUrls = dedupeSlideshowImageUrls(images.map((image) => image.publicUrl));
+  const urlSet = new Set(uniqueUrls);
+
+  return images.filter((image) => urlSet.has(image.publicUrl));
 }
 
-export async function getLandingSlideshowImageUrls() {
+async function fetchLandingSlideshowImageUrls() {
   const images = await getLandingSlideshowImages();
   return images.map((image) => image.publicUrl);
 }
+
+export const getLandingSlideshowImageUrls = unstable_cache(
+  fetchLandingSlideshowImageUrls,
+  ["landing-slideshow-urls"],
+  { revalidate: 300, tags: ["landing-slideshow"] },
+);
 
 export async function getPlatformEvents(limit = 250) {
   const admin = createSupabaseServiceRoleClient();

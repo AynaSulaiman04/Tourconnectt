@@ -7,6 +7,7 @@ import type { DirectConversationSummary, DirectMessagePageState, DirectMessageRe
 import { Button } from "@/components/ui/Button";
 import { InboxShell, type InboxConversationItem, type InboxMessageItem } from "@/components/messages/InboxShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { formatDateTimeUtc } from "@/lib/format/date";
 
 type DirectMessagesClientProps = {
   currentUserId: string;
@@ -24,14 +25,7 @@ function formatMessageTime(value: string | null | undefined) {
     return "Just now";
   }
 
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(new Date(value));
+  return formatDateTimeUtc(value, "Just now");
 }
 
 function buildConversationHref(pathname: string, conversationId: string) {
@@ -40,7 +34,7 @@ function buildConversationHref(pathname: string, conversationId: string) {
   return `${url.pathname}?${url.searchParams.toString()}`;
 }
 
-const EMOJI_OPTIONS = ["🙂", "✈️", "🌴", "✨", "👍"];
+const EMOJI_OPTIONS = ["??", "??", "??", "?", "??"];
 const FALLBACK_POLL_INTERVAL_MS = 120_000;
 
 function resolveCounterpartAvatar(
@@ -454,7 +448,7 @@ export function DirectMessagesClient({
       id: message.id,
       body: message.message,
       time: formatMessageTime(message.created_at),
-      sender: isOwnMessage ? "You" : role === "traveler" ? "Operator" : "Traveler",
+      sender: isOwnMessage ? "You" : role === "traveler" ? "Operator" : "Traveller",
       mine: isOwnMessage,
     };
   });
@@ -624,7 +618,7 @@ export function DirectMessagesClient({
       emptySidebarCopy={
         role === "traveler"
           ? "Choose a listing or inquiry to start talking with the operator."
-          : "Traveler conversations will appear here once they send a direct message."
+          : "Traveller conversations will appear here once they send a direct message."
       }
     />
   );

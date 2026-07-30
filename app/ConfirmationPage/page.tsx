@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { submitTravelerReview } from "@/lib/supabase/reviews";
 import { resolveWiPayInquiryAmount } from "@/lib/payments/wipay";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 
 type ConfirmationPageProps = {
   searchParams: Promise<{
@@ -21,14 +22,6 @@ type ConfirmationPageProps = {
     order_id?: string;
   }>;
 };
-
-function formatDate(dateString: string | null) {
-  if (!dateString) {
-    return "Not set";
-  }
-
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(dateString));
-}
 
 function getInquiryStatusLabel(status: string | null | undefined) {
   switch (status) {
@@ -50,14 +43,14 @@ function getInquiryStatusLabel(status: string | null | undefined) {
 function getNextStepText(status: string | null | undefined) {
   switch (status) {
     case "reviewed":
-      return "The operator has reviewed your inquiry and may be following up with timing or availability details.";
+      return "The operator has reviewed your enquiry and may be following up with timing or availability details.";
     case "confirmed":
-      return "Your inquiry is confirmed. You can review the final details or leave feedback once the trip is complete.";
+      return "Your enquiry is confirmed. You can review the final details or leave feedback once the trip is complete.";
     case "closed":
-      return "This inquiry is closed. You can still revisit the details and share feedback if you have not already.";
+      return "This enquiry is closed. You can still revisit the details and share feedback if you have not already.";
     case "rejected":
     case "unavailable":
-      return "The operator cannot take this inquiry right now. You can review the details or submit a new request later.";
+      return "The operator cannot take this enquiry right now. You can review the details or submit a new request later.";
     case "submitted":
     default:
       return "The operator will review your dates and preferences, then respond with the next steps.";
@@ -100,9 +93,9 @@ function buildWhatsAppHref(
   }
 
   const message = [
-    `Hello, I'm following up on inquiry ${inquiryId}.`,
+    `Hello, I'm following up on enquiry ${inquiryId}.`,
     listingTitle ? `Listing: ${listingTitle}` : null,
-    travelerName ? `Traveler: ${travelerName}` : null,
+    travelerName ? `Traveller: ${travelerName}` : null,
   ]
     .filter((value): value is string => Boolean(value))
     .join("\n");
@@ -120,14 +113,14 @@ function buildMailtoHref(
     return null;
   }
 
-  const subject = encodeURIComponent(`Inquiry ${inquiryId}${listingTitle ? ` - ${listingTitle}` : ""}`);
+  const subject = encodeURIComponent(`Enquiry ${inquiryId}${listingTitle ? ` - ${listingTitle}` : ""}`);
   const body = encodeURIComponent(
     [
       "Hello,",
       "",
-    `I'm following up on inquiry ${inquiryId}.`,
+    `I'm following up on enquiry ${inquiryId}.`,
       listingTitle ? `Listing: ${listingTitle}` : null,
-      travelerName ? `Traveler: ${travelerName}` : null,
+      travelerName ? `Traveller: ${travelerName}` : null,
     ]
       .filter((value): value is string => Boolean(value))
       .join("\n"),
@@ -137,7 +130,7 @@ function buildMailtoHref(
 }
 
 const reviewSchema = z.object({
-  inquiryId: z.string().uuid({ error: "Choose a valid inquiry." }),
+  inquiryId: z.string().uuid({ error: "Choose a valid enquiry." }),
   rating: z.coerce.number().int().min(1, { error: "Choose a rating." }).max(5, { error: "Choose a rating." }),
   comment: z.string().trim().max(2000, { error: "Keep your review under 2000 characters." }).optional().or(z.literal("")),
 });
@@ -155,15 +148,15 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
       <PageShell variant="public">
         <main className="mx-auto grid min-h-[calc(100dvh-4.75rem)] w-full max-w-5xl place-items-center px-5 py-12 md:px-10">
           <section className="w-full max-w-2xl rounded-3xl border border-outline-variant/30 bg-surface-container-lowest p-6 shadow-sm md:p-10">
-              <p className="font-label-caps text-secondary">Inquiry status</p>
+              <p className="font-label-caps text-secondary">Enquiry status</p>
               <h1 className="mt-3 font-headline text-4xl font-light text-on-surface md:text-6xl">Submitted</h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-on-surface-variant">
                 {inquiryId
-                  ? "Your inquiry was submitted. We sent the next steps to the email address you provided. Private trip and contact details are only shown to signed-in account holders."
-                  : "Choose an inquiry from your traveler profile, or submit a new request."}
+                  ? "Your enquiry was submitted. We sent the next steps to the email address you provided. Private trip and contact details are only shown to signed-in account holders."
+                  : "Choose an enquiry from your traveller profile, or submit a new request."}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link className="btn-primary" href="/Inquiry">
+                <Link className="btn-primary" href="/Enquiry">
                   Explore experiences
                 </Link>
                 <Link
@@ -265,7 +258,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
     if (profileContext.profile.role !== "traveler") {
       return {
         ...initialReviewFormState,
-        message: "Reviews can only be submitted from a traveler account.",
+        message: "Reviews can only be submitted from a traveller account.",
         fieldErrors: {},
       };
     }
@@ -733,7 +726,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
       <main className="wrap">
         <section className="grid">
           <div className="panel">
-            <p className="eyebrow">Inquiry confirmed</p>
+            <p className="eyebrow">Enquiry confirmed</p>
             <h1 className="title">{getInquiryStatusLabel(inquiry.status).toLowerCase()}</h1>
             <p className="copy">{getNextStepText(inquiry.status)}</p>
             {paymentNotice ? <p className="copy" style={{ marginTop: 12 }}>{paymentNotice}</p> : null}
@@ -774,7 +767,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
 
           <div className="summary-grid">
             <div className="panel">
-              <p className="eyebrow">Inquiry details</p>
+              <p className="eyebrow">Enquiry details</p>
               {inquiry.listing?.image_url ? (
                 <div className="listing-image">
                   <Image fill alt={inquiry.listing.title} sizes="(max-width: 768px) 100vw, 40vw" src={inquiry.listing.image_url} />
@@ -783,7 +776,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
 
               <div className="detail-grid">
                 <p className="detail-row">
-                  <strong>Traveler:</strong> {inquiry.traveler_name}
+                  <strong>Traveller:</strong> {inquiry.traveler_name}
                 </p>
                 <p className="detail-row">
                   <strong>Email:</strong> {inquiry.traveler_email}
@@ -869,7 +862,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
               ) : null}
 
               <div className="actions tight">
-                <Link className="button primary" href="/Inquiry">
+                <Link className="button primary" href="/Enquiry">
                   Return to inquiry
                 </Link>
                 <Link className="button" href="/TravellerProfile">
@@ -886,7 +879,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
               <ul className="list">
                 <li>{nextStep}</li>
                 <li>The operator reviews your preferred dates and availability window.</li>
-                <li>You can return here anytime to review the inquiry details.</li>
+                <li>You can return here anytime to review the enquiry details.</li>
               </ul>
 
               <div className="actions">
@@ -916,7 +909,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                   <p style={{ margin: "8px 0 0", color: "var(--on-surface-variant)", fontSize: "15px", lineHeight: "24px" }}>
                     {activeConversation
                       ? activeConversation.subtitle
-                      : "Message the operator to start a private thread tied to this inquiry."}
+                      : "Message the operator to start a private thread tied to this enquiry."}
                   </p>
                 </div>
 
@@ -952,8 +945,8 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                   <h3>{inquiry.has_review ? "Your review" : "Leave a review"}</h3>
                   <p>
                     {inquiry.has_review
-                      ? "This inquiry already has a traveler review on file."
-                      : "Share feedback once the inquiry is confirmed or closed."}
+                      ? "This enquiry already has a traveller review on file."
+                      : "Share feedback once the enquiry is confirmed or closed."}
                   </p>
 
                   {inquiry.has_review ? null : canShowReview ? (

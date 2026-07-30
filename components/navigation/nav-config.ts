@@ -19,7 +19,7 @@ export const NAVBAR_CONFIG: Record<NavbarVariant, NavbarConfig> = {
     eyebrow: "CONNECTING YOU TO THE REAL CARIBBEAN",
     action: { label: "Log in", href: "/LoginPage?redirect=/TravellerProfile" },
     items: [
-      { label: "Inquiry", href: "/Inquiry" },
+      { label: "Enquiry", href: "/Enquiry" },
       { label: "Concierge", href: "/ConciergeChat" },
       { label: "Profile", href: "/TravellerProfile" },
     ],
@@ -28,7 +28,7 @@ export const NAVBAR_CONFIG: Record<NavbarVariant, NavbarConfig> = {
     eyebrow: "CONNECTING YOU TO THE REAL CARIBBEAN",
     action: { label: "Log in", href: "/LoginPage?redirect=/TravellerProfile" },
     items: [
-      { label: "Inquiry", href: "/Inquiry" },
+      { label: "Enquiry", href: "/Enquiry" },
       { label: "Concierge", href: "/ConciergeChat" },
       { label: "Profile", href: "/TravellerProfile" },
     ],
@@ -49,6 +49,7 @@ export const NAVBAR_CONFIG: Record<NavbarVariant, NavbarConfig> = {
     eyebrow: "CONNECTING YOU TO THE REAL CARIBBEAN",
     action: { label: "Settings", href: "/AdminSettings" },
     items: [
+      { label: "Home", href: "/AdminContent" },
       { label: "Dashboard", href: "/AdminDashboard" },
       { label: "Bookings", href: "/AdminBookings" },
       { label: "Listings", href: "/AdminListings" },

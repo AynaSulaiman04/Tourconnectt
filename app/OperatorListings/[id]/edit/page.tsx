@@ -77,7 +77,7 @@ export default async function OperatorListingEditPage({ params }: OperatorListin
           role: profileContext.profile.role,
         }}
       >
-        <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+        <main className="portal-list-page">
           <div className="section-shell">
             <div className="glass-panel p-gutter">
               <p className="label-caps text-secondary mb-2">Listing editor</p>

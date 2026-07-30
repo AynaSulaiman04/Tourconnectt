@@ -59,7 +59,7 @@ export default async function OperatorMessagesPage({ searchParams }: OperatorMes
         ]
           .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
           .join(":") || "operator-direct-messages"}
-        pageCopy="Review traveler messages from your own conversations and reply directly from the operator inbox."
+        pageCopy="Review traveller messages from your own conversations and reply directly from the operator inbox."
         pageTitle="Operator inbox"
         returnTo="/OperatorDashboard"
         role="operator"

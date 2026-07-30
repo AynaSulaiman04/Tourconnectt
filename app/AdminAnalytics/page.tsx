@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { TableWrapper } from "@/components/ui/TableWrapper";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
 import { createReferralCampaignAction, toggleReferralCampaignAction } from "../AdminPromotions/actions";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
@@ -83,7 +84,7 @@ function buildSeries(events: Awaited<ReturnType<typeof getPlatformEvents>>, rang
     });
 
     return {
-      labels: months.map((date) => new Intl.DateTimeFormat("en", { month: "short" }).format(date)),
+      labels: months.map((date) => formatDate(date)),
       counts: months.map((date) => buckets.get(date.toISOString().slice(0, 7)) ?? 0),
       total: filtered.length,
     };
@@ -105,11 +106,7 @@ function buildSeries(events: Awaited<ReturnType<typeof getPlatformEvents>>, rang
   });
 
   return {
-    labels: days.map((date) =>
-      range === "7d"
-        ? new Intl.DateTimeFormat("en", { weekday: "short" }).format(date)
-        : new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date),
-    ),
+    labels: days.map((date) => formatDate(date)),
     counts: days.map((date) => buckets.get(date.toISOString().slice(0, 10)) ?? 0),
     total: filtered.length,
   };
@@ -153,7 +150,7 @@ function buildReferralLink(campaign: {
   utmMedium: string;
   utmCampaign: string;
 }) {
-  const url = new URL(campaign.landingPage || "/Inquiry", "http://tt-connect.local");
+  const url = new URL(campaign.landingPage || "/Enquiry", "http://tt-connect.local");
   url.searchParams.set("ref", campaign.code);
   url.searchParams.set("utm_source", campaign.utmSource);
   url.searchParams.set("utm_medium", campaign.utmMedium || "referral");
@@ -238,12 +235,12 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
 
   return (
     <PageShell variant="admin">
-      <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+      <main className="portal-list-page">
         <SectionHeader
           level={1}
           eyebrow="Analytics"
           title="Platform insights and reporting."
-          description="A single dashboard for growth metrics, inquiry trends, booking performance, operator performance, and traveler behavior."
+          description="A single dashboard for growth metrics, enquiry trends, booking performance, operator performance, and traveller behaviour."
           action={
             <div className="tc-filter-tabs">
               {(["7d", "30d"] as const).map((range) => (
@@ -281,12 +278,12 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
           {[
             { label: "Activity events", value: `${series.total.toLocaleString()}`, note: selectedRangeLabel },
             {
-              label: "Inquiry conversion",
+              label: "Enquiry conversion",
               value: `${Math.round((confirmedInRange.length / Math.max(1, inquiriesInRange.length)) * 100)}%`,
-              note: "Inquiry to booking momentum",
+              note: "Enquiry to booking momentum",
             },
             { label: "Live listings", value: `${listingsInRange.toLocaleString()}`, note: "Published in the selected range" },
-            { label: "Profile views", value: `${profileViewsInRange.toLocaleString()}`, note: "Traveler and partner interest" },
+            { label: "Profile views", value: `${profileViewsInRange.toLocaleString()}`, note: "Traveller and partner interest" },
           ].map((card, index) => (
             <GlassPanel key={card.label} className="p-gutter">
               <div className="label-caps text-secondary mb-2">{card.label}</div>
@@ -314,7 +311,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               <SectionHeader
                 eyebrow="KPI dashboard"
                 title="Visual reporting overview."
-                description="A clean chart surface for platform activity, inquiry conversion, and booking performance."
+                description="A clean chart surface for platform activity, enquiry conversion, and booking performance."
               />
               {hasActivity ? (
                 <div
@@ -709,8 +706,8 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                 <input
                   className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
                   name="landing_page"
-                  placeholder="/Inquiry"
-                  defaultValue="/Inquiry"
+                  placeholder="/Enquiry"
+                  defaultValue="/Enquiry"
                   type="text"
                 />
                 <div className="grid grid-cols-2 gap-3">

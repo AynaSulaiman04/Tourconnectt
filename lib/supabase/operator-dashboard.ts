@@ -236,7 +236,7 @@ export async function getOperatorDashboardData(): Promise<OperatorDashboardData>
 
       return {
         ...payment,
-        traveler_name: inquiry?.traveler_name ?? "Traveler",
+        traveler_name: inquiry?.traveler_name ?? "Traveller",
         listing_title: listing?.title ?? inquiry?.destination ?? null,
       };
     })

@@ -156,7 +156,7 @@ export async function createInquiryAction(
   if (listingError || !listing || !listing.operator_id) {
     return {
       ...initialInquiryFormState,
-      message: "That experience is not currently accepting inquiries.",
+      message: "That experience is not currently accepting enquiries.",
       fieldErrors: {
         listingId: ["Choose an active experience."],
       },
@@ -174,7 +174,7 @@ export async function createInquiryAction(
   if (!operatorProfile) {
     return {
       ...initialInquiryFormState,
-      message: "That experience is not currently accepting inquiries.",
+      message: "That experience is not currently accepting enquiries.",
       fieldErrors: {
         listingId: ["Choose an active experience."],
       },
@@ -277,7 +277,7 @@ export async function createInquiryAction(
   if (error || !inquiry) {
     return {
       ...initialInquiryFormState,
-      message: error?.message ?? "Unable to submit inquiry.",
+      message: error?.message ?? "Unable to submit enquiry.",
       fieldErrors: {},
     };
   }
@@ -301,8 +301,8 @@ export async function createInquiryAction(
         recipientProfileId: resolvedOperatorId,
         actorProfileId: authData.user?.id ?? null,
         kind: "inquiry_submitted",
-        title: "New inquiry received",
-        body: `${validatedFields.data.travelerName} submitted an inquiry for ${listing.title}.`,
+        title: "New enquiry received",
+        body: `${validatedFields.data.travelerName} submitted an enquiry for ${listing.title}.`,
         href: `/OperatorMessages?inquiry=${inquiry.id}`,
         entityType: "inquiry",
         entityId: inquiry.id,
@@ -323,8 +323,8 @@ export async function createInquiryAction(
     await recordAdminNotifications({
       actorProfileId: authData.user?.id ?? null,
       kind: "inquiry_submitted",
-      title: "New inquiry submitted",
-        body: `${validatedFields.data.travelerName} submitted an inquiry for ${listing.title}.`,
+      title: "New enquiry submitted",
+        body: `${validatedFields.data.travelerName} submitted an enquiry for ${listing.title}.`,
         href: `/AdminBookings?inquiry=${inquiry.id}`,
         entityType: "inquiry",
         entityId: inquiry.id,
@@ -384,7 +384,7 @@ export async function createInquiryAction(
     });
   }
 
-  revalidatePath("/Inquiry");
+  revalidatePath("/Enquiry");
   revalidatePath("/ConfirmationPage");
   revalidatePath("/TravellerProfile");
   revalidatePath("/OperatorDashboard");

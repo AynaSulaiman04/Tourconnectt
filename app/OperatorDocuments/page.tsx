@@ -15,6 +15,7 @@ import {
 } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
+import { formatDateTime } from "@/lib/format/date";
 
 type OperatorDocumentsPageProps = {
   searchParams: Promise<{
@@ -23,10 +24,6 @@ type OperatorDocumentsPageProps = {
     error?: string;
   }>;
 };
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
 
 function getStatusTone(status: string) {
   switch (status) {
@@ -495,16 +492,16 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
               <input name="return_to" type="hidden" value="/OperatorDocuments" />
               <div className="field">
                 <label htmlFor="guest_name">Guest Name</label>
-                <input id="guest_name" name="guest_name" placeholder="Traveler or guest name" required type="text" />
+                <input id="guest_name" name="guest_name" placeholder="Traveller or guest name" required type="text" />
               </div>
               <div className="field">
                 <label htmlFor="document_type">Document Type</label>
                 <input id="document_type" name="document_type" placeholder="Waiver, ID, itinerary" required type="text" />
               </div>
               <div className="field full-width">
-                <label htmlFor="inquiry_id">Linked Inquiry</label>
+                <label htmlFor="inquiry_id">Linked enquiry</label>
                 <select id="inquiry_id" name="inquiry_id" defaultValue="">
-                  <option value="">No linked inquiry</option>
+                  <option value="">No linked enquiry</option>
                   {recentInquiries.map((inquiry) => (
                     <option key={inquiry.id} value={inquiry.id}>
                       {inquiry.traveler_name} - {inquiry.destination}
@@ -550,7 +547,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
             <div className="upload-list">
               <div className="upload-item">
                 <strong>Request missing file</strong>
-                <p>Send a follow-up prompt to the traveler or guest concierge.</p>
+                <p>Send a follow-up prompt to the traveller or guest concierge.</p>
               </div>
               <div className="upload-item">
                 <strong>Archive complete</strong>
@@ -599,7 +596,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
                       <div>{doc.document_type}</div>
                       {doc.inquiry_id || doc.booking_id ? (
                         <p className="text-[12px] leading-5 text-on-surface-variant mt-2">
-                          Booking: {inquiryById.get(doc.inquiry_id ?? doc.booking_id ?? "")?.traveler_name ?? "Linked inquiry"}
+                          Booking: {inquiryById.get(doc.inquiry_id ?? doc.booking_id ?? "")?.traveler_name ?? "Linked enquiry"}
                         </p>
                       ) : null}
                       <a className="document-link" href={doc.file_url} target="_blank" rel="noreferrer">

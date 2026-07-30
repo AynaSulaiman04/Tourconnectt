@@ -386,7 +386,7 @@ export function ListingEditor({
   const heroImage = imageCleared ? "" : imagePreview || initialDraft?.image_base64 || initialDraft?.image_url || "";
 
   return (
-    <main className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop pt-10 pb-12">
+    <main className="portal-list-page max-w-7xl mx-auto">
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>

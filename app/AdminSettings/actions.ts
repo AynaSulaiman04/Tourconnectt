@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { clearPortalAuthCookie } from "@/lib/supabase/portal-auth";
@@ -70,6 +70,7 @@ async function saveAdminWorkspaceSettings(
   revalidatePath("/AdminSettings");
   revalidatePath("/AdminDashboard");
   revalidatePath("/AdminAnalytics");
+  revalidateTag("site-content", "max");
 }
 
 export async function updateAdminProfileAction(formData: FormData) {
@@ -243,6 +244,7 @@ export async function deleteLandingSlideshowImageAction(formData: FormData) {
 
   revalidatePath("/LandingPage");
   revalidatePath("/AdminSettings");
+  revalidateTag("landing-slideshow", "max");
   redirect(`${ADMIN_SETTINGS_REDIRECT}?saved=1`);
 }
 

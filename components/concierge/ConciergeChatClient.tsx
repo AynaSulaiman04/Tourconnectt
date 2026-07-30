@@ -23,6 +23,7 @@ import type {
   ConciergeRecommendation,
 } from "@/lib/ai/concierge-context";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { formatDate } from "@/lib/format/date";
 
 type ConciergeClientMessage = {
   id: string;
@@ -173,9 +174,7 @@ function formatRelativeTime(value: string | null | undefined, referenceTime = Da
     return "Yesterday";
   }
 
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(
-    new Date(value),
-  );
+  return formatDate(value);
 }
 
 function normalizeSourceEntries(message: ConciergeMessageRecord): ConciergeSourceEntry[] {

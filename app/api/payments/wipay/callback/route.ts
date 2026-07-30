@@ -320,7 +320,7 @@ async function handleProviderResponse(request: NextRequest) {
       const inquiryContext = await loadPaymentContext(transition.payment.inquiry_id);
       const paidAt = transition.payment.paid_at ?? new Date().toISOString();
       try {
-        const travelerName = inquiryContext?.traveler_name ?? "Traveler";
+        const travelerName = inquiryContext?.traveler_name ?? "Traveller";
         const travelerBody = `Payment for ${travelerName}'s booking has been confirmed.`;
         if (inquiryContext?.user_id) {
           await recordPlatformNotification({
@@ -345,7 +345,7 @@ async function handleProviderResponse(request: NextRequest) {
           await recordPlatformNotification({
             recipientProfileId: operatorId,
             kind: "traveler_payment_completed",
-            title: "Traveler payment completed",
+            title: "Traveller payment completed",
             body: `A traveler payment has been completed for ${inquiryContext?.destination_country ?? inquiryContext?.destination ?? "your booking"}.`,
             href: `/OperatorDashboard?paymentStatus=paid`,
             entityType: "payment",

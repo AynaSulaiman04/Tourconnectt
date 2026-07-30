@@ -20,6 +20,7 @@ import {
   isSuccessfulWiPayPayment,
   type WiPayPaymentSummary,
 } from "@/lib/payments/wipay";
+import { formatDate } from "@/lib/format/date";
 
 type AdminBookingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -39,10 +40,6 @@ type AdminBookingPaymentRecord = WiPayPaymentSummary & {
 
 function getParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value ?? "";
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
 }
 
 function normalizeFilter(value: string | undefined): BookingFilter {
@@ -146,7 +143,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
 
       return {
         ...payment,
-        traveler_name: inquiry?.traveler_name ?? "Traveler",
+        traveler_name: inquiry?.traveler_name ?? "Traveller",
         operator_name: inquiry?.operator_name ?? listing?.operator_name ?? "Operator",
         listing_title: listing?.title ?? inquiry?.destination ?? null,
         inquiry_status: inquiry?.status ?? "submitted",
@@ -230,12 +227,12 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
 
   return (
     <PageShell variant="admin">
-      <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+      <main className="portal-list-page">
         <SectionHeader
           level={1}
           eyebrow="Booking oversight"
           title="Monitor every booking request from one place."
-          description="This dedicated admin surface keeps inquiry flow, booking status, and customer communication visible without mixing it into operator tools."
+          description="This dedicated admin surface keeps enquiry flow, booking status, and customer communication visible without mixing it into operator tools."
           action={
             <Button href="/AdminAnalytics" variant="outline">
               Analytics Hub
@@ -256,7 +253,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
         <section className="section-shell grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
           {[
             ["Requests", workspace.inquiries.length.toLocaleString(), "Total booking-related records."],
-            ["Confirmed", workspace.stats.confirmedBookings.toLocaleString(), "Travelers already scheduled."],
+            ["Confirmed", workspace.stats.confirmedBookings.toLocaleString(), "Travellers already scheduled."],
             ["Pending", workspace.stats.pendingBookings.toLocaleString(), "Waiting for operator response."],
             ["Escalated", escalatedBookings.toLocaleString(), "Requires admin attention."],
           ].map(([label, value, note]) => (
@@ -277,7 +274,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                 <input
                   name="q"
                   defaultValue={query}
-                  placeholder="Search traveler, operator, listing, or inquiry id"
+                  placeholder="Search traveller, operator, listing, or enquiry id"
                   className="tc-filter-input text-sm"
                 />
               </div>
@@ -396,7 +393,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
               description={
                 tab === "bookings"
                   ? "Track each booking request alongside the operator, communication channel, and current state."
-                  : "Track traveler payments, their current status, and manual refund or cancellation actions."
+                  : "Track traveller payments, their current status, and manual refund or cancellation actions."
               }
             />
 
@@ -469,7 +466,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                         <div className="px-6 py-10 text-center">
                           <p className="font-body-md text-on-background">No bookings match your filters.</p>
                           <p className="mt-2 text-sm text-on-surface-variant">
-                            Booking requests will appear here when travelers submit inquiries.
+                            Booking requests will appear here when travellers submit enquiries.
                           </p>
                         </div>
                       </td>
@@ -481,7 +478,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                 <TableWrapper>
                   <thead>
                     <tr>
-                      <th>Traveler</th>
+                      <th>Traveller</th>
                       <th>Experience</th>
                       <th>Operator</th>
                       <th>Amount</th>
@@ -546,7 +543,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                           <div className="px-6 py-10 text-center">
                             <p className="font-body-md text-on-background">No payments match your filters.</p>
                             <p className="mt-2 text-sm text-on-surface-variant">
-                              WiPay transactions will appear here as travelers checkout, cancel, or complete payments.
+                              WiPay transactions will appear here as travellers checkout, cancel, or complete payments.
                             </p>
                           </div>
                         </td>
@@ -561,7 +558,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
           <div className="lg:col-span-4 flex flex-col gap-gutter">
             <GlassPanel className="p-gutter flex-1">
               <SectionHeader
-                eyebrow={tab === "bookings" ? "Selected inquiry" : "Selected payment"}
+                eyebrow={tab === "bookings" ? "Selected enquiry" : "Selected payment"}
                 title={
                   tab === "bookings"
                     ? selectedInquiry
@@ -641,7 +638,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                         className="w-full"
                         pendingLabel={status === "reviewed" ? "Marking..." : status === "confirmed" ? "Confirming..." : "Closing..."}
                       >
-                        {status === "reviewed" ? "Mark Reviewed" : status === "confirmed" ? "Confirm Trip" : "Close Inquiry"}
+                        {status === "reviewed" ? "Mark Reviewed" : status === "confirmed" ? "Confirm Trip" : "Close Enquiry"}
                       </FormSubmitButton>
                     </form>
                   ))}
@@ -657,7 +654,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                     <div className="font-body-md text-on-background">{selectedPayment.order_id}</div>
                   </div>
                   <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
-                    <div className="label-caps text-secondary mb-1">Inquiry status</div>
+                    <div className="label-caps text-secondary mb-1">Enquiry status</div>
                     <div className="font-body-md text-on-background">{getBookingStatusLabel(selectedPayment.inquiry_status)}</div>
                   </div>
                   <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
@@ -700,7 +697,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
             <GlassPanel className="p-gutter">
               <div className="label-caps text-secondary mb-2">Admin action</div>
               <p className="section-copy">
-                Keep this page available for platform-wide oversight while operators continue managing their own inquiry inboxes.
+                Keep this page available for platform-wide oversight while operators continue managing their own enquiry inboxes.
               </p>
                 <div className="mt-6 admin-action-group">
                   <Link className="btn-outline" href="/AdminDashboard">

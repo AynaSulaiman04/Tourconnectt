@@ -18,6 +18,7 @@ import {
   sumSuccessfulWiPayPayments,
   type WiPayPaymentSummary,
 } from "@/lib/payments/wipay";
+import { formatDate } from "@/lib/format/date";
 import type { TourListing, TravelerInquiry } from "./inquiry-types";
 import type { TravelerProfile } from "./profile-types";
 import { getTravelerCareProfiles, type TravelerCareProfile } from "./traveler-care";
@@ -323,7 +324,7 @@ export async function getAdminWorkspaceData() {
 
       return {
         ...payment,
-        traveler_name: inquiry?.traveler_name ?? "Traveler",
+        traveler_name: inquiry?.traveler_name ?? "Traveller",
         operator_name: inquiry?.operator_name ?? listing?.operator_name ?? "Operator",
         listing_title: listing?.title ?? inquiry?.destination ?? null,
       };
@@ -361,7 +362,7 @@ export async function getAdminWorkspaceData() {
             id: user.id,
             code: `TT-${slugify(user.full_name || "operator")}-${String(user.listing_count || user.inquiry_count || 0).padStart(2, "0")}`,
             partner: user.full_name,
-            landingPage: "/Inquiry",
+            landingPage: "/Enquiry",
             commissionRate: PLATFORM_ADMIN_COMMISSION_RATE * 100,
             usage: user.inquiry_count,
             conversions: Math.max(0, user.inquiry_count - 1),
@@ -445,7 +446,6 @@ export async function getAdminWorkspaceData() {
 function buildActivityTimeline(
   events: Awaited<ReturnType<typeof getPlatformEvents>>,
 ): Array<{ day: string; count: number }> {
-  const formatter = new Intl.DateTimeFormat("en", { weekday: "short" });
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - index));
@@ -470,7 +470,7 @@ function buildActivityTimeline(
   return days.map((date) => {
     const key = date.toISOString().slice(0, 10);
     return {
-      day: formatter.format(date),
+      day: formatDate(date),
       count: buckets.get(key) ?? 0,
     };
   });

@@ -1,5 +1,8 @@
 import "server-only";
 
+import { toBritishUserCopy } from "@/lib/copy/british-english";
+import { formatDate, formatDateTime } from "@/lib/format/date";
+
 export type EmailMessage = {
   subject: string;
   html: string;
@@ -209,39 +212,6 @@ function displayValue(value: string | null | undefined, fallback: string) {
   return value && value.trim().length > 0 ? value : fallback;
 }
 
-function formatDate(value: string | null) {
-  if (!value) {
-    return "Not set";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Not set";
-  }
-
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date);
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) {
-    return "Not set";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Not set";
-  }
-
-  if (!value.includes("T")) {
-    return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date);
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
 function renderEmailShell(params: {
   title: string;
   preheader: string;
@@ -250,7 +220,19 @@ function renderEmailShell(params: {
   sections: Array<{ label: string; value: string }>;
   cta?: { label: string; href: string };
 }) {
-  const sectionRows = params.sections
+  const title = toBritishUserCopy(params.title);
+  const preheader = toBritishUserCopy(params.preheader);
+  const heading = toBritishUserCopy(params.heading);
+  const intro = toBritishUserCopy(params.intro);
+  const sections = params.sections.map((section) => ({
+    label: toBritishUserCopy(section.label),
+    value: toBritishUserCopy(section.value),
+  }));
+  const cta = params.cta
+    ? { label: toBritishUserCopy(params.cta.label), href: params.cta.href }
+    : undefined;
+
+  const sectionRows = sections
     .map(
       (section) => `
         <tr>
@@ -267,17 +249,17 @@ function renderEmailShell(params: {
     .join("");
 
   return {
-    subject: params.title,
+    subject: title,
     html: `<!doctype html>
       <html lang="en">
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width,initial-scale=1" />
-          <title>${escapeHtml(params.title)}</title>
+          <title>${escapeHtml(title)}</title>
         </head>
         <body style="margin:0;background:#fcf9f8;font-family:Arial,Helvetica,sans-serif;color:#1c1b1b;">
           <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
-            ${escapeHtml(params.preheader)}
+            ${escapeHtml(preheader)}
           </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fcf9f8;padding:32px 16px;">
             <tr>
@@ -287,10 +269,10 @@ function renderEmailShell(params: {
                     <td style="padding:32px 32px 24px;">
                       <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a0401b;font-weight:700;margin-bottom:14px;">Tour ConnecTT</div>
                       <h1 style="margin:0;font-size:28px;line-height:34px;font-weight:300;letter-spacing:-.03em;text-transform:lowercase;color:#1c1b1b;">
-                        ${escapeHtml(params.heading)}
+                        ${escapeHtml(heading)}
                       </h1>
                       <p style="margin:16px 0 0;font-size:16px;line-height:26px;color:#4b463d;">
-                        ${escapeHtml(params.intro)}
+                        ${escapeHtml(intro)}
                       </p>
                     </td>
                   </tr>
@@ -300,11 +282,11 @@ function renderEmailShell(params: {
                     </td>
                   </tr>
                   ${
-                    params.cta
+                    cta
                       ? `<tr>
                           <td style="padding:0 32px 32px;">
-                            <a href="${escapeHtml(params.cta.href)}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:linear-gradient(135deg,#c5161d,#8f0f14);color:#ffffff;text-decoration:none;font-size:12px;line-height:16px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;">
-                              ${escapeHtml(params.cta.label)}
+                            <a href="${escapeHtml(cta.href)}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:linear-gradient(135deg,#c5161d,#8f0f14);color:#ffffff;text-decoration:none;font-size:12px;line-height:16px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;">
+                              ${escapeHtml(cta.label)}
                             </a>
                           </td>
                         </tr>`
@@ -317,12 +299,12 @@ function renderEmailShell(params: {
         </body>
       </html>`,
     text: [
-      params.heading,
+      heading,
       "",
-      params.intro,
+      intro,
       "",
-      ...params.sections.map((section) => `${section.label}: ${section.value}`),
-      params.cta ? `\n${params.cta.label}: ${params.cta.href}` : "",
+      ...sections.map((section) => `${section.label}: ${section.value}`),
+      cta ? `\n${cta.label}: ${cta.href}` : "",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -357,21 +339,23 @@ export function inquirySubmittedTravelerEmail(params: {
   listingTitle: string;
   destination?: string;
 }) {
-  return {
-    subject: `Inquiry received for ${params.listingTitle}`,
-    html: `
+  const subject = toBritishUserCopy(`Enquiry received for ${params.listingTitle}`);
+  const html = toBritishUserCopy(`
       <div style="font-family: Arial, sans-serif; color: #111318;">
-        <h2>Your inquiry has been received</h2>
+        <h2>Your enquiry has been received</h2>
         <p>Hi ${escapeHtml(params.travelerName)},</p>
-        <p>We received your inquiry for <strong>${escapeHtml(params.listingTitle)}</strong>.</p>
+        <p>We received your enquiry for <strong>${escapeHtml(params.listingTitle)}</strong>.</p>
         ${params.destination ? `<p>Destination: <strong>${escapeHtml(params.destination)}</strong></p>` : ""}
         <p>The operator will review your request and reply soon.</p>
         <br />
         <p>Tour ConnecTT</p>
       </div>
-    `,
-    text: `Your inquiry has been received\n\nHi ${params.travelerName},\nWe received your inquiry for ${params.listingTitle}.${params.destination ? `\nDestination: ${params.destination}` : ""}\nThe operator will review your request and reply soon.\n\nTour ConnecTT`,
-  } satisfies EmailMessage;
+    `);
+  const text = toBritishUserCopy(
+    `Your enquiry has been received\n\nHi ${params.travelerName},\nWe received your enquiry for ${params.listingTitle}.${params.destination ? `\nDestination: ${params.destination}` : ""}\nThe operator will review your request and reply soon.\n\nTour ConnecTT`,
+  );
+
+  return { subject, html, text } satisfies EmailMessage;
 }
 
 export function buildOperatorInquiryNotificationEmail(data: OperatorInquiryNotificationData): EmailMessage {
@@ -403,22 +387,24 @@ export function newInquiryOperatorEmail(params: {
   preferredStartDate?: string;
   preferredEndDate?: string;
 }) {
-  return {
-    subject: `New inquiry for ${params.listingTitle}`,
-    html: `
+  const subject = toBritishUserCopy(`New enquiry for ${params.listingTitle}`);
+  const html = toBritishUserCopy(`
       <div style="font-family: Arial, sans-serif; color: #111318;">
-        <h2>New traveler inquiry</h2>
+        <h2>New traveller enquiry</h2>
         <p>Hi ${escapeHtml(params.operatorName || "Operator")},</p>
-        <p><strong>${escapeHtml(params.travelerName)}</strong> submitted an inquiry for <strong>${escapeHtml(params.listingTitle)}</strong>.</p>
+        <p><strong>${escapeHtml(params.travelerName)}</strong> submitted an enquiry for <strong>${escapeHtml(params.listingTitle)}</strong>.</p>
         ${params.preferredStartDate ? `<p>Preferred start: ${escapeHtml(params.preferredStartDate)}</p>` : ""}
         ${params.preferredEndDate ? `<p>Preferred end: ${escapeHtml(params.preferredEndDate)}</p>` : ""}
         <p>Please log in to your operator dashboard to review and respond.</p>
         <br />
         <p>Tour ConnecTT</p>
       </div>
-    `,
-    text: `New traveler inquiry\n\nHi ${params.operatorName || "Operator"},\n${params.travelerName} submitted an inquiry for ${params.listingTitle}.${params.preferredStartDate ? `\nPreferred start: ${params.preferredStartDate}` : ""}${params.preferredEndDate ? `\nPreferred end: ${params.preferredEndDate}` : ""}\nPlease log in to your operator dashboard to review and respond.\n\nTour ConnecTT`,
-  } satisfies EmailMessage;
+    `);
+  const text = toBritishUserCopy(
+    `New traveller enquiry\n\nHi ${params.operatorName || "Operator"},\n${params.travelerName} submitted an enquiry for ${params.listingTitle}.${params.preferredStartDate ? `\nPreferred start: ${params.preferredStartDate}` : ""}${params.preferredEndDate ? `\nPreferred end: ${params.preferredEndDate}` : ""}\nPlease log in to your operator dashboard to review and respond.\n\nTour ConnecTT`,
+  );
+
+  return { subject, html, text } satisfies EmailMessage;
 }
 
 export function buildBookingConfirmedEmail(data: BookingConfirmationData): EmailMessage {

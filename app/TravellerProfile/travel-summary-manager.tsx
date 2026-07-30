@@ -258,6 +258,9 @@ export function TravelSummaryManager({ countries }: TravelSummaryManagerProps) {
     formAction(formData);
   }
 
+  const statusMessage =
+    localMessage || (state.message === "Travel summary is not available yet." ? "" : state.message);
+
   return (
     <section className="panel travel-summary-panel" id="travel-summary">
       <div className="travel-summary-head">
@@ -323,13 +326,14 @@ export function TravelSummaryManager({ countries }: TravelSummaryManagerProps) {
             {state.fieldErrors.countryName[0]}
           </p>
         ) : null}
-        <p
-          className={`form-status ${state.success ? "form-status-success" : "form-status-error"}`}
-          aria-live="polite"
-        >
-          {localMessage ||
-            (state.message === "Travel summary is not available yet." ? "" : state.message)}
-        </p>
+        {statusMessage ? (
+          <p
+            className={`form-status ${state.success ? "form-status-success" : "form-status-error"}`}
+            aria-live="polite"
+          >
+            {statusMessage}
+          </p>
+        ) : null}
       </form>
 
       <div className="travel-summary-list" aria-label="Added countries">

@@ -1,8 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { AnimatedHeroHeadline } from "@/components/ui/animated-hero";
+import { getHeroContentFromSiteContent, getPortalSettingsFromContent } from "@/lib/portal-settings";
 import { LandingImageSlideshow } from "./LandingImageSlideshow";
+import { LandingServicesMarquee } from "./LandingServicesMarquee";
 import { LandingScrollReveal } from "./LandingScrollReveal";
 import { NewsletterForm } from "./newsletter-form";
 import type { SiteContent } from "@/lib/site-content";
@@ -84,7 +87,9 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
   const featuredListings = resolveListings(listings);
   const testimonialsToRender = resolveTestimonials(testimonials);
   const hasListings = featuredListings.length > 0;
-  const slideshowImages = [...new Set(showcaseImages.map((image) => image.trim()).filter((image) => image.length > 0))];
+  const slideshowImages = showcaseImages;
+  const heroContent = getHeroContentFromSiteContent(siteContent);
+  const portalSettings = getPortalSettingsFromContent(siteContent);
 
   return (
     <main className="lp-page">
@@ -92,9 +97,15 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
 
       <section className="lp-hero">
         <div className="lp-hero-inner" data-lp-reveal>
-          <AnimatedHeroHeadline />
+          <AnimatedHeroHeadline
+            description={heroContent.description}
+            eyebrow={heroContent.eyebrow}
+            phrases={heroContent.phrases}
+            prefix={heroContent.prefix}
+            rotationIntervalMs={heroContent.rotationIntervalMs}
+          />
 
-          <form className="lp-search-card" action="/Inquiry" method="get">
+          <form className="lp-search-card" action="/Enquiry" method="get">
             <label className="lp-field">
               <span className="material-symbols-outlined lp-field-icon" aria-hidden="true">
                 location_on
@@ -128,7 +139,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
             </label>
 
             <Button type="submit" variant="outline" className="lp-search-submit btn-sm">
-              Inquire Now
+              Enquire now
             </Button>
           </form>
 
@@ -140,8 +151,12 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
         </div>
       </section>
 
-      <div data-lp-reveal>
-        <LandingImageSlideshow images={slideshowImages} />
+      <div className="lp-marquee-wrap" data-lp-reveal>
+        <LandingServicesMarquee />
+      </div>
+
+      <div className="lp-showcase-wrap" data-lp-reveal>
+        <LandingImageSlideshow images={slideshowImages} intervalMs={portalSettings.slideshowIntervalMs} />
       </div>
 
       <section className="lp-section" aria-labelledby="featured-listings" data-lp-reveal>
@@ -151,7 +166,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
             <h2 id="featured-listings">Featured listings</h2>
           </div>
 
-          <Button href="/Inquiry" variant="outline" className="btn-sm">
+          <Button href="/Enquiry" variant="outline" className="btn-sm">
             View All Listings
           </Button>
         </div>
@@ -160,10 +175,10 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
           {hasListings ? (
             featuredListings.map((listing) => {
               const listingLocation = listing.location || listing.country || "Location on request";
-              const listingDuration = listing.duration || "Inquiry based";
+              const listingDuration = listing.duration || "Enquiry based";
               const listingSummary =
                 listing.summary ||
-                "A live operator listing that travelers can open to view details and inquire.";
+                "A live operator listing that travellers can open to view details and enquire.";
 
               return (
                 <article key={listing.id} className="lp-listing-card" data-lp-reveal>
@@ -185,7 +200,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
                         <p className="lp-listing-label">Listing</p>
                         <p className="lp-listing-fallback-title">{listing.title}</p>
                         <p className="lp-listing-fallback-copy">
-                          This listing is ready for inquiry and currently has no cover image.
+                          This listing is ready for enquiry and currently has no cover image.
                         </p>
                       </div>
                     )}
@@ -202,7 +217,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
 
                     <div className="lp-listing-pills">
                       <span>{listingDuration}</span>
-                      <span>{listing.price || "Inquiry based"}</span>
+                      <span>{listing.price || "Enquiry based"}</span>
                     </div>
 
                     <div className="lp-listing-actions">
@@ -232,8 +247,8 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
       <section className="lp-section lp-testimonials" aria-labelledby="testimonials" data-lp-reveal>
         <div className="lp-section-head" data-lp-reveal>
           <div>
-            <p className="lp-section-eyebrow">Traveler trust</p>
-            <h2 id="testimonials">Loved by discerning travelers worldwide.</h2>
+            <p className="lp-section-eyebrow">Traveller trust</p>
+            <h2 id="testimonials">Loved by discerning travellers worldwide.</h2>
           </div>
 
           <div className="lp-rating">
@@ -279,9 +294,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
       <footer className="lp-footer" data-lp-reveal>
         <div className="lp-footer-main">
           <div className="lp-footer-brand">
-            <Link href="/LandingPage" className="lp-footer-logo" aria-label="Tour ConnecTT home">
-              <Image alt="Tour ConnecTT" className="lp-footer-logo-image" width={620} height={180} src="/branding/tourconnecttt-logo.png" />
-            </Link>
+            <BrandLogo className="lp-footer-logo-image" href="/LandingPage" linkClassName="lp-footer-logo" variant="footer" />
             <p className="lp-footer-description">
               {siteContent.footerDescription}
             </p>
@@ -290,7 +303,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
           <div className="lp-footer-column">
             <h3>Platform</h3>
             <Link href="/HowItWorks">How it works</Link>
-            <Link href="/Inquiry">Live listings</Link>
+            <Link href="/Enquiry">Live listings</Link>
             <Link href="/ConciergeChat">Concierge</Link>
           </div>
 

@@ -9,6 +9,7 @@ import { revokeOperatorSessionAction, updateOperatorSettingsAction } from "./act
 import { CalendarFeedCopyButton } from "@/components/operator/CalendarFeedCopyButton";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 
 type OperatorSettingsPageProps = {
   searchParams: Promise<{
@@ -44,7 +45,7 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
   const notificationPreferences = [
     {
       name: "inquiry_received_enabled",
-      label: "Inquiry received",
+      label: "Enquiry received",
       enabled: settings.inquiry_received_enabled,
     },
     {
@@ -69,17 +70,17 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
       device: "Operator workspace",
       location: profile.email,
       status: profile.is_active ? "Active now" : "Suspended",
-      note: profile.last_seen_at ? `Last seen ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(profile.last_seen_at))}` : "No tracked activity yet",
+      note: profile.last_seen_at ? `Last seen ${formatDateTime(profile.last_seen_at)}` : "No tracked activity yet",
     },
     {
       device: "Account created",
-      location: new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(profile.created_at)),
+      location: formatDate(profile.created_at),
       status: "Profile record",
       note: "Current operator profile linked to Supabase auth.",
     },
     {
       device: "Settings saved",
-      location: new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(settings.updated_at)),
+      location: formatDateTime(settings.updated_at),
       status: "Latest update",
       note: "Last change to workflow controls and inbox routing.",
     },
@@ -87,7 +88,7 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
 
   return (
     <PageShell variant="operator">
-      <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+      <main className="portal-list-page">
         {savedMessage ? (
           <StatusMessage tone="success" className="mb-6">
             {savedMessage}
@@ -349,7 +350,7 @@ function GlassCardProfile({ profile }: { profile: Awaited<ReturnType<typeof requ
         <div>
           <div className="label-caps text-secondary mb-1">Last seen</div>
           <div className="font-body-md text-on-background">
-            {profile.last_seen_at ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(profile.last_seen_at)) : "No recent activity"}
+            {profile.last_seen_at ? formatDateTime(profile.last_seen_at) : "No recent activity"}
           </div>
         </div>
       </div>
@@ -457,7 +458,7 @@ function optionsForLabel(label: string) {
       ];
     case "Booking workflow":
       return [
-        { value: "inquiry_first", label: "Inquiry first" },
+        { value: "inquiry_first", label: "Enquiry first" },
         { value: "review_then_confirm", label: "Review then confirm" },
         { value: "manual_hold", label: "Manual hold" },
       ];

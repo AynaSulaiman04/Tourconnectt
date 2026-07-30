@@ -116,7 +116,7 @@ export function HeroCarousel({ slides, trustSummary }: HeroCarouselProps) {
         </Link>
 
         {trustSummary ? (
-          <Link className="hero-rating-card" href="#trust-section" aria-label="Jump to traveler trust">
+          <Link className="hero-rating-card" href="#trust-section" aria-label="Jump to traveller trust">
             <div>
             <div className="hero-rating-score">
                 {trustSummary.reviewCount > 0 ? trustSummary.averageRating.toFixed(1) : "9.8"}
@@ -129,7 +129,7 @@ export function HeroCarousel({ slides, trustSummary }: HeroCarouselProps) {
                   </span>
                 ))}
               </div>
-              <div className="hero-rating-copy">Traveler rating</div>
+              <div className="hero-rating-copy">Traveller rating</div>
             </div>
           </Link>
         ) : null}

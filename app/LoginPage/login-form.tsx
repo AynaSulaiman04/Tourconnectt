@@ -137,7 +137,7 @@ export function LoginForm({
         await fetch("/api/portal-auth", { method: "DELETE" }).catch(() => null);
         const mismatchMessage =
           expectedRole === "traveler"
-            ? "This sign-in is reserved for traveler accounts. Please use the traveler login."
+            ? "This sign-in is reserved for traveller accounts. Please use the traveller login."
             : expectedRole === "operator"
               ? "This sign-in is reserved for operator accounts. Please use an operator account."
               : "This sign-in is reserved for admin accounts. Please use an admin account.";
@@ -290,14 +290,6 @@ export function LoginForm({
             {fieldErrors.password[0]}
           </p>
         ) : null}
-        {fieldErrors.password?.length ? (
-          <p className="invite-text login-help-text">
-            Forgot your password? <Link href="/LoginPage?mode=forgot">Request a reset link</Link>
-          </p>
-        ) : null}
-        <p className="forgot-hint">
-          Use the email above to sign in. If that fails, you can request a reset link.
-        </p>
       </div>
 
       <div className="submit-wrap">

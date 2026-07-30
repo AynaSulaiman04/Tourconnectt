@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { GlassPanel } from "@/components/ui/GlassPanel";
+import { formatDateRange as formatPreferredDateRange } from "@/lib/format/date";
 import {
   getOperatorDashboardData,
   type OperatorDashboardInquirySummary,
@@ -65,28 +66,11 @@ function formatLabel(value: string | null | undefined, fallback: string) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "Date on request";
-  }
-
-  const date = new Date(`${value}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) {
-    return "Date on request";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-function formatDateRange(booking: OperatorDashboardInquirySummary) {
-  const start = formatDate(booking.preferred_start_date);
-  const end = formatDate(booking.preferred_end_date);
-  return start === end ? start : `${start} – ${end}`;
+function formatBookingDateRange(booking: OperatorDashboardInquirySummary) {
+  return formatPreferredDateRange(booking.preferred_start_date, booking.preferred_end_date, {
+    fallback: "Date on request",
+    separator: " – ",
+  });
 }
 
 function formatPayment(booking: OperatorDashboardInquirySummary) {
@@ -188,11 +172,11 @@ export default async function OperatorBookingsPage({
         role: dashboard.profile.role,
       }}
     >
-      <main className="px-margin-mobile py-10 pb-section-gap md:px-margin-desktop">
+      <main className="portal-list-page">
         <section className="section-shell">
           <p className="label-caps text-secondary">Operator bookings</p>
           <h1 className="mt-3 font-display text-[clamp(2.5rem,8vw,4rem)] leading-none font-light tracking-[-0.03em] text-on-background">
-            Traveler bookings
+            Traveller bookings
           </h1>
           <p className="mt-4 max-w-3xl text-[18px] leading-7 font-light text-on-surface-variant">
             Review every assigned inquiry, trip date, payment state, and traveler conversation in
@@ -252,7 +236,7 @@ export default async function OperatorBookingsPage({
                 defaultValue={searchQuery}
                 id="operator-booking-search"
                 name="q"
-                placeholder="Traveler, destination, or listing..."
+                placeholder="Traveller, destination, or listing..."
                 type="search"
               />
               <input name="view" type="hidden" value={view} />
@@ -296,15 +280,15 @@ export default async function OperatorBookingsPage({
                       </div>
 
                       <div className="grid min-w-0 gap-3 sm:grid-cols-3 lg:w-[540px]">
-                        <BookingFact label="Traveler" value={booking.traveler_name || "Traveler"} />
-                        <BookingFact label="Travel dates" value={formatDateRange(booking)} />
+                        <BookingFact label="Traveller" value={booking.traveler_name || "Traveller"} />
+                        <BookingFact label="Travel dates" value={formatBookingDateRange(booking)} />
                         <BookingFact label={`Payment · ${payment.label}`} value={payment.detail} />
                       </div>
                     </div>
 
                     <div className="mt-6 flex flex-col gap-3 border-t border-outline-variant/20 pt-5 sm:flex-row sm:items-center sm:justify-between">
                       <p className="min-w-0 break-all text-xs text-on-surface-variant">
-                        {booking.traveler_email || "Traveler email unavailable"}
+                        {booking.traveler_email || "Traveller email unavailable"}
                       </p>
                       <Link className="btn-outline btn-sm shrink-0" href={messageHref}>
                         Open messages

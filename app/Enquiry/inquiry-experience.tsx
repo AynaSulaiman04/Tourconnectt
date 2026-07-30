@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { createInquiryAction } from "./actions";
+import { formatDate } from "@/lib/format/date";
 import { initialInquiryFormState } from "./types";
 import type { TourListing } from "@/lib/supabase/inquiry-types";
 import type { TravelerProfile } from "@/lib/supabase/profile-types";
@@ -98,7 +99,7 @@ export function InquiryExperience({
       ? [
           initialTripRequest.destination ? `Destination: ${initialTripRequest.destination}` : null,
           initialTripRequest.preferredStartDate || initialTripRequest.preferredEndDate
-            ? `Dates: ${initialTripRequest.preferredStartDate || "Select start"} to ${initialTripRequest.preferredEndDate || "Select end"}`
+            ? `Dates: ${formatDate(initialTripRequest.preferredStartDate, "Select start")} to ${formatDate(initialTripRequest.preferredEndDate, "Select end")}`
             : null,
           initialTripRequest.guests ? `Guests: ${initialTripRequest.guests}` : null,
           initialTripRequest.activities ? `Activities: ${initialTripRequest.activities}` : null,
@@ -112,9 +113,9 @@ export function InquiryExperience({
     <main className="wrap">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Traveler inquiry</p>
-          <h1 className="title">inquiry</h1>
-          <p className="lede">Browse real tour listings and request an inquiry.</p>
+          <p className="eyebrow">Traveller enquiry</p>
+          <h1 className="title">Enquiry</h1>
+          <p className="lede">Browse real tour listings and request an enquiry.</p>
           {tracking.referralCode ? (
             <p className="lede" style={{ marginTop: "0.75rem", color: "var(--secondary)" }}>
               Referral code applied: {tracking.referralCode}
@@ -302,7 +303,7 @@ export function InquiryExperience({
               </div>
 
               <label className="request-field">
-                <span>Inquiry notes</span>
+                <span>Enquiry notes</span>
                 <input
                   aria-invalid={Boolean(state.fieldErrors.notes?.length)}
                   aria-describedby={state.fieldErrors.notes?.length ? "notes_error" : undefined}
@@ -320,7 +321,7 @@ export function InquiryExperience({
 
               <div className="button-row">
                 <button className="button primary" disabled={pending} type="submit">
-                  {pending ? "Submitting" : "Submit inquiry"}
+                  {pending ? "Submitting" : "Submit enquiry"}
                 </button>
               </div>
 
@@ -331,9 +332,9 @@ export function InquiryExperience({
           ) : (
             <div className="listing-card listing-empty" style={{ marginTop: "1.25rem" }}>
               <p className="section-eyebrow" style={{ marginBottom: "0.5rem" }}>
-                No inquiry form yet
+                No enquiry form yet
               </p>
-              <h3 className="listing-title">The inquiry form appears when operators publish listings.</h3>
+              <h3 className="listing-title">The enquiry form appears when operators publish listings.</h3>
               <p className="listing-meta">
                 You can still use Concierge to plan a trip and return once live inventory is available.
               </p>
@@ -351,7 +352,7 @@ export function InquiryExperience({
         <div className="panel browse-header">
           <div>
             <p className="section-eyebrow">Browse listings</p>
-            <h2 className="panel-title">Search tours before you send an inquiry</h2>
+            <h2 className="panel-title">Search tours before you send an enquiry</h2>
           </div>
 
           <div className="browse-search-wrap">
@@ -420,9 +421,9 @@ export function InquiryExperience({
               <p className="section-eyebrow" style={{ marginBottom: "0.5rem" }}>
                 No active listings
               </p>
-              <h3 className="listing-title">Travelers can still explore Concierge and Messages.</h3>
+              <h3 className="listing-title">Travellers can still explore Concierge and Messages.</h3>
               <p className="listing-meta">
-                Operators have not published live listings yet. Once they do, the inquiry catalog will appear here automatically.
+                Operators have not published live listings yet. Once they do, the enquiry catalogue will appear here automatically.
               </p>
               <div className="listing-actions">
                 <Link className="button" href="/ConciergeChat">

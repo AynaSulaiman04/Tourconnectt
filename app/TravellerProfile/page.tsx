@@ -4,6 +4,7 @@ import { getTravelerInquiryDashboard } from "@/lib/supabase/inquiry";
 import { getDirectMessagePageState } from "@/lib/supabase/direct-messages";
 import { recordPlatformEvent } from "@/lib/supabase/analytics";
 import { getTravelerCareProfile } from "@/lib/supabase/traveler-care";
+import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { TravellerDashboardView } from "./traveller-dashboard";
 
 type TravellerProfilePageProps = {
@@ -22,7 +23,7 @@ export default async function TravellerProfilePage({ searchParams }: TravellerPr
   const resolvedSearchParams = await searchParams;
   const { authUser, profile } = await getCurrentUserProfile();
 
-  await recordPlatformEvent({
+  void recordPlatformEvent({
     event_type: "profile_view",
     actor_profile_id: authUser.id,
     actor_role: profile.role,
@@ -32,7 +33,7 @@ export default async function TravellerProfilePage({ searchParams }: TravellerPr
     },
   });
 
-  const [dashboard, directMessageState, careProfile] = await Promise.all([
+  const [dashboard, directMessageState, careProfile, defaultProfileImageUrl] = await Promise.all([
     getTravelerInquiryDashboard(profile.id),
     getDirectMessagePageState({
       profile,
@@ -40,14 +41,16 @@ export default async function TravellerProfilePage({ searchParams }: TravellerPr
       markAsSeen: false,
     }),
     getTravelerCareProfile(profile.id),
+    getDefaultProfileImageUrl(profile.id),
   ]);
 
   return (
     <PageShell
+      authResolved
       travelerProfile={{
         id: profile.id,
         full_name: profile.full_name,
-        profile_image_url: profile.profile_image_url,
+        profile_image_url: profile.profile_image_url ?? defaultProfileImageUrl,
         role: profile.role,
       }}
       variant="traveler"
@@ -60,6 +63,7 @@ export default async function TravellerProfilePage({ searchParams }: TravellerPr
         activeTab={normalizeSearchParam(resolvedSearchParams.tab) === "payments" ? "payments" : "overview"}
         profile={profile}
         careProfile={careProfile}
+        defaultProfileImageUrl={defaultProfileImageUrl}
       />
     </PageShell>
   );

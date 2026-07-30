@@ -173,16 +173,16 @@ export async function updateInquiryStatusAction(formData: FormData) {
     kind: `inquiry_${status}`,
     title:
       status === "reviewed"
-        ? "Inquiry reviewed"
+        ? "Enquiry reviewed"
         : status === "confirmed"
-          ? "Inquiry confirmed"
-          : "Inquiry closed",
+          ? "Enquiry confirmed"
+          : "Enquiry closed",
     body:
       status === "reviewed"
-        ? `An inquiry for ${inquiryLabel} was moved to review.`
+        ? `An enquiry for ${inquiryLabel} was moved to review.`
         : status === "confirmed"
-          ? `An inquiry for ${inquiryLabel} was confirmed.`
-          : `An inquiry for ${inquiryLabel} was closed.`,
+          ? `An enquiry for ${inquiryLabel} was confirmed.`
+          : `An enquiry for ${inquiryLabel} was closed.`,
     href: `/AdminBookings?inquiry=${inquiryId}`,
     entityType: "inquiry",
     entityId: inquiryId,
@@ -204,16 +204,16 @@ export async function updateInquiryStatusAction(formData: FormData) {
           kind: `inquiry_${status}`,
           title:
             status === "reviewed"
-              ? "Inquiry under review"
+              ? "Enquiry under review"
               : status === "confirmed"
-                ? "Inquiry confirmed"
-                : "Inquiry closed",
+                ? "Enquiry confirmed"
+                : "Enquiry closed",
           body:
             status === "reviewed"
-              ? `Your inquiry for ${inquiryLabel} is under review.`
+              ? `Your enquiry for ${inquiryLabel} is under review.`
               : status === "confirmed"
-                ? `Your inquiry for ${inquiryLabel} is confirmed.`
-                : `Your inquiry for ${inquiryLabel} is now closed.`,
+                ? `Your enquiry for ${inquiryLabel} is confirmed.`
+                : `Your enquiry for ${inquiryLabel} is now closed.`,
           href: `/ConfirmationPage?inquiryId=${inquiryId}`,
           entityType: "inquiry",
           entityId: inquiryId,
@@ -228,16 +228,16 @@ export async function updateInquiryStatusAction(formData: FormData) {
           kind: `inquiry_${status}`,
           title:
             status === "reviewed"
-              ? "Inquiry under review"
+              ? "Enquiry under review"
               : status === "confirmed"
-                ? "Inquiry confirmed"
-                : "Inquiry closed",
+                ? "Enquiry confirmed"
+                : "Enquiry closed",
           body:
             status === "reviewed"
-              ? `The inquiry for ${inquiryLabel} is now under review.`
+              ? `The enquiry for ${inquiryLabel} is now under review.`
               : status === "confirmed"
-                ? `The inquiry for ${inquiryLabel} has been confirmed.`
-                : `The inquiry for ${inquiryLabel} has been closed.`,
+                ? `The enquiry for ${inquiryLabel} has been confirmed.`
+                : `The enquiry for ${inquiryLabel} has been closed.`,
           href: `/OperatorMessages?inquiry=${inquiryId}`,
           entityType: "inquiry",
           entityId: inquiryId,

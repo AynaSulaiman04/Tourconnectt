@@ -11,6 +11,7 @@ import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { updateListingModerationAction } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
+import { formatDate } from "@/lib/format/date";
 
 type AdminListingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,10 +22,6 @@ type ListingSort = "newest" | "oldest" | "status" | "operator";
 
 function getParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value ?? "";
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
 }
 
 function normalizeView(value: string | undefined): ListingView {
@@ -139,11 +136,11 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
 
   return (
     <PageShell variant="admin">
-      <main className="px-margin-mobile md:px-margin-desktop py-10 pb-section-gap">
+      <main className="portal-list-page">
         <SectionHeader
           level={1}
           eyebrow="Admin listings"
-          title="Moderate every listing before it reaches travelers."
+          title="Moderate every listing before it reaches travellers."
           description="Review operator submissions, approve high-quality tours, and keep the platform's featured inventory aligned with the Tour ConnecTT standard."
           action={
             <Button href="/AdminAnalytics" variant="outline">

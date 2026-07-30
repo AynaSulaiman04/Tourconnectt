@@ -2,10 +2,13 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { getLandingSlideshowImageUrls } from "@/lib/supabase/analytics";
-import { getInquiryListings } from "@/lib/supabase/inquiry";
+import { dedupeSlideshowImageUrls, DEFAULT_LANDING_SLIDESHOW_IMAGES } from "@/lib/landing-slideshow-images";
+import { getFeaturedInquiryListings } from "@/lib/supabase/inquiry";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { getRoleDashboardRoute } from "@/lib/supabase/profile";
+import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
+import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getSiteContent } from "@/lib/site-content";
+import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
 
 type ReviewRow = {
@@ -16,17 +19,8 @@ type ReviewRow = {
   created_at: string;
 };
 
-const DEFAULT_SHOWCASE_IMAGES = [
-  "/landing/slideshow/01-tobago-bay.webp",
-  "/landing/slideshow/03-rainforest-waterfall.webp",
-  "/landing/slideshow/04-heritage-tree.webp",
-  "/landing/slideshow/05-beach-sunset.webp",
-  "/landing/slideshow/06-leatherback-turtles.webp",
-  "/landing/slideshow/07-pigeon-point.webp",
-  "/landing/slideshow/08-rainbow-bay.webp",
-  "/landing/slideshow/09-rainbow-hills.webp",
-  "/landing/slideshow/10-tropical-coast.webp",
-];
+const LANDING_SHOWCASE_LIMIT = 6;
+const DEFAULT_SHOWCASE_IMAGES = DEFAULT_LANDING_SLIDESHOW_IMAGES;
 
 function isMissingRelationOrSchemaError(error: { code?: string | null; message?: string | null } | null) {
   return Boolean(
@@ -40,7 +34,7 @@ function isMissingRelationOrSchemaError(error: { code?: string | null; message?:
   );
 }
 
-function settleWithTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 3500) {
+function settleWithTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 2000) {
   const wrapped = promise.then((value) => ({ ok: true as const, value })).catch(() => ({ ok: false as const, value: fallback }));
   const timeout = new Promise<{ ok: false; value: T }>((resolve) => {
     setTimeout(() => resolve({ ok: false as const, value: fallback }), timeoutMs);
@@ -56,7 +50,8 @@ async function loadLandingReviews() {
     const { data, error } = await admin
       .from("reviews")
       .select("id,rating,comment,traveler_id,created_at")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(20);
 
     if (error) {
       if (isMissingRelationOrSchemaError(error) || error.message?.includes("terminated")) {
@@ -97,7 +92,7 @@ async function loadLandingReviews() {
 
       if (!profileError || isMissingRelationOrSchemaError(profileError) || profileError.message?.includes("terminated")) {
         for (const profile of (profiles ?? []) as Array<{ id: string; full_name: string | null }>) {
-          nameByTravelerId.set(profile.id, profile.full_name?.trim() || "Verified traveler");
+          nameByTravelerId.set(profile.id, profile.full_name?.trim() || "Verified traveller");
         }
       }
     }
@@ -114,8 +109,8 @@ async function loadLandingReviews() {
             "Impeccable planning and 24/7 support. Our family trip was effortless and absolutely magical.",
           ][index] ||
           "A memorable Tour ConnecTT journey.",
-        name: nameByTravelerId.get(review.traveler_id) || `Traveler ${index + 1}`,
-        location: "Verified traveler",
+        name: nameByTravelerId.get(review.traveler_id) || `Traveller ${index + 1}`,
+        location: "Verified traveller",
         avatarUrl: null,
         rating: review.rating,
       })) satisfies LandingTestimonial[],
@@ -131,12 +126,14 @@ async function loadLandingReviews() {
 export default async function LandingPage() {
   const cookieStore = await cookies();
   const authFlow = cookieStore.get("tt-auth-flow")?.value;
+  const hasSession = hasSupabaseSessionCookie(cookieStore.getAll());
 
-  const [listings, landingReviews, showcaseImages, siteContent] = await Promise.all([
-    getInquiryListings().catch(() => []),
-    settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 3500),
-    settleWithTimeout(getLandingSlideshowImageUrls(), [], 3500),
+  const [listings, landingReviews, showcaseImages, siteContent, profileContext] = await Promise.all([
+    settleWithTimeout(getFeaturedInquiryListings(3), [], 2000),
+    settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
+    settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
     getSiteContent(),
+    hasSession ? getOptionalCurrentUserProfile() : Promise.resolve(null),
   ]);
   const { testimonials, reviewSummary } = landingReviews;
   if (authFlow === "recovery" || authFlow === "magic_link") {
@@ -155,8 +152,31 @@ export default async function LandingPage() {
     }
   }
 
+  const dedupedShowcaseImages = dedupeSlideshowImageUrls(showcaseImages).slice(0, LANDING_SHOWCASE_LIMIT);
+  const resolvedShowcaseImages =
+    dedupedShowcaseImages.length >= 3
+      ? dedupedShowcaseImages
+      : dedupeSlideshowImageUrls([...dedupedShowcaseImages, ...DEFAULT_SHOWCASE_IMAGES]).slice(0, LANDING_SHOWCASE_LIMIT);
+
+  const defaultProfileImageUrl = profileContext?.profile
+    ? await getDefaultProfileImageUrl(profileContext.profile.id)
+    : null;
+
   return (
-    <PageShell variant="public">
+    <PageShell
+      authResolved
+      travelerProfile={
+        profileContext?.profile
+          ? {
+              id: profileContext.profile.id,
+              full_name: profileContext.profile.full_name,
+              profile_image_url: profileContext.profile.profile_image_url ?? defaultProfileImageUrl,
+              role: profileContext.profile.role,
+            }
+          : null
+      }
+      variant="public"
+    >
       <LandingPageView
         listings={listings.map((listing) => ({
           id: listing.id,
@@ -168,11 +188,11 @@ export default async function LandingPage() {
           imageUrl: listing.image_url ?? null,
           operatorName: listing.operator_name ?? null,
           price: listing.price ?? null,
-          listingHref: `/Inquiry?listing=${listing.id}`,
+          listingHref: `/Enquiry?listing=${listing.id}`,
         }))}
         reviewSummary={reviewSummary}
         testimonials={testimonials}
-        showcaseImages={showcaseImages.length >= DEFAULT_SHOWCASE_IMAGES.length ? showcaseImages : DEFAULT_SHOWCASE_IMAGES}
+        showcaseImages={resolvedShowcaseImages}
         siteContent={siteContent}
       />
     </PageShell>

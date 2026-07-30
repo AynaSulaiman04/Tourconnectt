@@ -33,7 +33,7 @@ export async function createReferralCampaignAction(formData: FormData) {
   const returnTo = getReturnTo(formData);
   const partnerName = String(formData.get("partner_name") ?? "").trim();
   const codeInput = String(formData.get("code") ?? "").trim();
-  const landingPage = String(formData.get("landing_page") ?? "/Inquiry").trim() || "/Inquiry";
+  const landingPage = String(formData.get("landing_page") ?? "/Enquiry").trim() || "/Enquiry";
   const utmSource = String(formData.get("utm_source") ?? "").trim();
   const utmMedium = String(formData.get("utm_medium") ?? "referral").trim() || "referral";
   const utmCampaign = String(formData.get("utm_campaign") ?? "").trim();
