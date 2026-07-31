@@ -5,7 +5,7 @@ export type LandingServiceMarqueeItem = {
 
 export const LANDING_SERVICE_MARQUEE_ITEMS: LandingServiceMarqueeItem[] = [
   { icon: "travel_explore", label: "Curated Listings" },
-  { icon: "mail", label: "Travel Inquiries" },
+  { icon: "mail", label: "Travel Enquiries" },
   { icon: "smart_toy", label: "AI Concierge" },
   { icon: "verified_user", label: "Verified Operators" },
   { icon: "payments", label: "Secure WiPay Checkout" },

@@ -11,6 +11,8 @@ import { getSiteContent } from "@/lib/site-content";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
 
+export const revalidate = 60;
+
 type ReviewRow = {
   id: string;
   rating: number;

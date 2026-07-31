@@ -222,7 +222,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
 
                     <div className="lp-listing-actions">
                       <Button href={listing.listingHref} variant="primary" className="btn-sm">
-                        Inquire Now
+                        Enquire now
                       </Button>
                       <Button href={listing.listingHref} variant="outline" className="btn-sm">
                         View Details
