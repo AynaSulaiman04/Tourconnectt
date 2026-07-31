@@ -55,7 +55,6 @@ export const NAVBAR_CONFIG: Record<NavbarVariant, NavbarConfig> = {
       { label: "Listings", href: "/AdminListings" },
       { label: "Users", href: "/AdminUsers" },
       { label: "Analytics", href: "/AdminAnalytics" },
-      { label: "Content", href: "/AdminContent" },
     ],
   },
 };

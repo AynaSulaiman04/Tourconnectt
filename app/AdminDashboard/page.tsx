@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { PortalQuickLinks } from "@/components/admin/PortalQuickLinks";
 import { PageShell } from "@/components/layout/PageShell";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
 import { formatDate, formatDateTime } from "@/lib/format/date";
@@ -222,9 +223,9 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         : null;
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(workspace.profile)}>
 
-      <main className="main">
+      <main className="portal-list-page">
         <header className="page-header">
           <div>
             <span className="admin-label">Administrator</span>
@@ -301,7 +302,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                   <Link
                     key={range}
                     className={`tc-filter-pill ${range === selectedRange ? "active tc-filter-pill-active" : ""}`}
-                    href={`/AdminDashboard?range=${range}`}
+                    href={buildDashboardHref(range, selectedPaymentStatus)}
                   >
                     {range.toUpperCase()}
                   </Link>

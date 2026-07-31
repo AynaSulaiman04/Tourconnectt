@@ -4,6 +4,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { HomePageControls } from "@/components/admin/HomePageControls";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { requireAdminProfile } from "@/lib/supabase/admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getSiteContent } from "@/lib/site-content";
@@ -19,7 +20,7 @@ function getParam(value: string | string[] | undefined) {
 }
 
 export default async function AdminContentPage({ searchParams }: AdminContentPageProps) {
-  await requireAdminProfile();
+  const profile = await requireAdminProfile();
   const [content, params] = await Promise.all([getSiteContent(), searchParams]);
   const admin = createSupabaseServiceRoleClient();
   const [{ data: reviewsData }, { data: listingsData }] = await Promise.all([
@@ -43,16 +44,20 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
         ? "Public content saved."
         : params.saved === "reset"
           ? "Default copy restored."
-          : saved
-            ? "Changes saved successfully."
-            : null;
+          : params.saved === "review"
+            ? "Review saved."
+            : params.saved === "review-deleted"
+              ? "Review removed."
+              : saved
+                ? "Changes saved successfully."
+                : null;
   const actionError = getFriendlyFeedbackMessage(
     getParam(params.error),
     "That change could not be saved. Check the fields and try again.",
   );
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(profile)}>
       <main className="portal-list-page">
         <SectionHeader
           level={1}

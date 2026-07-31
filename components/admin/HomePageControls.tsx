@@ -118,7 +118,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
               <Button href="/AdminSettings#landing-slideshow" variant="outline">
                 Manage slideshow images
               </Button>
-              <Button href="/AdminListings?status=featured" variant="outline">
+              <Button href="/AdminListings?view=featured" variant="outline">
                 Open featured listings
               </Button>
             </div>
@@ -159,7 +159,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
             </div>
           )}
 
-          <Button href="/AdminListings?status=live" variant="ghost" className="justify-center">
+          <Button href="/AdminListings?view=live" variant="ghost" className="justify-center">
             Browse live listings to feature
           </Button>
         </div>

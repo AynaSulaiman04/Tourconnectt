@@ -8,6 +8,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { TableWrapper } from "@/components/ui/TableWrapper";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
@@ -234,7 +235,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
   const totalCommission = operatorCommissionRows.reduce((sum, row) => sum + row.commission, 0);
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(workspace.profile)}>
       <main className="portal-list-page">
         <SectionHeader
           level={1}

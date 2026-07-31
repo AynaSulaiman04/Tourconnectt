@@ -6,6 +6,7 @@ import { GlassPanel } from "@/components/ui/GlassPanel";
 import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import {
   updateInquiryPaymentAmountAction,
@@ -133,22 +134,22 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
     "We could not update this payment. Please try again.",
   );
 
-  const escalatedBookings = workspace.inquiries.filter((item) => ["escalated", "flagged", "needs_admin"].includes(item.status)).length;
+  const escalatedBookings = workspace.inquiries.filter((item) => item.status === "closed").length;
 
   const paymentRows = await getWiPayPaymentsForInquiryIds(workspace.inquiries.map((item) => item.id)).catch(() => []);
-  const bookingPayments: AdminBookingPaymentRecord[] = paymentRows
-    .map((payment) => {
-      const inquiry = workspace.inquiries.find((item) => item.id === payment.inquiry_id) ?? null;
-      const listing = inquiry?.listing ?? null;
+  const allBookingPayments: AdminBookingPaymentRecord[] = paymentRows.map((payment) => {
+    const inquiry = workspace.inquiries.find((item) => item.id === payment.inquiry_id) ?? null;
+    const listing = inquiry?.listing ?? null;
 
-      return {
-        ...payment,
-        traveler_name: inquiry?.traveler_name ?? "Traveller",
-        operator_name: inquiry?.operator_name ?? listing?.operator_name ?? "Operator",
-        listing_title: listing?.title ?? inquiry?.destination ?? null,
-        inquiry_status: inquiry?.status ?? "submitted",
-      };
-    })
+    return {
+      ...payment,
+      traveler_name: inquiry?.traveler_name ?? "Traveller",
+      operator_name: inquiry?.operator_name ?? listing?.operator_name ?? "Operator",
+      listing_title: listing?.title ?? inquiry?.destination ?? null,
+      inquiry_status: inquiry?.status ?? "submitted",
+    };
+  });
+  const bookingPayments: AdminBookingPaymentRecord[] = allBookingPayments
     .filter((payment) => {
       if (paymentStatusFilter === "paid") {
         return isSuccessfulWiPayPayment(payment.status);
@@ -211,8 +212,12 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
       return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
     });
 
-  const selectedInquiry = filteredBookings.find((inquiry) => inquiry.id === selectedId) ?? null;
-  const selectedPayment = bookingPayments.find((payment) => payment.inquiry_id === selectedId) ?? null;
+  const selectedInquiry = selectedId
+    ? workspace.inquiries.find((inquiry) => inquiry.id === selectedId) ?? null
+    : filteredBookings[0] ?? null;
+  const selectedPayment = selectedId
+    ? allBookingPayments.find((payment) => payment.inquiry_id === selectedId) ?? null
+    : bookingPayments[0] ?? null;
 
   const pendingRequests = workspace.inquiries.filter((item) => item.status === "submitted").length;
   const reviewedRequests = workspace.inquiries.filter((item) => item.status === "reviewed").length;
@@ -226,7 +231,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
   };
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(workspace.profile)}>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -255,7 +260,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
             ["Requests", workspace.inquiries.length.toLocaleString(), "Total booking-related records."],
             ["Confirmed", workspace.stats.confirmedBookings.toLocaleString(), "Travellers already scheduled."],
             ["Pending", workspace.stats.pendingBookings.toLocaleString(), "Waiting for operator response."],
-            ["Escalated", escalatedBookings.toLocaleString(), "Requires admin attention."],
+            ["Closed", escalatedBookings.toLocaleString(), "Completed or archived enquiries."],
           ].map(([label, value, note]) => (
             <GlassPanel key={label} className="p-gutter h-full">
               <div className="label-caps text-secondary mb-3">{label}</div>
@@ -662,7 +667,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                     <div className="font-body-md text-on-background">{getPaymentStatusLabel(selectedPayment.status)}</div>
                   </div>
                   <div className="grid gap-3">
-                    {selectedPayment.status === "pending" ? (
+                    {isPendingWiPayPayment(selectedPayment.status) ? (
                       <form action={updateWiPayPaymentStatusAction}>
                         <input name="order_id" type="hidden" value={selectedPayment.order_id} />
                         <input

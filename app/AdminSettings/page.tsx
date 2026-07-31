@@ -5,6 +5,7 @@ import { GlassPanel } from "@/components/ui/GlassPanel";
 import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getLandingSlideshowImages } from "@/lib/supabase/analytics";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
@@ -60,7 +61,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
   ];
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(workspace.profile)}>
       <main className="portal-list-page">
         <style>{`
           .admin-settings-toggle:focus-visible {

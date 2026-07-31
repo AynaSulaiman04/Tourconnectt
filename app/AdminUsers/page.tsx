@@ -7,6 +7,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { updateTravelerCareProfileAction, updateUserAccessAction } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
@@ -84,7 +85,12 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   const roleFilter = normalizeRoleFilter(getParam(resolvedSearchParams.role));
   const statusFilter = normalizeStatusFilter(getParam(resolvedSearchParams.status));
   const sort = normalizeSort(getParam(resolvedSearchParams.sort));
-  const actionMessage = resolvedSearchParams.updated ? "User access updated." : null;
+  const actionMessage =
+    resolvedSearchParams.updated === "care"
+      ? "Guest care profile saved."
+      : resolvedSearchParams.updated
+        ? "User access updated."
+        : null;
   const actionError = getFriendlyFeedbackMessage(
     getParam(resolvedSearchParams.error),
     "We could not update that user. Please try again.",
@@ -118,7 +124,9 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
       return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
     });
 
-  const selectedUser = filteredUsers.find((user) => user.id === selectedId) ?? filteredUsers[0] ?? null;
+  const selectedUser = selectedId
+    ? workspace.users.find((user) => user.id === selectedId) ?? null
+    : filteredUsers[0] ?? null;
   const selectedUserTours = selectedUser
     ? workspace.inquiries.filter((inquiry) => inquiry.user_id === selectedUser.id)
     : [];
@@ -130,7 +138,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   const underReviewUsers = workspace.users.filter((user) => getUserStatus(user) === "under_review").length;
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(workspace.profile)}>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -284,11 +292,12 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((person) => {
-                    const status = getUserStatus(person);
+                  {filteredUsers.length ? (
+                    filteredUsers.map((person) => {
+                      const status = getUserStatus(person);
 
-                    return (
-                      <tr key={person.id}>
+                      return (
+                        <tr key={person.id}>
                         <td className="align-middle">
                           <div className="flex items-center gap-3">
                             <div className="relative h-10 w-10 overflow-hidden rounded-full bg-surface-container-high">
@@ -357,7 +366,19 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                  ) : (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className="px-6 py-10 text-center">
+                          <p className="font-body-md text-on-background">No users match your filters.</p>
+                          <p className="mt-2 text-sm text-on-surface-variant">
+                            Try clearing search or adjusting role and access filters.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </TableWrapper>
             </GlassPanel>

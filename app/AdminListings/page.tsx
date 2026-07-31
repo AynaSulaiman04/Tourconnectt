@@ -7,6 +7,7 @@ import { GlassPanel } from "@/components/ui/GlassPanel";
 import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
+import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { updateListingModerationAction } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
@@ -126,7 +127,9 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
       return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
     });
 
-  const selectedListing = filteredListings.find((listing) => listing.id === selectedId) ?? filteredListings[0] ?? workspace.listings[0] ?? null;
+  const selectedListing = selectedId
+    ? workspace.listings.find((listing) => listing.id === selectedId) ?? null
+    : filteredListings[0] ?? null;
 
   const totalListings = workspace.listings.length;
   const underReviewListings = workspace.listings.filter((listing) => getListingStatus(listing) === "under_review").length;
@@ -135,7 +138,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
   const featuredListings = workspace.listings.filter((listing) => listing.featured).length;
 
   return (
-    <PageShell variant="admin">
+    <PageShell {...getAdminPageShellProps(workspace.profile)}>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -332,14 +335,16 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                                   Approve
                                 </FormSubmitButton>
                               </form>
-                              <form action={updateListingModerationAction}>
-                                <input name="listing_id" type="hidden" value={item.id} />
-                                <input name="return_to" type="hidden" value={`/AdminListings?listing=${item.id}`} />
-                                <input name="action" type="hidden" value="feature" />
-                                <FormSubmitButton variant="outline" className="btn-sm" pendingLabel="Updating...">
-                                  Toggle Featured
-                                </FormSubmitButton>
-                              </form>
+                              {status === "live" && item.is_active ? (
+                                <form action={updateListingModerationAction}>
+                                  <input name="listing_id" type="hidden" value={item.id} />
+                                  <input name="return_to" type="hidden" value={`/AdminListings?listing=${item.id}`} />
+                                  <input name="action" type="hidden" value="feature" />
+                                  <FormSubmitButton variant="outline" className="btn-sm" pendingLabel="Updating...">
+                                    Toggle Featured
+                                  </FormSubmitButton>
+                                </form>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
