@@ -41,11 +41,13 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
   const currentUserId = profile?.id ?? null;
   const currentRole = profile?.role ?? (variant === "traveler" && profile ? "traveler" : null);
   const dashboardHref = isLoggedIn ? getRoleDashboardRoute(currentRole ?? "traveler") : "/SignUp";
-  const visibleItems = config.items.map((item) =>
-    variant === "public" && item.label === "Profile"
-      ? { ...item, href: dashboardHref }
-      : item,
-  );
+  const visibleItems = config.items
+    .map((item) =>
+      variant === "public" && item.label === "Profile"
+        ? { ...item, href: dashboardHref }
+        : item,
+    )
+    .filter((item, index, items) => items.findIndex((entry) => entry.href === item.href) === index);
   const inlineItems = visibleItems.slice(0, MAX_INLINE_ITEMS);
   const overflowItems = visibleItems.slice(MAX_INLINE_ITEMS);
   const showTravelerPanel = Boolean(
@@ -110,7 +112,7 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
             const active = isActive(pathname, href);
             return (
               <Link
-                key={item.href}
+                key={`${item.label}-${href}`}
                 className={`nav-link ${active ? "nav-link-active" : ""}`}
                 href={href}
               >
@@ -134,7 +136,7 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
                   const active = isActive(pathname, href);
                   return (
                     <Link
-                      key={item.href}
+                      key={`${item.label}-${href}`}
                       className={`nav-more-link ${active ? "nav-more-link-active" : ""}`}
                       href={href}
                       role="menuitem"
@@ -170,7 +172,7 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
 
                 return (
                   <Link
-                    key={item.href}
+                    key={`${item.label}-${href}`}
                     aria-current={active ? "page" : undefined}
                     className={`mobile-nav-link ${active ? "mobile-nav-link-active" : ""}`}
                     href={href}
@@ -185,6 +187,7 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
                 );
               })}
               {variant === "operator" || variant === "admin" ? (
+                visibleItems.some((item) => item.href === config.action.href) ? null : (
                 <Link
                   className="mobile-nav-link"
                   href={config.action.href}
@@ -196,6 +199,7 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
                 >
                   Settings
                 </Link>
+                )
               ) : null}
               {isLoggedIn ? (
                 <SignOutButton className="mobile-nav-signout">Sign out</SignOutButton>
