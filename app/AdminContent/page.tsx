@@ -102,7 +102,7 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
             <form action={updateSiteContentAction} className="mt-6 grid gap-5">
               <label className="grid gap-2"><span className="label-caps text-secondary">Footer description</span><textarea className="min-h-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3" defaultValue={content.footerDescription} name="footerDescription" required /></label>
               {([
-                ["howItWorks", "How it works"], ["aboutUs", "About us"], ["partners", "Partners"], ["careers", "Careers"], ["helpCenter", "Help center"], ["contactUs", "Contact us"],
+                ["howItWorks", "How it works"], ["aboutUs", "About us"], ["partners", "Partners"], ["careers", "Careers"], ["helpCenter", "Help centre"], ["contactUs", "Contact us"],
               ] as const).map(([name, label]) => (
                 <label className="grid gap-2" key={name}><span className="label-caps text-secondary">{label}</span><textarea className="min-h-32 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3" defaultValue={content[name]} name={name} required /></label>
               ))}

@@ -446,7 +446,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                         <td className="align-middle">
                           <div className="font-body-md font-semibold text-on-background">{row.name}</div>
                           <div className="text-xs uppercase tracking-[0.15em] text-on-surface-variant/70">
-                            {row.inquiries} inquiries
+                            {row.inquiries} enquiries
                           </div>
                         </td>
                         <td className="align-middle text-sm text-on-surface-variant">{row.successfulPayments}</td>
@@ -752,7 +752,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                 <div className="label-caps text-secondary mb-2">How partners use it</div>
                 <p className="section-copy">
                   Share the generated referral link with tourism partners or hotel partners. The code is tracked automatically through
-                  the Inquiry flow, and any confirmed referral activity is captured in platform events for reporting.
+                  the Enquiry flow, and any confirmed referral activity is captured in platform events for reporting.
                 </p>
               </div>
             </GlassPanel>

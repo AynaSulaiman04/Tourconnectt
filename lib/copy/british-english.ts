@@ -31,5 +31,11 @@ export function toBritishUserCopy(value: string) {
     .replace(/\bcatalog\b/g, "catalogue")
     .replace(/\binquire\b/g, "enquire")
     .replace(/\bInquire\b/g, "Enquire")
-    .replace(/\bbehavior\b/g, "behaviour");
+    .replace(/\bbehavior\b/g, "behaviour")
+    .replace(/\bBehavior\b/g, "Behaviour")
+    .replace(/\bHelp center\b/g, "Help centre")
+    .replace(/\bhelp center\b/g, "help centre")
+    .replace(/\bat the center\b/g, "at the centre")
+    .replace(/\bCenter\b/g, "Centre")
+    .replace(/\bcenter\b/g, "centre");
 }

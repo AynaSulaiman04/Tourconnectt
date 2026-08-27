@@ -3,6 +3,7 @@ import "server-only";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { buildConciergeContext, type ConciergeContextBundle } from "@/lib/ai/concierge-context";
+import { extractItineraryDraft, type ItineraryDay } from "@/lib/ai/itinerary-draft";
 
 export type ConciergeHistoryMessage = {
   role: "user" | "assistant" | "system";
@@ -19,6 +20,7 @@ export type ConciergeReplyResult = {
   sources?: ConciergeContextBundle["sourceSummaries"];
   promptContext?: string;
   context?: ConciergeContextBundle;
+  itineraryDraft?: ItineraryDay[];
 };
 
 function getOpenAIModel() {
@@ -50,15 +52,20 @@ function getOpenAIClient() {
 
 function buildSystemPrompt(context: ConciergeContextBundle) {
   return [
-    "You are TT Connect Concierge, a warm, concise travel assistant for Trinidad and Tobago tourism.",
+    "You are TT Connect Concierge, a warm travel consultant for Trinidad and Tobago tourism.",
+    "Use a natural ChatGPT-style conversation: one thread, no forms, no booking-form tone.",
+    "From a single conversation, understand flights, accommodation, attractions, transportation, and daily schedules when the traveller mentions them.",
+    "When the traveller refines the trip, update the itinerary in your reply rather than starting from scratch.",
     "Use only the provided platform context for listings, prices, availability, and knowledge.",
     "Never invent prices, availability, operators, or government advisories.",
     "If a detail is missing, clearly say the operator will confirm it.",
     "Recommend real TT Connect listings when helpful.",
-    "Guide users to submit an inquiry if they want to move forward.",
+    "Guide users to submit an enquiry if they want to move forward.",
+    "Use British English spelling (enquiry, traveller, personalise, centre).",
     "Do not mention internal database or implementation details.",
-    "Do not route traveler actions to operator or admin pages.",
-    "Keep the reply friendly, useful, and not overly long.",
+    "Do not route traveller actions to operator or admin pages.",
+    "When planning a trip, include a clear day-by-day draft itinerary (Day 1, Day 2, etc.) with timing, transport, stays, and attractions where known.",
+    "Call out destination, duration, travellers, interests, and budget when they are known.",
     "",
     context.promptContext,
   ].join("\n");
@@ -102,9 +109,15 @@ export async function generateConciergeReply(params: {
   userId: string | null;
   historyMessages: ConciergeHistoryMessage[];
 }) {
+  const conversationMessages = [
+    ...params.historyMessages.map((entry) => ({ role: entry.role, content: entry.content })),
+    { role: "user", content: params.message },
+  ];
+
   const context = await buildConciergeContext({
     query: params.message,
     userId: params.userId,
+    conversationMessages,
   });
 
   const client = getOpenAIClient();
@@ -123,7 +136,7 @@ export async function generateConciergeReply(params: {
     const completion = await client.chat.completions.create({
       model: getOpenAIModel(),
       temperature: 0.4,
-      max_tokens: 700,
+      max_tokens: 900,
       messages: [
         { role: "system", content: buildSystemPrompt(context) },
         ...toChatMessages(params.historyMessages.slice(-10)),
@@ -148,6 +161,7 @@ export async function generateConciergeReply(params: {
     return {
       ok: true,
       assistantText,
+      itineraryDraft: extractItineraryDraft(assistantText),
       recommendations: context.recommendations,
       sources: context.sourceSummaries,
       promptContext: context.promptContext,

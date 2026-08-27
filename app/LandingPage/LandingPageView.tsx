@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { AnimatedHeroHeadline } from "@/components/ui/animated-hero";
 import { getHeroContentFromSiteContent, getPortalSettingsFromContent } from "@/lib/portal-settings";
+import { LandingTripPrompt } from "@/components/landing/LandingTripPrompt";
 import { LandingImageSlideshow } from "./LandingImageSlideshow";
 import { LandingServicesMarquee } from "./LandingServicesMarquee";
 import { LandingScrollReveal } from "./LandingScrollReveal";
@@ -105,43 +106,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
             rotationIntervalMs={heroContent.rotationIntervalMs}
           />
 
-          <form className="lp-search-card" action="/Enquiry" method="get">
-            <label className="lp-field">
-              <span className="material-symbols-outlined lp-field-icon" aria-hidden="true">
-                location_on
-              </span>
-              <span className="lp-field-label">Destination / Where to?</span>
-              <input name="destination" type="text" placeholder="Where to?" required />
-            </label>
-            <div className="lp-field lp-field-dates">
-              <span className="material-symbols-outlined lp-field-icon" aria-hidden="true">
-                calendar_month
-              </span>
-              <span className="lp-field-label">Dates / Select dates</span>
-              <div className="lp-date-grid">
-                <input name="preferred_start_date" type="date" aria-label="Start date" required />
-                <input name="preferred_end_date" type="date" aria-label="End date" required />
-              </div>
-            </div>
-            <label className="lp-field">
-              <span className="material-symbols-outlined lp-field-icon" aria-hidden="true">
-                people
-              </span>
-              <span className="lp-field-label">Number of guests</span>
-              <input name="guests" type="number" min="1" placeholder="2 guests" required />
-            </label>
-            <label className="lp-field">
-              <span className="material-symbols-outlined lp-field-icon" aria-hidden="true">
-                travel_explore
-              </span>
-              <span className="lp-field-label">Activities</span>
-              <input name="activities" type="text" placeholder="Any experience" />
-            </label>
-
-            <Button type="submit" variant="outline" className="lp-search-submit btn-sm">
-              Enquire now
-            </Button>
-          </form>
+          <LandingTripPrompt />
 
           <div className="lp-hero-actions">
             <Button href="/SignUp" variant="outline" className="btn-sm lp-register-btn">
@@ -316,7 +281,7 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
 
           <div className="lp-footer-column">
             <h3>Support</h3>
-            <Link href="/HelpCenter">Help center</Link>
+            <Link href="/HelpCenter">Help centre</Link>
             <Link href="/TermsOfService">Terms of service</Link>
             <Link href="/PrivacyPolicy">Privacy policy</Link>
             <Link href="/ContactUs">Contact us</Link>

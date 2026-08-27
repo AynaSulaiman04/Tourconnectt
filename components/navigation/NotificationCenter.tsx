@@ -299,7 +299,7 @@ export function NotificationCenter({ profileId, role }: NotificationCenterProps)
                       ? "No admin updates right now. Updates will appear when listings, inquiries, users, or bookings change."
                       : role === "operator"
                         ? "No operator updates right now."
-                        : "No traveler updates right now."}
+                        : "No traveller updates right now."}
               </p>
             </div>
 

@@ -231,7 +231,7 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
               <h1 className="title">Hello, {firstName}</h1>
               <p className="copy">
                 {dashboard.liveListingsCount > 0
-                  ? `${dashboard.liveListingsCount} listings and ${dashboard.pendingInquiriesCount} pending inquiries are ready for review.`
+                  ? `${dashboard.liveListingsCount} listings and ${dashboard.pendingInquiriesCount} pending enquiries are ready for review.`
                   : "Your operator workspace is ready for listings and inquiries."}
               </p>
             </div>
@@ -268,7 +268,7 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
             </div>
 
             <div className="glass-panel stat-card">
-              <p className="stat-label">Pending Inquiries</p>
+              <p className="stat-label">Pending Enquiries</p>
               <p className="stat-value">{dashboard.pendingInquiriesCount.toLocaleString()}</p>
               <p className="stat-copy">Manual responses waiting for review or follow-up.</p>
             </div>
@@ -295,7 +295,7 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
           <section className="content-grid">
             <div className="glass-panel panel">
               <div className="panel-head">
-                <h3>Recent Inquiries</h3>
+                <h3>Recent Enquiries</h3>
                 <Button href="/OperatorBookings" variant="outline" className="btn-sm">
                   View all
                 </Button>

@@ -198,7 +198,7 @@ export function DirectMessagesClient({
           setLiveNotice(
             role === "traveler"
               ? "New message from your operator"
-              : "New traveler reply received",
+              : "New traveller reply received",
           );
         }
 
@@ -597,7 +597,7 @@ export function DirectMessagesClient({
         </div>
       }
       composerHint="Your conversations are secure and private."
-      composerPlaceholder={role === "traveler" ? "Write a message to the operator..." : "Write a reply to the traveler..."}
+      composerPlaceholder={role === "traveler" ? "Write a message to the operator..." : "Write a reply to the traveller..."}
       sendLabel={pending ? "Sending..." : "Send Message"}
       statusNotice={
         composerStatus ? (
@@ -612,7 +612,7 @@ export function DirectMessagesClient({
           ? "Send a reply below to keep the conversation going."
           : role === "traveler"
             ? "Choose an operator thread from the inbox to continue your trip planning."
-            : "Select an existing traveler thread from the inbox to reply."
+            : "Select an existing traveller thread from the inbox to reply."
       }
       emptySidebarTitle="No conversations yet"
       emptySidebarCopy={

@@ -167,7 +167,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               <div className="label-caps text-secondary mb-3">Moderation policy</div>
 
               <h2 className="font-display text-[34px] leading-[1.05] tracking-[-0.04em] text-on-background">
-                Approval behavior
+                Approval behaviour
               </h2>
               <p className="section-copy mt-2">
                 Keep reviews strict, consistent, and easy to audit.

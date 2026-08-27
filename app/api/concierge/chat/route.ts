@@ -528,6 +528,8 @@ export async function POST(request: NextRequest) {
               sources: reply.sources ?? [],
             },
         recommendations: reply.recommendations ?? [],
+        tripIntentSummary: reply.context?.tripIntentSummary ?? null,
+        itineraryDraft: reply.itineraryDraft ?? [],
         sources: reply.sources ?? [],
       },
       { status: 200 },

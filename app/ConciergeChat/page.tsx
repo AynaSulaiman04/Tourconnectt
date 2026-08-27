@@ -16,6 +16,11 @@ export default async function ConciergeChatPage({ searchParams }: ConciergeChatP
       ? resolvedSearchParams.conversation.trim()
       : null;
 
+  const initialPrompt =
+    typeof resolvedSearchParams.prompt === "string" && resolvedSearchParams.prompt.trim().length > 0
+      ? resolvedSearchParams.prompt.trim()
+      : null;
+
   const profileContext = await getOptionalCurrentUserProfile().catch(() => null);
 
   if (profileContext?.profile && profileContext.profile.role && !["traveler", "operator", "admin"].includes(profileContext.profile.role)) {
@@ -23,10 +28,26 @@ export default async function ConciergeChatPage({ searchParams }: ConciergeChatP
   }
 
   const initialContext = await buildConciergeContext({
-    query: "",
+    query: initialPrompt ?? "",
     userId: profileContext?.profile?.id ?? null,
   }).catch(() => ({
-    query: "",
+    query: initialPrompt ?? "",
+    tripIntent: {
+      rawQuery: initialPrompt ?? "",
+      destinations: [],
+      durationDays: null,
+      travellerCount: null,
+      travellerDescription: null,
+      interests: [],
+      attractions: [],
+      accommodation: [],
+      flights: [],
+      transportation: [],
+      scheduleNotes: [],
+      budget: null,
+      itineraryNotes: [],
+    },
+    tripIntentSummary: null,
     traveler: null,
     recommendations: [],
     knowledgeSources: [],
@@ -77,6 +98,7 @@ export default async function ConciergeChatPage({ searchParams }: ConciergeChatP
         knowledgeSources={initialContext.knowledgeSources}
         messages={pageState.messages}
         recommendations={initialContext.recommendations}
+        initialPrompt={initialPrompt}
       />
     </PageShell>
   );

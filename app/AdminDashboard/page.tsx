@@ -101,7 +101,7 @@ function buildActivityBreakdown(events: Awaited<ReturnType<typeof getPlatformEve
   const filtered = events.filter((event) => new Date(event.created_at) >= start);
   const categories = [
     {
-      label: "Inquiries",
+      label: "Enquiries",
       color: "rgba(197, 22, 29, 0.92)",
       match: (eventType: string) =>
         eventType === "inquiry_submitted" || eventType === "inquiry_reviewed" || eventType === "inquiry_confirmed" || eventType === "inquiry_closed",
@@ -279,7 +279,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         <section className="stats-grid">
           {[
             ["Activity Events", activitySeries.total.toLocaleString(), selectedRangeLabel, false],
-            ["Inquiries", visibleInquiries.length.toLocaleString(), "in selected range", false],
+            ["Enquiries", visibleInquiries.length.toLocaleString(), "in selected range", false],
             ["Listings", visibleListings.length.toLocaleString(), "published or updated", false],
             ["Operators", visibleOperators.length.toLocaleString(), "new or active in range", false],
           ].map(([label, value, change, isError]) => (

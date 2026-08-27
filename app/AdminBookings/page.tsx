@@ -14,6 +14,7 @@ import {
   updateWiPayPaymentStatusAction,
 } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import { StructuredLeadPanel, getStructuredLeadDescription } from "@/components/admin/StructuredLeadPanel";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
 import {
   getWiPayPaymentsForInquiryIds,
@@ -576,8 +577,8 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                 description={
                   tab === "bookings"
                     ? selectedInquiry
-                      ? selectedInquiry.notes ?? "No notes were provided."
-                      : "Inquiries will appear here automatically."
+                      ? getStructuredLeadDescription(selectedInquiry.notes)
+                      : "Enquiries will appear here automatically."
                     : selectedPayment
                       ? `Payment for ${selectedPayment.listing_title ?? "this booking"} is currently ${getPaymentStatusLabel(
                           selectedPayment.status,
@@ -585,6 +586,16 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                       : "Payments will appear here automatically."
                 }
               />
+
+              {tab === "bookings" && selectedInquiry ? (
+                <div className="mt-6">
+                  <StructuredLeadPanel
+                    notes={selectedInquiry.notes}
+                    travelerEmail={selectedInquiry.traveler_email}
+                    travelerName={selectedInquiry.traveler_name}
+                  />
+                </div>
+              ) : null}
 
               {tab === "bookings" && selectedInquiry ? (
                 <div className="mt-6 grid gap-4">

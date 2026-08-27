@@ -333,7 +333,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                           {person.role === "admin"
                             ? "Full Platform"
                             : person.role === "operator"
-                              ? "Listings + Inquiries"
+                              ? "Listings + Enquiries"
                               : "Traveller Profile"}
                         </td>
                         <td className="align-middle">
@@ -417,7 +417,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                   {selectedUser.role === "traveler" ? (
                     <>
                       <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
-                        <div className="label-caps text-secondary mb-2">Booked tours and inquiries</div>
+                        <div className="label-caps text-secondary mb-2">Booked tours and enquiries</div>
                         {selectedUserTours.length ? (
                           <div className="grid gap-2 text-sm text-on-background">
                             {selectedUserTours.map((inquiry) => (
@@ -426,7 +426,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                               </div>
                             ))}
                           </div>
-                        ) : <div className="font-body-md text-on-surface-variant">No tour inquiries yet.</div>}
+                        ) : <div className="font-body-md text-on-surface-variant">No tour enquiries yet.</div>}
                       </div>
 
                       <form action={updateTravelerCareProfileAction} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 p-4 grid gap-4">

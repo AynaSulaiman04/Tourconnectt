@@ -265,7 +265,7 @@ export function TravellerDashboardView({
   );
   const feedItems = buildFeedItems(dashboard.inquiries, directMessageState.conversations);
   const heroStats: Array<{ value: ReactNode; label: string }> = [
-    { value: dashboard.stats.inquiriesSent, label: "Inquiries Sent" },
+    { value: dashboard.stats.inquiriesSent, label: "Enquiries Sent" },
     { value: confirmedBookings.length, label: "Bookings & Payments" },
     { value: unreadMessages, label: "Unread Messages" },
   ];
@@ -294,7 +294,7 @@ export function TravellerDashboardView({
           <p className="dashboard-eyebrow">Traveller dashboard</p>
           <h1 className="dashboard-title">{displayName}</h1>
           <p className="dashboard-copy">
-            A single place for your inquiries, bookings, WiPay payments, and operator messages. Updates here reflect
+            A single place for your enquiries, bookings, WiPay payments, and operator messages. Updates here reflect
             your latest travel activity.
           </p>
 
@@ -358,7 +358,7 @@ export function TravellerDashboardView({
           <article className="dashboard-panel dashboard-section" id="requested-inquiries">
             <div className="dashboard-section-head">
               <div>
-                <p className="dashboard-eyebrow">Requested inquiries</p>
+                <p className="dashboard-eyebrow">Requested enquiries</p>
                 <h2 className="dashboard-section-title">Your recent requests</h2>
                 <p className="dashboard-section-copy">
                   Track every enquiry from submission through operator response.
@@ -424,7 +424,7 @@ export function TravellerDashboardView({
                 })
               ) : (
                 <div className="dashboard-empty">
-                  <strong>No inquiries yet</strong>
+                  <strong>No enquiries yet</strong>
                   <p>Start a new enquiry and it will appear here with live status updates.</p>
                 </div>
               )}
@@ -585,7 +585,7 @@ export function TravellerDashboardView({
               ) : (
                 <div className="dashboard-empty">
                   <strong>No recent activity</strong>
-                  <p>As your inquiries move forward, updates will appear here in real time.</p>
+                  <p>As your enquiries move forward, updates will appear here in real time.</p>
                 </div>
               )}
             </div>

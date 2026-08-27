@@ -10,6 +10,12 @@ import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/l
 import { sendInquirySubmissionEmailsForInquiryId } from "@/lib/email/workflows";
 import { recordAdminNotifications, recordPlatformNotification } from "@/lib/supabase/notifications";
 import { ensureConversationForInquiry } from "@/lib/supabase/direct-messages";
+import { parseTripIntent } from "@/lib/ai/trip-intent";
+import {
+  embedStructuredLeadInNotes,
+  hasStoredLeadData,
+  tripIntentToStoredLead,
+} from "@/lib/inquiry/structured-lead";
 import { initialInquiryFormState, type InquiryFormState } from "./types";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -24,6 +30,20 @@ function isValidIsoDate(value: string) {
 
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function buildStructuredNotes(displayNotes: string | null | undefined) {
+  const trimmed = displayNotes?.trim() ?? "";
+  if (!trimmed) {
+    return null;
+  }
+
+  const storedLead = tripIntentToStoredLead(parseTripIntent(trimmed));
+  if (!hasStoredLeadData(storedLead)) {
+    return trimmed;
+  }
+
+  return embedStructuredLeadInNotes(storedLead, trimmed);
 }
 
 async function getInquirySubmissionFingerprint(travelerEmail: string) {
@@ -261,7 +281,7 @@ export async function createInquiryAction(
       preferred_start_date: validatedFields.data.preferredStartDate,
       preferred_end_date: validatedFields.data.preferredEndDate,
       availability: validatedFields.data.availability,
-      notes: validatedFields.data.notes || null,
+      notes: buildStructuredNotes(validatedFields.data.notes) || null,
       status: "submitted",
       referral_code: validatedFields.data.referralCode || null,
       utm_source: validatedFields.data.utmSource || null,

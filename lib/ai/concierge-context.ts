@@ -3,6 +3,14 @@ import "server-only";
 import { normalizeMediaSource } from "@/lib/supabase/media";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import type { TourListing, TravelerInquiry } from "@/lib/supabase/inquiry-types";
+import {
+  expandQueryWithTripIntent,
+  formatTripIntentPromptBlock,
+  formatTripIntentSummary,
+  parseTripIntent,
+  parseTripIntentFromConversation,
+  type TripIntent,
+} from "@/lib/ai/trip-intent";
 
 type KnowledgeSourceRow = {
   id: string;
@@ -82,6 +90,8 @@ export type ConciergeTravelerContext = {
 
 export type ConciergeContextBundle = {
   query: string;
+  tripIntent: TripIntent;
+  tripIntentSummary: string | null;
   traveler: ConciergeTravelerContext | null;
   recommendations: ConciergeRecommendation[];
   knowledgeSources: ConciergeKnowledgeSource[];
@@ -189,8 +199,10 @@ function isFetchFailedError(error: unknown) {
   return error instanceof Error && (error.message === "TypeError: fetch failed" || error.message.includes("fetch failed"));
 }
 
-export async function getRelevantListings(query: string, limit = 5) {
+export async function getRelevantListings(query: string, limit = 5, tripIntent?: TripIntent) {
   try {
+    const intent = tripIntent ?? parseTripIntent(query);
+    const searchQuery = expandQueryWithTripIntent(query, intent);
     const admin = createSupabaseServiceRoleClient();
     const { data, error } = await admin
       .from("tour_listings")
@@ -207,7 +219,7 @@ export async function getRelevantListings(query: string, limit = 5) {
       throw new Error(error.message);
     }
 
-    const tokens = tokenize(query);
+    const tokens = tokenize(searchQuery);
     const rows = (data ?? []) as Array<TourListing & { image_base64?: string | null }>;
     const scored = rows
       .map((listing) => {
@@ -221,6 +233,18 @@ export async function getRelevantListings(query: string, limit = 5) {
           listing.price ?? "",
         ].join(" ");
         let score = tokens.length ? scoreText(haystack, tokens) : 0;
+
+        for (const destination of intent.destinations) {
+          if (normalizeText(haystack).includes(normalizeText(destination))) {
+            score += 8;
+          }
+        }
+
+        for (const interest of intent.interests) {
+          if (normalizeText(haystack).includes(normalizeText(interest.split(" ")[0] ?? interest))) {
+            score += 4;
+          }
+        }
 
         if (listing.featured) {
           score += 2;
@@ -269,7 +293,7 @@ export async function getRelevantListings(query: string, limit = 5) {
       price: listing.price ?? null,
       operator_name: listing.operator_name,
       image_url: listing.image_url,
-      reason: buildListingReason(listing, query, listing.score),
+      reason: buildListingReason(listing, searchQuery, listing.score),
       score: listing.score,
       href: `/Enquiry?listing=${listing.id}`,
     }));
@@ -407,12 +431,21 @@ export async function getTravelerContext(userId: string): Promise<ConciergeTrave
   }
 }
 
-export async function buildConciergeContext(params: { query: string; userId?: string | null }) {
+export async function buildConciergeContext(params: {
+  query: string;
+  userId?: string | null;
+  conversationMessages?: Array<{ role: string; content: string }>;
+}) {
   try {
+    const tripIntent = params.conversationMessages?.length
+      ? parseTripIntentFromConversation(params.conversationMessages)
+      : parseTripIntent(params.query);
+    const tripIntentSummary = formatTripIntentSummary(tripIntent);
+    const tripIntentPrompt = formatTripIntentPromptBlock(tripIntent);
     const traveler = params.userId ? await getTravelerContext(params.userId) : null;
     const [recommendations, knowledgeSources] = await Promise.all([
-      getRelevantListings(params.query, 5),
-      getRelevantKnowledgeSources(params.query, 5),
+      getRelevantListings(params.query, 5, tripIntent),
+      getRelevantKnowledgeSources(expandQueryWithTripIntent(params.query, tripIntent), 5),
     ]);
 
     const sourceSummaries = [
@@ -443,11 +476,11 @@ export async function buildConciergeContext(params: { query: string; userId?: st
 
     const travelerLines = traveler
       ? [
-          `Traveler: ${traveler.profile?.full_name ?? "Logged-in traveler"}`,
+          `Traveller: ${traveler.profile?.full_name ?? "Logged-in traveller"}`,
           traveler.profile?.preferred_inquiry_area ? `Preferred area: ${traveler.profile.preferred_inquiry_area}` : null,
           traveler.countries.length ? `Countries on file: ${traveler.countries.join(", ")}` : null,
           traveler.recentInquiries.length
-            ? `Recent inquiries: ${traveler.recentInquiries
+            ? `Recent enquiries: ${traveler.recentInquiries
                 .map((inquiry) => {
                   const listingTitle = inquiry.listing_title ?? inquiry.destination;
                   return `${listingTitle} (${inquiry.status}${inquiry.preferred_start_date ? `, ${inquiry.preferred_start_date}` : ""})`;
@@ -470,6 +503,7 @@ export async function buildConciergeContext(params: { query: string; userId?: st
 
     const promptContext = [
       "TT Connect platform context:",
+      ...(tripIntentPrompt ? [tripIntentPrompt, ""] : []),
       ...travelerLines.map((line) => `- ${line}`),
       "Relevant listings:",
       ...recommendationLines,
@@ -485,6 +519,8 @@ export async function buildConciergeContext(params: { query: string; userId?: st
 
     return {
       query: params.query,
+      tripIntent,
+      tripIntentSummary,
       traveler,
       recommendations,
       knowledgeSources,
@@ -498,6 +534,8 @@ export async function buildConciergeContext(params: { query: string; userId?: st
 
     return {
       query: params.query,
+      tripIntent: parseTripIntent(params.query),
+      tripIntentSummary: null,
       traveler: null,
       recommendations: [],
       knowledgeSources: [],

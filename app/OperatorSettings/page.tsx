@@ -176,7 +176,7 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
               Configure the operator workspace.
             </h1>
             <p className="max-w-[720px] text-[18px] leading-7 font-light text-on-surface-variant">
-              Manage operator identity, customer communication preferences, inquiry handling, and availability routing without touching traveler or admin settings.
+              Manage operator identity, customer communication preferences, enquiry handling, and availability routing without touching traveller or admin settings.
             </p>
           </div>
         </div>
@@ -369,7 +369,7 @@ function WorkflowCard({
     <div className="glass-panel p-gutter">
       <div className="eyebrow" style={{ marginBottom: 6 }}>Workflow policy</div>
       <h3 className="font-display text-[30px] leading-9 font-light text-on-background">
-        Control inquiry and booking behavior.
+        Control enquiry and booking behaviour.
       </h3>
       <p className="mt-2 text-sm text-on-surface-variant">
         Keep the operator workspace responsive, premium, and easy to hand off between concierge staff.

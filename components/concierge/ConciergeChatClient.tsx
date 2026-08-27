@@ -22,8 +22,10 @@ import type {
   ConciergeKnowledgeSource,
   ConciergeRecommendation,
 } from "@/lib/ai/concierge-context";
+import type { ItineraryDay } from "@/lib/ai/itinerary-draft";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatDate } from "@/lib/format/date";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
 
 type ConciergeClientMessage = {
   id: string;
@@ -51,6 +53,7 @@ type ConciergeChatClientProps = {
   messages: ConciergeMessageRecord[];
   recommendations: ConciergeRecommendation[];
   knowledgeSources: ConciergeKnowledgeSource[];
+  initialPrompt?: string | null;
 };
 
 type ConciergeChatResponsePayload = {
@@ -59,9 +62,18 @@ type ConciergeChatResponsePayload = {
   conversationTitle?: string | null;
   assistantMessage?: ConciergeClientMessage;
   recommendations?: ConciergeRecommendation[];
+  tripIntentSummary?: string | null;
+  itineraryDraft?: ItineraryDay[];
   error?: string;
   configurationError?: string;
   storageWarning?: string | null;
+};
+
+type ConciergeSubmitLeadResponse = {
+  ok?: boolean;
+  inquiryId?: string;
+  redirectTo?: string;
+  error?: string;
 };
 
 type ResettableState<T> = {
@@ -197,6 +209,19 @@ function toClientMessages(messages: ConciergeMessageRecord[]): ConciergeClientMe
   }));
 }
 
+function mergeItineraryDraft(current: ItineraryDay[], next: ItineraryDay[]) {
+  if (!next.length) {
+    return current;
+  }
+
+  const byDay = new Map(current.map((entry) => [entry.day, entry]));
+  for (const entry of next) {
+    byDay.set(entry.day, entry);
+  }
+
+  return [...byDay.values()].sort((left, right) => left.day - right.day);
+}
+
 function buildTempMessageId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
@@ -299,18 +324,20 @@ export function ConciergeChatClient({
   currentConversationTitle,
   messages,
   recommendations,
+  initialPrompt = null,
 }: ConciergeChatClientProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatActionsRef = useRef<HTMLDivElement | null>(null);
+  const initialPromptSentRef = useRef(false);
   const initialChatMessages = useMemo(
     () => loadInitialChatMessages(messages, currentConversationId),
     [currentConversationId, messages],
   );
 
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(() => initialPrompt?.trim() ?? "");
   const [chatMessages, setChatMessages] = useResettableState(initialChatMessages);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -324,6 +351,17 @@ export function ConciergeChatClient({
     useResettableState(currentConversationTitle);
   const [suggestedListings, setSuggestedListings] = useResettableState(recommendations);
   const [showSuggestedListings, setShowSuggestedListings] = useState(false);
+  const [tripIntentSummary, setTripIntentSummary] = useState<string | null>(null);
+  const [itineraryDraft, setItineraryDraft] = useState<ItineraryDay[]>([]);
+  const [submittingLead, setSubmittingLead] = useState(false);
+  const {
+    isSupported: isVoiceSupported,
+    isListening,
+    interimTranscript,
+    error: voiceError,
+    startListening,
+    stopListening,
+  } = useSpeechToText();
   const isHydrated = useSyncExternalStore(
     subscribeToHydration,
     getHydratedSnapshot,
@@ -337,6 +375,24 @@ export function ConciergeChatClient({
 
     window.sessionStorage.setItem(`concierge-thread:${activeConversationId}`, JSON.stringify(chatMessages));
   }, [activeConversationId, chatMessages]);
+
+  const promptSignInNotice =
+    initialPrompt?.trim() && !isAuthenticated
+      ? "Sign in to plan your trip with Concierge and save your itinerary chat."
+      : null;
+
+  useEffect(() => {
+    if (!initialPrompt?.trim() || initialPromptSentRef.current) {
+      return;
+    }
+
+    if (!isAuthenticated || !aiConfigured || pending) {
+      return;
+    }
+
+    initialPromptSentRef.current = true;
+    void sendMessage(initialPrompt);
+  }, [aiConfigured, initialPrompt, isAuthenticated, pending]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -452,6 +508,14 @@ export function ConciergeChatClient({
         }
       }
 
+      if (payload.tripIntentSummary) {
+        setTripIntentSummary(payload.tripIntentSummary);
+      }
+
+      if (Array.isArray(payload.itineraryDraft) && payload.itineraryDraft.length > 0) {
+        setItineraryDraft((current) => mergeItineraryDraft(current, payload.itineraryDraft ?? []));
+      }
+
       if (payload.conversationId) {
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set("conversation", payload.conversationId);
@@ -462,6 +526,52 @@ export function ConciergeChatClient({
     } finally {
       setPending(false);
       window.requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }
+
+  async function submitConciergeLead(listingId?: string | null) {
+    if (!isAuthenticated || !activeConversationId || submittingLead || pending) {
+      return;
+    }
+
+    setSubmittingLead(true);
+    setError(null);
+    setStatusNotice(null);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? null;
+
+      const { response, payload } = await fetchJsonWithTimeout<ConciergeSubmitLeadResponse>(
+        "/api/concierge/submit-lead",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({
+            conversationId: activeConversationId,
+            listingId: listingId ?? null,
+          }),
+        },
+        "Submitting your enquiry timed out. Please try again.",
+      );
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error ?? "Unable to submit your enquiry right now.");
+      }
+
+      setStatusNotice("Your structured enquiry was sent to our travel consultants.");
+      if (payload.redirectTo) {
+        router.push(payload.redirectTo);
+      }
+    } catch (leadError) {
+      setError(
+        leadError instanceof Error ? leadError.message : "Unable to submit your enquiry right now.",
+      );
+    } finally {
+      setSubmittingLead(false);
     }
   }
 
@@ -565,6 +675,24 @@ export function ConciergeChatClient({
     event.preventDefault();
     await sendMessage(draft);
   }
+
+  function handleVoiceSearch() {
+    if (!isAuthenticated || !aiConfigured || pending) {
+      return;
+    }
+
+    if (isListening) {
+      stopListening();
+      return;
+    }
+
+    startListening((transcript) => {
+      setDraft(transcript);
+      void sendMessage(transcript);
+    });
+  }
+
+  const composerValue = isListening && interimTranscript ? interimTranscript : draft;
 
   return (
     <div className="concierge-root">
@@ -1017,9 +1145,27 @@ export function ConciergeChatClient({
 
         .composer-row {
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-columns: auto auto minmax(0, 1fr) auto;
           gap: 0.7rem;
           align-items: end;
+        }
+
+        .icon-button.listening {
+          border-color: rgba(197, 22, 29, 0.32);
+          background: rgba(243, 222, 214, 0.92);
+          color: var(--secondary);
+          animation: concierge-mic-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes concierge-mic-pulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+
+          50% {
+            transform: scale(1.04);
+          }
         }
 
         .composer-input {
@@ -1104,6 +1250,90 @@ export function ConciergeChatClient({
         .recommendation-shell {
           margin-top: 1rem;
           padding-top: 0.1rem;
+        }
+
+        .itinerary-panel {
+          margin-top: 1rem;
+          padding: 1rem 1.1rem;
+          border-radius: 1.2rem;
+          border: 1px solid var(--outline-variant);
+          background: rgba(255, 253, 251, 0.92);
+          box-shadow: var(--shadow-soft);
+        }
+
+        .itinerary-panel h2 {
+          margin: 0;
+          font-family: var(--font-display);
+          font-size: 1.35rem;
+          font-weight: 300;
+          letter-spacing: -0.03em;
+        }
+
+        .itinerary-panel-copy {
+          margin: 0.45rem 0 0.9rem;
+          color: var(--on-surface-variant);
+          font-size: 0.88rem;
+          line-height: 1.55;
+        }
+
+        .quote-request-button {
+          margin-top: 0.85rem;
+          width: 100%;
+          min-height: 2.9rem;
+          padding: 0.8rem 1rem;
+          border-radius: 999px;
+          border: 1px solid rgba(167, 67, 31, 0.18);
+          background: var(--secondary);
+          color: var(--on-secondary);
+          font-size: 0.72rem;
+          line-height: 1;
+          letter-spacing: 0.16em;
+          font-weight: 700;
+          text-transform: uppercase;
+          transition: transform 150ms ease, opacity 150ms ease;
+        }
+
+        .quote-request-button:hover:not(:disabled) {
+          transform: translateY(-1px);
+        }
+
+        .quote-request-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.55;
+        }
+
+        .itinerary-day-list {
+          display: grid;
+          gap: 0.65rem;
+        }
+
+        .itinerary-day-card {
+          display: grid;
+          gap: 0.2rem;
+          padding: 0.8rem 0.9rem;
+          border-radius: 0.95rem;
+          border: 1px solid rgba(111, 98, 73, 0.14);
+          background: rgba(248, 245, 241, 0.88);
+        }
+
+        .itinerary-day-label {
+          color: var(--secondary);
+          font-size: 0.68rem;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+
+        .itinerary-day-title {
+          font-size: 0.96rem;
+          font-weight: 600;
+          color: var(--on-surface);
+        }
+
+        .itinerary-day-detail {
+          color: var(--on-surface-variant);
+          font-size: 0.86rem;
+          line-height: 1.5;
         }
 
         .section-heading {
@@ -1235,7 +1465,7 @@ export function ConciergeChatClient({
               <h1 className="truncate">{conversationLabel}</h1>
               <p className="chat-subtitle">
                 {isAuthenticated
-                  ? "Ask about live listings, itinerary ideas, or operator replies."
+                  ? "Chat naturally — flights, hotels, attractions, transport, and schedules update as we plan."
                   : "Sign in to continue the conversation and save your chat history."}
               </p>
             </div>
@@ -1311,10 +1541,10 @@ export function ConciergeChatClient({
                 ))
               ) : (
                 <div className="empty-state">
-                  <h3>Tell me what kind of trip you&apos;re looking for.</h3>
+                  <h3>Describe your ideal trip in plain English.</h3>
                   <p>
-                    I can suggest real Tour ConnecTT listings, pull in active knowledge sources, and
-                    remember the conversation for next time.
+                    Chat about flights, hotels, attractions, transport, and daily schedules. Your itinerary
+                    will keep updating as the conversation evolves — like speaking with a travel consultant.
                   </p>
                   {!isAuthenticated ? (
                     <Link className="recommendation-action" href="/LoginPage">
@@ -1333,6 +1563,49 @@ export function ConciergeChatClient({
 
               <div ref={messagesEndRef} />
             </div>
+
+            {itineraryDraft.length ? (
+              <div className="itinerary-panel">
+                <h2>Your evolving itinerary</h2>
+                <p className="itinerary-panel-copy">
+                  This draft updates whenever you refine dates, transport, stays, or activities in chat.
+                </p>
+                <div className="itinerary-day-list">
+                  {itineraryDraft.map((day) => (
+                    <article key={day.day} className="itinerary-day-card">
+                      <div className="itinerary-day-label">Day {day.day}</div>
+                      <div className="itinerary-day-title">{day.title}</div>
+                      {day.detail ? <div className="itinerary-day-detail">{day.detail}</div> : null}
+                    </article>
+                  ))}
+                </div>
+                {isAuthenticated ? (
+                  <button
+                    className="quote-request-button"
+                    type="button"
+                    disabled={submittingLead || pending || !activeConversationId}
+                    onClick={() => submitConciergeLead(suggestedListings[0]?.id)}
+                  >
+                    {submittingLead ? "Submitting enquiry..." : "Request personalised quote"}
+                  </button>
+                ) : null}
+              </div>
+            ) : chatMessages.some((message) => message.role === "user") && isAuthenticated ? (
+              <div className="itinerary-panel">
+                <h2>Ready for a consultant quote?</h2>
+                <p className="itinerary-panel-copy">
+                  Send your chat as a structured enquiry so a travel consultant can refine the itinerary and email you a quote.
+                </p>
+                <button
+                  className="quote-request-button"
+                  type="button"
+                  disabled={submittingLead || pending || !activeConversationId}
+                  onClick={() => submitConciergeLead(suggestedListings[0]?.id)}
+                >
+                  {submittingLead ? "Submitting enquiry..." : "Request personalised quote"}
+                </button>
+              </div>
+            ) : null}
 
             {showSuggestedListings && suggestedListings.length ? (
               <div className="recommendation-shell">
@@ -1370,7 +1643,7 @@ export function ConciergeChatClient({
 
                       <div className="recommendation-actions">
                         <Link className="recommendation-action" href={listing.href}>
-                          Open inquiry
+                          Open enquiry
                         </Link>
                         <Link className="recommendation-action secondary" href={`/Messages?listing=${listing.id}`}>
                           Chat with operator
@@ -1385,11 +1658,14 @@ export function ConciergeChatClient({
 
           <footer className="composer">
             {error ? <div className="status-banner error">{error}</div> : null}
+            {promptSignInNotice ? <div className="status-banner neutral">{promptSignInNotice}</div> : null}
             {statusNotice ? <div className="status-banner neutral">{statusNotice}</div> : null}
             {storageNotice ? <div className="status-banner neutral">{storageNotice}</div> : null}
+            {tripIntentSummary ? <div className="status-banner neutral">Understanding your trip: {tripIntentSummary}</div> : null}
+            {voiceError ? <div className="status-banner error">{voiceError}</div> : null}
             {!isAuthenticated ? (
               <div className="status-banner neutral">
-                Concierge chat requires sign-in to save history and personalize suggestions.
+                Concierge chat requires sign-in to save history and personalise suggestions.
               </div>
             ) : null}
             {!aiConfigured ? (
@@ -1409,17 +1685,31 @@ export function ConciergeChatClient({
                 <span className="material-symbols-outlined text-[1.25rem]">attach_file</span>
               </button>
 
+              <button
+                className={`icon-button${isListening ? " listening" : ""}`}
+                aria-label={isListening ? "Stop voice search" : "Speak to search"}
+                aria-pressed={isListening}
+                title={isListening ? "Stop listening" : "Speak to search"}
+                type="button"
+                disabled={!isAuthenticated || !aiConfigured || pending || !isVoiceSupported}
+                onClick={handleVoiceSearch}
+              >
+                <span className="material-symbols-outlined text-[1.25rem]">{isListening ? "mic_off" : "mic"}</span>
+              </button>
+
               <textarea
                 ref={inputRef}
                 className="composer-input"
                 placeholder={
-                  isAuthenticated
-                    ? aiConfigured
-                      ? "Ask about live listings, trip ideas, or travel help..."
-                      : "Concierge AI is unavailable until OpenAI is configured."
-                    : "Sign in to send a Concierge AI message."
+                  isListening
+                    ? "Listening... speak your trip idea or destination."
+                    : isAuthenticated
+                      ? aiConfigured
+                        ? "Ask about live listings, trip ideas, or travel help..."
+                        : "Concierge AI is unavailable until OpenAI is configured."
+                      : "Sign in to send a Concierge AI message."
                 }
-                value={draft}
+                value={composerValue}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={async (event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
@@ -1427,7 +1717,7 @@ export function ConciergeChatClient({
                     await sendMessage(draft);
                   }
                 }}
-                disabled={!isAuthenticated || !aiConfigured || pending}
+                disabled={!isAuthenticated || !aiConfigured || pending || isListening}
                 rows={2}
               />
 
@@ -1441,7 +1731,7 @@ export function ConciergeChatClient({
             </form>
 
             <div className="composer-helper">
-              <span>Enter sends your message.</span>
+              <span>{isListening ? "Speak now, then we will search live listings for you." : "Enter sends your message. Use the mic to speak to search."}</span>
             </div>
           </footer>
         </section>
