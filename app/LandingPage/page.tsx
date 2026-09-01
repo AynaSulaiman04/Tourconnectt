@@ -22,7 +22,7 @@ type ReviewRow = {
   created_at: string;
 };
 
-const LANDING_SHOWCASE_LIMIT = 6;
+const LANDING_SHOWCASE_LIMIT = 24;
 const DEFAULT_SHOWCASE_IMAGES = DEFAULT_LANDING_SLIDESHOW_IMAGES;
 
 function isMissingRelationOrSchemaError(error: { code?: string | null; message?: string | null } | null) {

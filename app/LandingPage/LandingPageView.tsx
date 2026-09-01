@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { AnimatedHeroHeadline } from "@/components/ui/animated-hero";
 import { getHeroContentFromSiteContent, getPortalSettingsFromContent } from "@/lib/portal-settings";
@@ -9,7 +8,6 @@ import { LandingHeroVideo } from "./LandingHeroVideo";
 import { LandingImageSlideshow } from "./LandingImageSlideshow";
 import { LandingServicesMarquee } from "./LandingServicesMarquee";
 import { LandingScrollReveal } from "./LandingScrollReveal";
-import { NewsletterForm } from "./newsletter-form";
 import type { SiteContent } from "@/lib/site-content";
 import "./page.css";
 
@@ -266,65 +264,6 @@ export function LandingPageView({
         </div>
       </section>
 
-      <footer className="lp-footer" data-lp-reveal>
-        <div className="lp-footer-main">
-          <div className="lp-footer-brand">
-            <BrandLogo className="lp-footer-logo-image" href="/LandingPage" linkClassName="lp-footer-logo" variant="footer" />
-            <p className="lp-footer-description">
-              {siteContent.footerDescription}
-            </p>
-          </div>
-
-          <div className="lp-footer-column">
-            <h3>Platform</h3>
-            <Link href="/HowItWorks">How it works</Link>
-            <Link href="/Enquiry">Live listings</Link>
-            <Link href="/ConciergeChat">Concierge</Link>
-          </div>
-
-          <div className="lp-footer-column">
-            <h3>Company</h3>
-            <Link href="/AboutUs">About us</Link>
-            <Link href="/Partners">Our partners</Link>
-            <Link href="/Careers">Careers</Link>
-          </div>
-
-          <div className="lp-footer-column">
-            <h3>Support</h3>
-            <Link href="/HelpCenter">Help centre</Link>
-            <Link href="/TermsOfService">Terms of service</Link>
-            <Link href="/PrivacyPolicy">Privacy policy</Link>
-            <Link href="/ContactUs">Contact us</Link>
-          </div>
-
-          <div className="lp-footer-column">
-            <h3>Stay inspired</h3>
-            <p>{siteContent.footerDescription}</p>
-
-            <NewsletterForm />
-          </div>
-        </div>
-
-        <div className="lp-footer-bottom">
-          <p>&copy; 2026 TOURCONNECTT. ALL RIGHTS RESERVED.</p>
-
-          <div className="lp-footer-bottom-links">
-            <Link href="/PrivacyPolicy">Privacy</Link>
-            <Link href="/TermsOfService">Terms</Link>
-            <div className="lp-footer-socials" aria-label="Social links">
-              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram">
-                ig
-              </a>
-              <a href="https://www.facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook">
-                f
-              </a>
-              <a href="https://www.x.com/" target="_blank" rel="noreferrer" aria-label="X">
-                x
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }

@@ -3,6 +3,7 @@ export type NavbarVariant = "public" | "traveler" | "operator" | "admin";
 export type NavItem = {
   label: string;
   href: string;
+  icon?: string;
 };
 
 export type NavbarConfig = {
@@ -10,6 +11,7 @@ export type NavbarConfig = {
   action: {
     label: string;
     href: string;
+    icon?: string;
   };
   items: NavItem[];
 };
@@ -35,26 +37,26 @@ export const NAVBAR_CONFIG: Record<NavbarVariant, NavbarConfig> = {
   },
   operator: {
     eyebrow: "CONNECTING YOU TO THE REAL CARIBBEAN",
-    action: { label: "Settings", href: "/OperatorSettings" },
+    action: { label: "Settings", href: "/OperatorSettings", icon: "settings" },
     items: [
-      { label: "Overview", href: "/OperatorDashboard" },
-      { label: "Listings", href: "/OperatorListings" },
-      { label: "Bookings", href: "/OperatorBookings" },
-      { label: "Customers", href: "/OperatorUserManage" },
-      { label: "Messages", href: "/OperatorMessages" },
-      { label: "Documents", href: "/OperatorDocuments" },
+      { label: "Overview", href: "/OperatorDashboard", icon: "dashboard" },
+      { label: "Listings", href: "/OperatorListings", icon: "list_alt" },
+      { label: "Bookings", href: "/OperatorBookings", icon: "event_available" },
+      { label: "Customers", href: "/OperatorUserManage", icon: "groups" },
+      { label: "Messages", href: "/OperatorMessages", icon: "forum" },
+      { label: "Documents", href: "/OperatorDocuments", icon: "folder_open" },
     ],
   },
   admin: {
     eyebrow: "CONNECTING YOU TO THE REAL CARIBBEAN",
-    action: { label: "Settings", href: "/AdminSettings" },
+    action: { label: "Settings", href: "/AdminSettings", icon: "settings" },
     items: [
-      { label: "Home", href: "/AdminContent" },
-      { label: "Dashboard", href: "/AdminDashboard" },
-      { label: "Bookings", href: "/AdminBookings" },
-      { label: "Listings", href: "/AdminListings" },
-      { label: "Users", href: "/AdminUsers" },
-      { label: "Analytics", href: "/AdminAnalytics" },
+      { label: "Home", href: "/AdminContent", icon: "home" },
+      { label: "Dashboard", href: "/AdminDashboard", icon: "dashboard" },
+      { label: "Bookings", href: "/AdminBookings", icon: "event_available" },
+      { label: "Listings", href: "/AdminListings", icon: "list_alt" },
+      { label: "Users", href: "/AdminUsers", icon: "group" },
+      { label: "Analytics", href: "/AdminAnalytics", icon: "insights" },
     ],
   },
 };

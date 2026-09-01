@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { MainNavbar } from "@/components/navigation/MainNavbar";
+import { SidebarNav } from "@/components/navigation/SidebarNav";
 import type { NavbarVariant } from "@/components/navigation/nav-config";
+import "@/components/navigation/portal-sidebar.css";
 
 type PageShellProps = {
   children: ReactNode;
@@ -28,6 +30,7 @@ export function PageShell({
   travelerProfile = null,
 }: PageShellProps) {
   const isPortal = variant !== "public";
+  const useSidebar = variant === "admin" || variant === "operator";
   const isFullBleed = contentClassName.includes("full-bleed") || contentClassName.includes("concierge-page-shell");
   const resolvedContentClassName = [
     isPortal && !isFullBleed ? "portal-shell-content" : "",
@@ -35,15 +38,31 @@ export function PageShell({
   ]
     .filter(Boolean)
     .join(" ");
-  const shouldShowFooter = showFooter ?? (isPortal && !isFullBleed);
+  const shouldShowFooter = showFooter ?? !isFullBleed;
+
+  const shellClass = [
+    "page-shell",
+    useSidebar ? "page-shell-portal" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`page-shell ${className}`.trim()}>
+    <div className={shellClass}>
       <div className="grain-overlay" />
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
-      <MainNavbar authResolved={authResolved} travelerProfile={travelerProfile} variant={variant} />
+      {useSidebar ? (
+        <SidebarNav
+          authResolved={authResolved}
+          travelerProfile={travelerProfile}
+          variant={variant as "admin" | "operator"}
+        />
+      ) : (
+        <MainNavbar authResolved={authResolved} travelerProfile={travelerProfile} variant={variant} />
+      )}
       <div
         className={`page-shell-inner ${resolvedContentClassName}`.trim()}
         id="main-content"
