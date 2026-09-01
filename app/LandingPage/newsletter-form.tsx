@@ -7,7 +7,9 @@ export function NewsletterForm() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage("Newsletter signup is coming soon.");
+    // There is no newsletter store yet. Until one exists, point people at a
+    // channel that does reach the team rather than implying a subscription.
+    setMessage("The mailing list is not open yet. Contact us and we will add you when it launches.");
   }
 
   return (

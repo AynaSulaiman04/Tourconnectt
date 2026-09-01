@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type SpeechRecognitionResultList = {
   isFinal: boolean;
@@ -48,6 +48,24 @@ function getSpeechRecognitionClass() {
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 }
 
+// Speech recognition support never changes for the life of the document, so
+// there is nothing to subscribe to.
+function subscribeToNothing() {
+  return () => {};
+}
+
+function getSpeechRecognitionSupport() {
+  return Boolean(getSpeechRecognitionClass());
+}
+
+// The server has no `window`, so it must report "unsupported" and the first
+// client render must agree. Reading `window` during render instead makes SSR
+// emit a disabled mic while hydration computes an enabled one, which React
+// reports as an attribute mismatch and refuses to patch up.
+function getServerSpeechRecognitionSupport() {
+  return false;
+}
+
 export function useSpeechToText() {
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
@@ -55,7 +73,11 @@ export function useSpeechToText() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const onFinalRef = useRef<(text: string) => void>(() => {});
 
-  const isSupported = typeof window !== "undefined" && Boolean(getSpeechRecognitionClass());
+  const isSupported = useSyncExternalStore(
+    subscribeToNothing,
+    getSpeechRecognitionSupport,
+    getServerSpeechRecognitionSupport,
+  );
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();

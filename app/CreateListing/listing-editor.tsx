@@ -89,6 +89,11 @@ export function ListingEditor({
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // The same editor serves /CreateListing and /OperatorListings/[id]/edit. Only
+  // the edit route hands it a draft that is already tied to a published
+  // listing, so the heading follows that rather than always saying "create".
+  const isEditingPublishedListing = Boolean(initialDraft?.published_listing_id);
+
   const [step, setStep] = useState(() => {
     if (initialDraft) {
       return 0;
@@ -393,7 +398,9 @@ export function ListingEditor({
             <span className="font-label-caps text-secondary block mb-2">
               Step {String(step + 1).padStart(2, "0")} of 03
             </span>
-            <h1 className="font-headline-lg text-headline-lg">Create New Listing</h1>
+            <h1 className="font-headline-lg text-headline-lg">
+              {isEditingPublishedListing ? "Edit Listing" : "Create New Listing"}
+            </h1>
           </div>
 
           <span className="font-body-md text-on-surface-variant">

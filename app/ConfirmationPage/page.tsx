@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { submitTravelerReview } from "@/lib/supabase/reviews";
 import { resolveWiPayInquiryAmount } from "@/lib/payments/wipay";
-import { formatDate, formatDateTime } from "@/lib/format/date";
+import { formatDate } from "@/lib/format/date";
 
 type ConfirmationPageProps = {
   searchParams: Promise<{

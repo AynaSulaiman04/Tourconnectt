@@ -29,7 +29,7 @@ function pathMatches(pathname: string, candidate: string) {
   return pathname === candidate || pathname.startsWith(`${candidate}/`);
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   if (pathname === "/Inquiry" || pathname.startsWith("/Inquiry/")) {

@@ -91,8 +91,8 @@ export default async function OperatorListingEditPage({ params }: OperatorListin
                 <Link className="btn-primary btn-sm" href="/OperatorListings">
                   Back to Listings
                 </Link>
-                <Link className="btn-outline btn-sm" href="/OperatorListings">
-                  Back to Listings
+                <Link className="btn-outline btn-sm" href="/CreateListing">
+                  Create a Listing
                 </Link>
               </div>
             </div>
