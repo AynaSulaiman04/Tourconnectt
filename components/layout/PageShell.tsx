@@ -55,22 +55,36 @@ export function PageShell({
         Skip to main content
       </a>
       {useSidebar ? (
-        <SidebarNav
-          authResolved={authResolved}
-          travelerProfile={travelerProfile}
-          variant={variant as "admin" | "operator" | "traveler"}
-        />
+        <>
+          <SidebarNav
+            authResolved={authResolved}
+            travelerProfile={travelerProfile}
+            variant={variant as "admin" | "operator" | "traveler"}
+          />
+          <div className="page-shell-portal-main">
+            <div
+              className={`page-shell-inner ${resolvedContentClassName}`.trim()}
+              id="main-content"
+              tabIndex={-1}
+            >
+              {children}
+            </div>
+            {shouldShowFooter ? <SiteFooter variant={variant} /> : null}
+          </div>
+        </>
       ) : (
-        <MainNavbar authResolved={authResolved} travelerProfile={travelerProfile} variant={variant} />
+        <>
+          <MainNavbar authResolved={authResolved} travelerProfile={travelerProfile} variant={variant} />
+          <div
+            className={`page-shell-inner ${resolvedContentClassName}`.trim()}
+            id="main-content"
+            tabIndex={-1}
+          >
+            {children}
+          </div>
+          {shouldShowFooter ? <SiteFooter variant={variant} /> : null}
+        </>
       )}
-      <div
-        className={`page-shell-inner ${resolvedContentClassName}`.trim()}
-        id="main-content"
-        tabIndex={-1}
-      >
-        {children}
-      </div>
-      {shouldShowFooter ? <SiteFooter variant={variant} /> : null}
     </div>
   );
 }
