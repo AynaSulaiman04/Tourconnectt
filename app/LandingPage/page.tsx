@@ -156,11 +156,10 @@ export default async function LandingPage() {
     }
   }
 
-  const dedupedShowcaseImages = dedupeSlideshowImageUrls(showcaseImages).slice(0, LANDING_SHOWCASE_LIMIT);
-  const resolvedShowcaseImages =
-    dedupedShowcaseImages.length >= 3
-      ? dedupedShowcaseImages
-      : dedupeSlideshowImageUrls([...dedupedShowcaseImages, ...DEFAULT_SHOWCASE_IMAGES]).slice(0, LANDING_SHOWCASE_LIMIT);
+  const resolvedShowcaseImages = dedupeSlideshowImageUrls([
+    ...showcaseImages,
+    ...DEFAULT_SHOWCASE_IMAGES,
+  ]).slice(0, LANDING_SHOWCASE_LIMIT);
 
   const defaultProfileImageUrl = profileContext?.profile
     ? await getDefaultProfileImageUrl(profileContext.profile.id)

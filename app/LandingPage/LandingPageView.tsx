@@ -70,6 +70,54 @@ const fallbackTestimonials: LandingTestimonial[] = [
     avatarUrl: null,
     rating: 5,
   },
+  {
+    id: "testimonial-4",
+    text: "The Argyle Waterfall hike with a naturalist guide was the highlight of our year. We saw wildlife we never would have spotted alone.",
+    name: "Sarah K.",
+    location: "Toronto, Canada",
+    avatarUrl: null,
+    rating: 5,
+  },
+  {
+    id: "testimonial-5",
+    text: "Booking through the concierge was faster than any travel agent. Two messages and our whole Tobago week was set.",
+    name: "Marcus D.",
+    location: "Berlin, Germany",
+    avatarUrl: null,
+    rating: 5,
+  },
+  {
+    id: "testimonial-6",
+    text: "The operators knew every hidden beach, every family-run spot for doubles. It felt like being toured by a local friend.",
+    name: "Anika T.",
+    location: "Mumbai, India",
+    avatarUrl: null,
+    rating: 5,
+  },
+  {
+    id: "testimonial-7",
+    text: "Leatherback turtle nesting at Grande Rivière was unreal. The operator timed everything perfectly and answered every question.",
+    name: "Elena V.",
+    location: "Madrid, Spain",
+    avatarUrl: null,
+    rating: 5,
+  },
+  {
+    id: "testimonial-8",
+    text: "Carnival with local hosts is a different level. Costumes, mas camps, transport, food — all arranged, all seamless.",
+    name: "Kojo A.",
+    location: "Accra, Ghana",
+    avatarUrl: null,
+    rating: 5,
+  },
+  {
+    id: "testimonial-9",
+    text: "We booked last-minute and still had a private catamaran to Nylon Pool the next morning. Impressive turnaround.",
+    name: "Rachel P.",
+    location: "Sydney, Australia",
+    avatarUrl: null,
+    rating: 5,
+  },
 ];
 
 function formatRating(value: number) {
@@ -236,7 +284,7 @@ export function LandingPageView({
         </div>
 
         <div className="lp-testimonial-grid">
-          {testimonialsToRender.slice(0, 3).map((item) => (
+          {testimonialsToRender.slice(0, 6).map((item) => (
             <article className="lp-testimonial-card" key={item.id} data-lp-reveal>
               <p className="lp-quote">“{item.text}”</p>
               <div className="lp-person">

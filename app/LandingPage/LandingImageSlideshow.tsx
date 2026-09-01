@@ -81,11 +81,10 @@ export function LandingImageSlideshow({ images, intervalMs = DEFAULT_SLIDESHOW_I
               fill
               alt={`Featured Trinidad and Tobago destination ${index + 1}`}
               className="lp-showcase-image"
-              priority={index === 0}
-              quality={92}
+              quality={82}
               sizes="(max-width: 768px) 100vw, (max-width: 1440px) 100vw, 1440px"
               src={image}
-              loading={index <= 1 ? "eager" : "lazy"}
+              loading={index === 0 ? "eager" : "lazy"}
               unoptimized={shouldServeImageUnoptimized(image)}
             />
           </div>

@@ -30,6 +30,19 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
   const config = NAVBAR_CONFIG[variant];
   const [sessionProfile, setSessionProfile] = useState<SidebarNavProps["travelerProfile"] | undefined>(undefined);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerPathname, setDrawerPathname] = useState(pathname);
+
+  // Close the mobile drawer on navigation. Adjusted during render rather than
+  // in an effect: an effect that calls setState synchronously causes a second
+  // render pass, so the drawer would briefly still be open on the new route.
+  if (pathname !== drawerPathname) {
+    setDrawerPathname(pathname);
+
+    if (mobileOpen) {
+      setMobileOpen(false);
+    }
+  }
+
   const profile = travelerProfile ?? sessionProfile ?? null;
   const currentUserId = profile?.id ?? null;
   const currentRole = profile?.role ?? (variant === "operator" ? "operator" : "admin");
@@ -57,10 +70,6 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
       cancelled = true;
     };
   }, [authResolved, travelerProfile]);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   const items = config.items;
   const settingsItem = config.action;
