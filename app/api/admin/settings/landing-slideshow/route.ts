@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const LANDING_SLIDESHOW_BUCKET = "landing-slideshow";
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = 10;
 const MAX_BATCH_SIZE = 150 * 1024 * 1024;
 const MAX_REQUEST_SIZE = MAX_BATCH_SIZE + 1024 * 1024;
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
 
       if (file.size > MAX_FILE_SIZE) {
         return NextResponse.json(
-          { message: "Each slideshow image must be 15 MB or smaller." },
+          { message: "Each slideshow image must be 25 MB or smaller." },
           { status: 413 },
         );
       }

@@ -184,7 +184,10 @@ export async function getAdminWorkspaceSettings() {
 export async function getLandingSlideshowImages() {
   const admin = createSupabaseServiceRoleClient();
   const { data, error } = await admin.storage.from(LANDING_SLIDESHOW_BUCKET).list(LANDING_SLIDESHOW_PREFIX, {
-    limit: 12,
+    // Admins upload in bulk, and the Admin Settings gallery lists every image so
+    // they can be reviewed and deleted. The landing page slices this down to the
+    // showcase limit itself.
+    limit: 200,
     sortBy: { column: "created_at", order: "desc" },
   });
 

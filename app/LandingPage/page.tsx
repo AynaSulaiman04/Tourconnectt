@@ -9,6 +9,7 @@ import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supa
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getSiteContent } from "@/lib/site-content";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
+import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
 
 export const revalidate = 60;
@@ -130,10 +131,11 @@ export default async function LandingPage() {
   const authFlow = cookieStore.get("tt-auth-flow")?.value;
   const hasSession = hasSupabaseSessionCookie(cookieStore.getAll());
 
-  const [listings, landingReviews, showcaseImages, siteContent, profileContext] = await Promise.all([
+  const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext] = await Promise.all([
     settleWithTimeout(getFeaturedInquiryListings(3), [], 2000),
     settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
     settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
+    settleWithTimeout(getLandingHeroVideo(), null, 2000),
     getSiteContent(),
     hasSession ? getOptionalCurrentUserProfile() : Promise.resolve(null),
   ]);
@@ -195,6 +197,7 @@ export default async function LandingPage() {
         reviewSummary={reviewSummary}
         testimonials={testimonials}
         showcaseImages={resolvedShowcaseImages}
+        heroVideo={heroVideo ? { url: heroVideo.publicUrl, contentType: heroVideo.contentType } : null}
         siteContent={siteContent}
       />
     </PageShell>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { AnimatedHeroHeadline } from "@/components/ui/animated-hero";
 import { getHeroContentFromSiteContent, getPortalSettingsFromContent } from "@/lib/portal-settings";
 import { LandingTripPrompt } from "@/components/landing/LandingTripPrompt";
+import { LandingHeroVideo } from "./LandingHeroVideo";
 import { LandingImageSlideshow } from "./LandingImageSlideshow";
 import { LandingServicesMarquee } from "./LandingServicesMarquee";
 import { LandingScrollReveal } from "./LandingScrollReveal";
@@ -38,6 +39,7 @@ type LandingPageViewProps = {
   listings: LandingListingCard[];
   testimonials: LandingTestimonial[];
   showcaseImages: string[];
+  heroVideo: { url: string; contentType: string | null } | null;
   siteContent: SiteContent;
   reviewSummary: {
     averageRating: number;
@@ -84,7 +86,14 @@ function resolveTestimonials(testimonials: LandingTestimonial[]) {
   return testimonials.length ? testimonials : fallbackTestimonials;
 }
 
-export function LandingPageView({ listings, testimonials, reviewSummary, showcaseImages, siteContent }: LandingPageViewProps) {
+export function LandingPageView({
+  listings,
+  testimonials,
+  reviewSummary,
+  showcaseImages,
+  heroVideo,
+  siteContent,
+}: LandingPageViewProps) {
   const featuredListings = resolveListings(listings);
   const testimonialsToRender = resolveTestimonials(testimonials);
   const hasListings = featuredListings.length > 0;
@@ -96,7 +105,8 @@ export function LandingPageView({ listings, testimonials, reviewSummary, showcas
     <main className="lp-page">
       <LandingScrollReveal />
 
-      <section className="lp-hero">
+      <section className="lp-hero" data-has-video={heroVideo ? "true" : undefined}>
+        {heroVideo ? <LandingHeroVideo contentType={heroVideo.contentType} src={heroVideo.url} /> : null}
         <div className="lp-hero-inner" data-lp-reveal>
           <AnimatedHeroHeadline
             description={heroContent.description}

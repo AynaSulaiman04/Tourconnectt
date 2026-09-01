@@ -12,7 +12,9 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
-    deviceSizes: [640, 828, 1200, 1920],
+    // 2560 and 3840 let the slideshow serve a genuinely sharp image on QHD and
+    // 4K displays instead of upscaling a 1920px file.
+    deviceSizes: [640, 828, 1200, 1920, 2560, 3840],
     qualities: [75, 85, 92],
     remotePatterns: [
       {

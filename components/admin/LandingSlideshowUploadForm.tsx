@@ -4,15 +4,55 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
-const MAX_FILES_PER_UPLOAD = 10;
-const MAX_BATCH_SIZE = 150 * 1024 * 1024;
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+/** Selection cap. Larger selections are split into batches automatically. */
+const MAX_FILES_PER_SELECTION = 100;
+/** Files sent per request. Matches the server's per-request cap. */
+const FILES_PER_BATCH = 10;
+/** Bytes per request, kept well under the server's 150 MB request ceiling. */
+const MAX_BATCH_BYTES = 120 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+
+type UploadBatch = {
+  files: File[];
+  bytes: number;
+};
+
+/**
+ * Groups a selection into requests that satisfy both the file-count and the
+ * byte ceiling. A single file over the byte ceiling still gets its own batch so
+ * the server, not the browser, reports the size error.
+ */
+function buildBatches(files: File[]): UploadBatch[] {
+  const batches: UploadBatch[] = [];
+  let current: UploadBatch = { files: [], bytes: 0 };
+
+  for (const file of files) {
+    const wouldExceedCount = current.files.length >= FILES_PER_BATCH;
+    const wouldExceedBytes = current.files.length > 0 && current.bytes + file.size > MAX_BATCH_BYTES;
+
+    if (wouldExceedCount || wouldExceedBytes) {
+      batches.push(current);
+      current = { files: [], bytes: 0 };
+    }
+
+    current.files.push(file);
+    current.bytes += file.size;
+  }
+
+  if (current.files.length) {
+    batches.push(current);
+  }
+
+  return batches;
+}
 
 export function LandingSlideshowUploadForm() {
   const router = useRouter();
   const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedCount, setSelectedCount] = useState(0);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   async function handleUpload() {
@@ -23,59 +63,86 @@ export function LandingSlideshowUploadForm() {
       return;
     }
 
-    if (files.length > MAX_FILES_PER_UPLOAD) {
-      setStatus({ tone: "error", message: `Upload up to ${MAX_FILES_PER_UPLOAD} images at a time.` });
+    if (files.length > MAX_FILES_PER_SELECTION) {
+      setStatus({
+        tone: "error",
+        message: `Select up to ${MAX_FILES_PER_SELECTION} images at a time. You chose ${files.length}.`,
+      });
       return;
     }
 
-    if (files.some((file) => file.size === 0)) {
-      setStatus({ tone: "error", message: "One of the selected image files is empty. Choose a different file." });
+    const emptyFile = files.find((file) => file.size === 0);
+    if (emptyFile) {
+      setStatus({ tone: "error", message: `"${emptyFile.name}" is empty. Remove it and try again.` });
       return;
     }
 
-    if (files.some((file) => !ALLOWED_MIME_TYPES.has(file.type))) {
-      setStatus({ tone: "error", message: "Only JPG, PNG, WEBP, or AVIF images are supported." });
+    const wrongType = files.find((file) => !ALLOWED_MIME_TYPES.has(file.type));
+    if (wrongType) {
+      setStatus({
+        tone: "error",
+        message: `"${wrongType.name}" is not a JPG, PNG, WEBP, or AVIF image.`,
+      });
       return;
     }
 
-    if (files.some((file) => file.size > MAX_FILE_SIZE)) {
-      setStatus({ tone: "error", message: "Each slideshow image must be 15 MB or smaller." });
+    const tooLarge = files.find((file) => file.size > MAX_FILE_SIZE);
+    if (tooLarge) {
+      setStatus({
+        tone: "error",
+        message: `"${tooLarge.name}" is ${(tooLarge.size / (1024 * 1024)).toFixed(1)} MB. Each image must be 25 MB or smaller.`,
+      });
       return;
     }
 
-    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-    if (totalBytes > MAX_BATCH_SIZE) {
-      setStatus({ tone: "error", message: "This upload batch is too large. Please keep the total under 150 MB." });
-      return;
-    }
+    const batches = buildBatches(files);
 
     setIsUploading(true);
     setStatus(null);
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
+    setProgress({ done: 0, total: files.length });
+
+    let uploaded = 0;
 
     try {
-      const uploadData = new FormData();
-      files.forEach((file) => uploadData.append("landing_slideshow_uploads", file));
+      // Sequential batches. Parallel requests of this size compete for upload
+      // bandwidth and make the progress count meaningless.
+      for (const batch of batches) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 10 * 60 * 1000);
 
-      const response = await fetch("/api/admin/settings/landing-slideshow", {
-        method: "POST",
-        body: uploadData,
-        signal: controller.signal,
-      });
+        try {
+          const uploadData = new FormData();
+          batch.files.forEach((file) => uploadData.append("landing_slideshow_uploads", file));
 
-      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+          const response = await fetch("/api/admin/settings/landing-slideshow", {
+            method: "POST",
+            body: uploadData,
+            signal: controller.signal,
+          });
 
-      if (!response.ok) {
-        throw new Error(payload?.message || "We could not upload the slideshow images.");
+          const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+          if (!response.ok) {
+            throw new Error(
+              payload?.message ||
+                `Upload stopped after ${uploaded} of ${files.length} images. Please retry the rest.`,
+            );
+          }
+
+          uploaded += batch.files.length;
+          setProgress({ done: uploaded, total: files.length });
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
       }
 
       if (inputRef.current) {
         inputRef.current.value = "";
       }
+      setSelectedCount(0);
       setStatus({
         tone: "success",
-        message: payload?.message || "Slideshow images uploaded.",
+        message: `${uploaded} slideshow image${uploaded === 1 ? "" : "s"} uploaded across ${batches.length} batch${batches.length === 1 ? "" : "es"}.`,
       });
       router.refresh();
     } catch (error) {
@@ -83,16 +150,18 @@ export function LandingSlideshowUploadForm() {
         tone: "error",
         message:
           error instanceof Error && error.name === "AbortError"
-            ? "The upload timed out. Check your connection and try again."
+            ? `The upload timed out after ${uploaded} of ${files.length} images. Check your connection and retry the rest.`
             : error instanceof Error
               ? error.message
               : "We could not upload the slideshow images.",
       });
     } finally {
-      window.clearTimeout(timeoutId);
       setIsUploading(false);
+      setProgress(null);
     }
   }
+
+  const percentage = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -105,12 +174,45 @@ export function LandingSlideshowUploadForm() {
           multiple
           name="landing_slideshow_uploads"
           type="file"
-          onChange={() => setStatus(null)}
+          onChange={(event) => {
+            setStatus(null);
+            setSelectedCount(event.target.files?.length ?? 0);
+          }}
         />
         <span className="text-xs leading-5 text-on-surface-variant">
-          JPG, PNG, WEBP, or AVIF. Up to 10 images, 15 MB each and 150 MB total. Use 4K source files for best quality.
+          JPG, PNG, WEBP, or AVIF. Select up to 100 at once &mdash; they upload in batches of 10 automatically.
+          Each image up to 25 MB. Upload 4K originals (3840&nbsp;px wide or more); the site serves a sharp
+          size for every screen.
         </span>
+        {selectedCount > 0 && !isUploading ? (
+          <span className="text-xs font-semibold text-secondary">
+            {selectedCount} image{selectedCount === 1 ? "" : "s"} ready in{" "}
+            {Math.ceil(selectedCount / FILES_PER_BATCH)} batch
+            {Math.ceil(selectedCount / FILES_PER_BATCH) === 1 ? "" : "es"}.
+          </span>
+        ) : null}
       </label>
+
+      {progress ? (
+        <div className="grid gap-1">
+          <div
+            aria-label="Slideshow upload progress"
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={percentage}
+            className="h-2 w-full overflow-hidden rounded-full bg-surface-container-high"
+            role="progressbar"
+          >
+            <div
+              className="h-full rounded-full bg-secondary transition-[width] duration-200"
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+          <span className="text-xs text-on-surface-variant">
+            Uploaded {progress.done} of {progress.total}
+          </span>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         <Button disabled={isUploading} type="button" variant="primary" onClick={handleUpload}>

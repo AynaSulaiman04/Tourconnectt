@@ -206,8 +206,13 @@ export async function getRelevantListings(query: string, limit = 5, tripIntent?:
     const admin = createSupabaseServiceRoleClient();
     const { data, error } = await admin
       .from("tour_listings")
-      .select("id,title,location,country,duration,summary,image_url,image_base64,price,operator_id,operator_name,featured,is_active,created_at,updated_at")
+      .select("id,title,location,country,duration,summary,image_url,image_base64,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at")
       .eq("is_active", true)
+      // Concierge recommendations are public, and are now reachable without an
+      // account. Only moderated listings may be surfaced, matching the storefront
+      // queries in lib/supabase/inquiry.ts. Without this, draft, under_review and
+      // rejected listings were recommended to travellers.
+      .eq("status", "live")
       .order("featured", { ascending: false })
       .order("created_at", { ascending: false });
 

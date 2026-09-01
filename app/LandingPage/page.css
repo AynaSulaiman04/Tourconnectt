@@ -52,6 +52,145 @@
   text-align: center;
 }
 
+/* Hero background video.
+   Only applied when an admin has uploaded one; without it the hero keeps the
+   still cream card above. `isolation` keeps the video's stacking context inside
+   the section so it cannot slide under the navbar. */
+/* Full-bleed: the hero sits inside a padded page container, so break out to
+   the viewport width or the video leaves gutters down both sides. */
+.lp-hero[data-has-video="true"] {
+  position: relative;
+  isolation: isolate;
+  padding: 0;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  /* Pull up over the .lp-page top padding so the video meets the navbar. */
+  margin-top: -2rem;
+  /* New block formatting context. Without it the inner card's top margin
+     collapses out through this padding-less section and drags the video layer
+     down with it, leaving a band of page background under the navbar. */
+  display: flow-root;
+}
+
+.lp-hero-video-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lp-hero-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Warm scrim. The hero card sits on top of this, so it carries most of the
+   text-contrast work and lets the card stay translucent. */
+.lp-hero-video-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(20, 14, 10, 0.15), transparent 55%),
+    linear-gradient(180deg, rgba(20, 14, 10, 0.42), rgba(20, 14, 10, 0.55) 60%, rgba(20, 14, 10, 0.72));
+}
+
+.lp-hero[data-has-video="true"] .lp-hero-inner {
+  position: relative;
+  z-index: 1;
+  margin: clamp(2.5rem, 6vw, 5.5rem) auto clamp(2.5rem, 6vw, 5.5rem);
+  max-width: 72rem;
+  border-color: rgba(255, 253, 251, 0.22);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 253, 251, 0.12), transparent 40%),
+    linear-gradient(180deg, rgba(28, 21, 16, 0.5), rgba(28, 21, 16, 0.62));
+  backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: 0 30px 90px rgba(14, 10, 7, 0.45);
+}
+
+/* Invert the hero copy so it reads against the video rather than the cream card. */
+.lp-hero[data-has-video="true"] .lp-hero-inner :is(h1, h2, p, span, label, textarea, input) {
+  color: rgba(255, 253, 251, 0.94);
+}
+
+.lp-hero[data-has-video="true"] .lp-hero-inner .lp-eyebrow {
+  color: rgba(255, 213, 186, 0.95);
+}
+
+/* The trip prompt is a light card nested inside the now-dark hero panel.
+   Re-tone the whole card, not just the textarea, or it reads as a grey slab. */
+.lp-hero[data-has-video="true"] .lp-trip-prompt {
+  border-color: rgba(255, 253, 251, 0.18);
+  background: rgba(16, 11, 8, 0.46);
+  box-shadow: 0 18px 54px rgba(10, 7, 5, 0.4);
+}
+
+.lp-hero[data-has-video="true"] .lp-trip-prompt-input {
+  border-color: rgba(255, 253, 251, 0.24);
+  background: rgba(10, 7, 5, 0.45);
+  color: rgba(255, 253, 251, 0.95);
+}
+
+.lp-hero[data-has-video="true"] .lp-trip-prompt-input::placeholder {
+  color: rgba(255, 253, 251, 0.55);
+}
+
+.lp-hero[data-has-video="true"] .lp-trip-prompt-input:focus {
+  border-color: rgba(255, 213, 186, 0.55);
+}
+
+.lp-hero[data-has-video="true"] .lp-trip-prompt-label {
+  color: rgba(255, 213, 186, 0.95);
+}
+
+.lp-hero[data-has-video="true"] .lp-trip-prompt-helper {
+  color: rgba(255, 253, 251, 0.7);
+}
+
+/* Outline controls ship a near-white background. On the dark panel that has to
+   become glass, or light text lands on a light pill and disappears. */
+.lp-hero[data-has-video="true"] :is(.lp-trip-prompt-mic, .lp-trip-prompt-submit, .lp-register-btn) {
+  border-color: rgba(255, 253, 251, 0.42);
+  background: rgba(255, 253, 251, 0.12);
+  color: rgba(255, 253, 251, 0.96);
+  backdrop-filter: blur(6px);
+}
+
+.lp-hero[data-has-video="true"]
+  :is(.lp-trip-prompt-mic, .lp-trip-prompt-submit, .lp-register-btn):hover {
+  background: rgba(255, 253, 251, 0.22);
+  border-color: rgba(255, 253, 251, 0.6);
+}
+
+/* Muted but still readable, rather than invisible. */
+.lp-hero[data-has-video="true"] :is(.lp-trip-prompt-mic, .lp-trip-prompt-submit):disabled {
+  border-color: rgba(255, 253, 251, 0.22);
+  background: rgba(255, 253, 251, 0.06);
+  color: rgba(255, 253, 251, 0.55);
+}
+
+.lp-hero[data-has-video="true"] .lp-trip-prompt-link {
+  color: rgba(255, 213, 186, 0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-video {
+    /* The component also pauses playback; this covers the no-JS case. */
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .lp-hero[data-has-video="true"] .lp-hero-inner {
+    margin-inline: var(--space-margin-mobile);
+    backdrop-filter: blur(10px);
+  }
+}
+
 .lp-animated-hero {
   display: grid;
   gap: 0.75rem;

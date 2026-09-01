@@ -25,11 +25,24 @@ import {
   getConciergeQuotaSnapshot,
   withConciergeProfileLock,
 } from "@/lib/ai/concierge-rate-limit";
+import {
+  CONCIERGE_GUEST_DAILY_LIMIT,
+  CONCIERGE_GUEST_HOURLY_LIMIT,
+  getConciergeGuestKey,
+  getConciergeGuestQuota,
+  releaseConciergeGuestRequest,
+  reserveConciergeGuestRequest,
+} from "@/lib/ai/concierge-guest-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_LENGTH = 2000;
+/**
+ * Guests have no stored conversation, so the client replays recent turns. Cap
+ * the replay so a caller cannot inflate the prompt (and the bill) at will.
+ */
+const MAX_GUEST_HISTORY_MESSAGES = 8;
 
 function conciergeRateLimitResponse(
   quota: Awaited<ReturnType<typeof getConciergeQuotaSnapshot>>,
@@ -169,6 +182,151 @@ async function getProfileFromBearerToken(request: NextRequest) {
   };
 }
 
+/**
+ * Unauthenticated Concierge. Visitors reach this from the landing page trip
+ * prompt, so it has to answer without an account. Nothing is persisted: the
+ * client replays recent turns and the quota is metered per IP instead of per
+ * profile. Signing in is only required to send an enquiry to an operator.
+ */
+async function handleGuestConciergeRequest(request: NextRequest) {
+  const body = (await request.json().catch(() => null)) as
+    | {
+        message?: string;
+        action?: string | null;
+        history?: unknown;
+      }
+    | null;
+
+  const action = body?.action?.trim() ?? null;
+
+  // Guests have no stored conversation, so starting over is purely client-side.
+  if (action === "new" || action === "clear") {
+    return NextResponse.json(
+      {
+        ok: true,
+        conversationId: null,
+        conversationTitle: null,
+        persistenceMode: "guest",
+        messages: [],
+        recommendations: [],
+        sources: [],
+      },
+      { status: 200, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const message = body?.message?.trim() ?? "";
+
+  if (!message) {
+    return NextResponse.json(
+      { ok: false, error: "Please enter a message before sending." },
+      { status: 400 },
+    );
+  }
+
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return NextResponse.json(
+      { ok: false, error: `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.` },
+      { status: 400 },
+    );
+  }
+
+  const historyMessages = (Array.isArray(body?.history) ? body.history : [])
+    .filter(
+      (entry): entry is { role: string; content: string } =>
+        Boolean(entry) &&
+        typeof entry === "object" &&
+        typeof (entry as { content?: unknown }).content === "string" &&
+        typeof (entry as { role?: unknown }).role === "string",
+    )
+    .filter((entry) => entry.role === "user" || entry.role === "assistant")
+    .map((entry) => ({
+      role: entry.role as "user" | "assistant",
+      content: entry.content.slice(0, MAX_MESSAGE_LENGTH),
+    }))
+    .slice(-MAX_GUEST_HISTORY_MESSAGES);
+
+  const guestKey = getConciergeGuestKey(request.headers);
+  const quota = await getConciergeGuestQuota(guestKey);
+
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        persistenceMode: "guest",
+        signInPrompt: true,
+        error:
+          "You have reached the free Concierge limit for now. Sign in to keep planning, or try again later.",
+      },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(Math.max(quota.retryAfterSeconds, 1)),
+          "X-RateLimit-Limit": `${CONCIERGE_GUEST_HOURLY_LIMIT};w=3600, ${CONCIERGE_GUEST_DAILY_LIMIT};w=86400`,
+          "X-RateLimit-Remaining": "0",
+        },
+      },
+    );
+  }
+
+  // The row is the reservation. Take it before the provider call so concurrent
+  // requests from one address cannot both pass the check above.
+  const reservationId = await reserveConciergeGuestRequest(guestKey);
+  let reply;
+
+  try {
+    reply = await generateConciergeReply({ message, userId: null, historyMessages });
+  } catch (error) {
+    await releaseConciergeGuestRequest(reservationId);
+    throw error;
+  }
+
+  // An unconfigured or failed provider must not consume the visitor's quota.
+  if (!reply.ok) {
+    await releaseConciergeGuestRequest(reservationId);
+
+    const failureStatus = reply.statusCode ?? (reply.configurationError ? 503 : 500);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        conversationId: null,
+        persistenceMode: "guest",
+        error:
+          failureStatus >= 500
+            ? "Concierge AI is temporarily unavailable. Please try again later."
+            : reply.configurationError ?? reply.error ?? "Unable to generate a concierge response.",
+        recommendations: reply.recommendations ?? [],
+        sources: reply.sources ?? [],
+        storageWarning: null,
+      },
+      { status: failureStatus, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      conversationId: null,
+      conversationTitle: deriveConciergeConversationTitle(message),
+      persistenceMode: "guest",
+      storageWarning: null,
+      guestRemaining: Math.max(quota.remaining - 1, 0),
+      assistantMessage: {
+        role: "assistant",
+        content: reply.assistantText,
+        sources: reply.sources ?? [],
+      },
+      recommendations: reply.recommendations ?? [],
+      tripIntentSummary: reply.context?.tripIntentSummary ?? null,
+      itineraryDraft: reply.itineraryDraft ?? [],
+      sources: reply.sources ?? [],
+    },
+    { status: 200, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     let profileContext = await getOptionalCurrentUserProfile();
@@ -178,13 +336,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!profileContext?.profile) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Please sign in to use Concierge AI.",
-        },
-        { status: 401 },
-      );
+      return handleGuestConciergeRequest(request);
     }
 
     const body = (await request.json().catch(() => null)) as

@@ -376,17 +376,18 @@ export function ConciergeChatClient({
     window.sessionStorage.setItem(`concierge-thread:${activeConversationId}`, JSON.stringify(chatMessages));
   }, [activeConversationId, chatMessages]);
 
-  const promptSignInNotice =
-    initialPrompt?.trim() && !isAuthenticated
-      ? "Sign in to plan your trip with Concierge and save your itinerary chat."
-      : null;
+  // Guests can plan a full trip without an account. Signing in is only needed
+  // to keep the thread and to send an enquiry to an operator.
+  const promptSignInNotice = !isAuthenticated
+    ? "You are planning as a guest. Sign in to save this chat and send an enquiry to the operator."
+    : null;
 
   useEffect(() => {
     if (!initialPrompt?.trim() || initialPromptSentRef.current) {
       return;
     }
 
-    if (!isAuthenticated || !aiConfigured || pending) {
+    if (!aiConfigured || pending) {
       return;
     }
 
@@ -429,7 +430,7 @@ export function ConciergeChatClient({
 
   async function sendMessage(messageText: string) {
     const trimmed = messageText.trim();
-    if (!trimmed || pending || !isAuthenticated) {
+    if (!trimmed || pending) {
       return;
     }
 
@@ -463,6 +464,15 @@ export function ConciergeChatClient({
             body: JSON.stringify({
               message: trimmed,
               conversationId: activeConversationId,
+              // Guest threads are never stored server-side, so the recent turns
+              // travel with the request to keep the conversation coherent.
+              ...(isAuthenticated
+                ? {}
+                : {
+                    history: chatMessages
+                      .slice(-8)
+                      .map((entry) => ({ role: entry.role, content: entry.content })),
+                  }),
             }),
           },
           "The concierge response timed out. Please try again.",
@@ -1464,9 +1474,7 @@ export function ConciergeChatClient({
             <div className="min-w-0">
               <h1 className="truncate">{conversationLabel}</h1>
               <p className="chat-subtitle">
-                {isAuthenticated
-                  ? "Chat naturally — flights, hotels, attractions, transport, and schedules update as we plan."
-                  : "Sign in to continue the conversation and save your chat history."}
+                Chat naturally — flights, hotels, attractions, transport, and schedules update as we plan.
               </p>
             </div>
 
@@ -1546,11 +1554,7 @@ export function ConciergeChatClient({
                     Chat about flights, hotels, attractions, transport, and daily schedules. Your itinerary
                     will keep updating as the conversation evolves — like speaking with a travel consultant.
                   </p>
-                  {!isAuthenticated ? (
-                    <Link className="recommendation-action" href="/LoginPage">
-                      Sign in to start chatting
-                    </Link>
-                  ) : null}
+                  <p>No account needed to start planning.</p>
                 </div>
               )}
 
@@ -1588,22 +1592,42 @@ export function ConciergeChatClient({
                   >
                     {submittingLead ? "Submitting enquiry..." : "Request personalised quote"}
                   </button>
-                ) : null}
+                ) : (
+                  <>
+                    <Link className="quote-request-button" href="/LoginPage?redirect=/ConciergeChat">
+                      Sign in to send this to an operator
+                    </Link>
+                    <Link className="recommendation-action" href="/Enquiry">
+                      Or send an enquiry without an account
+                    </Link>
+                  </>
+                )}
               </div>
-            ) : chatMessages.some((message) => message.role === "user") && isAuthenticated ? (
+            ) : chatMessages.some((message) => message.role === "user") ? (
               <div className="itinerary-panel">
                 <h2>Ready for a consultant quote?</h2>
                 <p className="itinerary-panel-copy">
                   Send your chat as a structured enquiry so a travel consultant can refine the itinerary and email you a quote.
                 </p>
-                <button
-                  className="quote-request-button"
-                  type="button"
-                  disabled={submittingLead || pending || !activeConversationId}
-                  onClick={() => submitConciergeLead(suggestedListings[0]?.id)}
-                >
-                  {submittingLead ? "Submitting enquiry..." : "Request personalised quote"}
-                </button>
+                {isAuthenticated ? (
+                  <button
+                    className="quote-request-button"
+                    type="button"
+                    disabled={submittingLead || pending || !activeConversationId}
+                    onClick={() => submitConciergeLead(suggestedListings[0]?.id)}
+                  >
+                    {submittingLead ? "Submitting enquiry..." : "Request personalised quote"}
+                  </button>
+                ) : (
+                  <>
+                    <Link className="quote-request-button" href="/LoginPage?redirect=/ConciergeChat">
+                      Sign in to send this to an operator
+                    </Link>
+                    <Link className="recommendation-action" href="/Enquiry">
+                      Or send an enquiry without an account
+                    </Link>
+                  </>
+                )}
               </div>
             ) : null}
 
@@ -1663,11 +1687,6 @@ export function ConciergeChatClient({
             {storageNotice ? <div className="status-banner neutral">{storageNotice}</div> : null}
             {tripIntentSummary ? <div className="status-banner neutral">Understanding your trip: {tripIntentSummary}</div> : null}
             {voiceError ? <div className="status-banner error">{voiceError}</div> : null}
-            {!isAuthenticated ? (
-              <div className="status-banner neutral">
-                Concierge chat requires sign-in to save history and personalise suggestions.
-              </div>
-            ) : null}
             {!aiConfigured ? (
               <div className="status-banner neutral">
                 Concierge AI is unavailable until OpenAI is configured.
@@ -1691,7 +1710,7 @@ export function ConciergeChatClient({
                 aria-pressed={isListening}
                 title={isListening ? "Stop listening" : "Speak to search"}
                 type="button"
-                disabled={!isAuthenticated || !aiConfigured || pending || !isVoiceSupported}
+                disabled={!aiConfigured || pending || !isVoiceSupported}
                 onClick={handleVoiceSearch}
               >
                 <span className="material-symbols-outlined text-[1.25rem]">{isListening ? "mic_off" : "mic"}</span>
@@ -1703,11 +1722,9 @@ export function ConciergeChatClient({
                 placeholder={
                   isListening
                     ? "Listening... speak your trip idea or destination."
-                    : isAuthenticated
-                      ? aiConfigured
-                        ? "Ask about live listings, trip ideas, or travel help..."
-                        : "Concierge AI is unavailable until OpenAI is configured."
-                      : "Sign in to send a Concierge AI message."
+                    : aiConfigured
+                      ? "Ask about live listings, trip ideas, or travel help..."
+                      : "Concierge AI is unavailable until OpenAI is configured."
                 }
                 value={composerValue}
                 onChange={(event) => setDraft(event.target.value)}
@@ -1717,14 +1734,14 @@ export function ConciergeChatClient({
                     await sendMessage(draft);
                   }
                 }}
-                disabled={!isAuthenticated || !aiConfigured || pending || isListening}
+                disabled={!aiConfigured || pending || isListening}
                 rows={2}
               />
 
               <button
                 className="composer-button"
                 type="submit"
-                disabled={!isAuthenticated || !aiConfigured || pending || !draft.trim()}
+                disabled={!aiConfigured || pending || !draft.trim()}
               >
                 {pending ? "Sending" : "Send"}
               </button>

@@ -71,12 +71,14 @@ export function dedupeSlideshowImageUrls(imageUrls: string[]) {
   return uniqueImages;
 }
 
+/**
+ * Only inline sources genuinely cannot be optimized. Supabase public storage
+ * and local `/landing/` files are both allowed by `images.remotePatterns`, so
+ * routing them through the optimizer is what produces a responsive srcset and
+ * a sharp image on 4K displays. Bypassing it shipped the raw multi-megabyte
+ * original to every device at one fixed size.
+ */
 export function shouldServeImageUnoptimized(src: string) {
   const trimmed = src.trim();
-  return (
-    trimmed.startsWith("data:") ||
-    trimmed.startsWith("blob:") ||
-    trimmed.startsWith("/landing/") ||
-    trimmed.includes("/storage/v1/object/public/")
-  );
+  return trimmed.startsWith("data:") || trimmed.startsWith("blob:");
 }

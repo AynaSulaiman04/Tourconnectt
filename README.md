@@ -294,6 +294,18 @@ Fallback behavior:
 - If `OPENAI_API_KEY` is missing, the Concierge page shows a clean configuration message and does not crash.
 - If the concierge tables are not yet migrated, the chat can still fall back to session-only history until the migration is applied.
 
+### Guest Access
+
+Concierge AI works without an account. The landing page hero accepts a plain-English
+trip description and carries it straight into the chat, which answers immediately.
+
+- Guests are rate limited per IP: 10 messages an hour, 40 a day.
+- Guest threads are not stored. Recent turns travel with each request, so closing
+  the tab ends the thread.
+- Signing in stores the conversation and unlocks `Request personalised quote`.
+- Only `live` listings are ever recommended.
+- Set `CONCIERGE_IP_SALT` in production to salt the rate-limit hashes.
+
 ### How It Works
 
 - Users ask for trip ideas, beach experiences, family-friendly tours, cultural activities, or itinerary suggestions.
@@ -308,6 +320,34 @@ Fallback behavior:
 3. Open the Concierge page.
 4. Ask for a tour suggestion such as beach, culture, family, or budget travel.
 5. Confirm the response uses real Supabase listings and knowledge sources.
+
+## Home Page Media
+
+Both are managed from `/AdminSettings` and need no code change.
+
+### Hero background video
+
+- Upload one MP4, WebM, or QuickTime file up to 50 MB.
+- It plays muted, looping, and full-bleed behind the hero headline, with a scrim
+  so the copy stays legible. A 15-30 second clip with no audio works best.
+- Uploading replaces the previous video; the old file is deleted.
+- `Remove video` returns the hero to its still cream design.
+- Playback pauses for visitors with `prefers-reduced-motion: reduce`.
+- Stored in the public `landing-hero-video` bucket, resolved newest-first.
+- The 50 MB ceiling is the Supabase project's global upload limit. Raise that in
+  the Supabase dashboard first, then `LANDING_HERO_VIDEO_MAX_BYTES`.
+
+### Slideshow images
+
+- Select up to 100 images at once. The browser uploads them in batches of 10
+  automatically, with a progress count, and reports how many landed if a batch
+  fails part way.
+- JPG, PNG, WEBP, or AVIF, up to 25 MB each.
+- Upload 4K originals. `images.deviceSizes` goes up to 3840 and the slideshow
+  requests quality 92, so Next serves a sharp, right-sized image per screen.
+- Supabase-hosted images go through the Next image optimiser. They used to
+  bypass it, which shipped the raw multi-megabyte original at one fixed size.
+- Every uploaded image is listed in Admin Settings with a remove button.
 
 ## Testing Workflow
 

@@ -8,9 +8,11 @@ import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getLandingSlideshowImages } from "@/lib/supabase/analytics";
+import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
 import { formatDateTime } from "@/lib/format/date";
 import { getWiPayConfigStatus } from "@/lib/payments/wipay";
+import { LandingHeroVideoForm } from "@/components/admin/LandingHeroVideoForm";
 import { LandingSlideshowUploadForm } from "@/components/admin/LandingSlideshowUploadForm";
 import {
   deleteLandingSlideshowImageAction,
@@ -29,9 +31,10 @@ function getParam(value: string | string[] | undefined) {
 }
 
 export default async function AdminSettingsPage({ searchParams }: AdminSettingsPageProps) {
-  const [workspace, slideshowImages] = await Promise.all([
+  const [workspace, slideshowImages, heroVideo] = await Promise.all([
     getAdminWorkspaceData(),
     getLandingSlideshowImages(),
+    getLandingHeroVideo(),
   ]);
   const resolvedSearchParams = await searchParams;
   const statusMessage = resolvedSearchParams.saved ? "Admin settings saved." : null;
@@ -415,6 +418,23 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
               <div className="mt-5">
                 <LandingSlideshowUploadForm />
               </div>
+              </div>
+            </GlassPanel>
+
+            <GlassPanel className="mt-8 p-gutter">
+              <div className="label-caps text-secondary mb-2">Home page hero</div>
+              <h2 className="font-display text-[30px] leading-[1.05] tracking-[-0.04em] text-on-background">
+                Hero background video
+              </h2>
+              <p className="section-copy mt-2">
+                Plays muted and on loop behind the home page hero headline. Travellers see the still hero
+                design until a video is uploaded.
+              </p>
+              <div className="mt-5">
+                <LandingHeroVideoForm
+                  currentVideoSizeBytes={heroVideo?.sizeBytes ?? null}
+                  currentVideoUrl={heroVideo?.publicUrl ?? null}
+                />
               </div>
             </GlassPanel>
 
