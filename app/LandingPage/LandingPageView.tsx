@@ -129,7 +129,14 @@ function resolveListings(listings: LandingListingCard[]) {
 }
 
 function resolveTestimonials(testimonials: LandingTestimonial[]) {
-  return testimonials.length ? testimonials : fallbackTestimonials;
+  const seenIds = new Set(testimonials.map((item) => item.id));
+  const merged = [...testimonials];
+  for (const fallback of fallbackTestimonials) {
+    if (merged.length >= 3) break;
+    if (seenIds.has(fallback.id)) continue;
+    merged.push(fallback);
+  }
+  return merged;
 }
 
 export function LandingPageView({
@@ -284,7 +291,7 @@ export function LandingPageView({
         </div>
 
         <div className="lp-testimonial-grid">
-          {testimonialsToRender.slice(0, 6).map((item) => (
+          {testimonialsToRender.slice(0, 3).map((item) => (
             <article className="lp-testimonial-card" key={item.id} data-lp-reveal>
               <p className="lp-quote">“{item.text}”</p>
               <div className="lp-person">

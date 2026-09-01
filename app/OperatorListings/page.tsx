@@ -5,6 +5,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { getOperatorListingDrafts, getOperatorListings } from "@/lib/supabase/operator-listings";
+import { formatListingPrice } from "@/lib/format/listing-price";
 
 function formatRelativeTime(value: string) {
   const diffMs = Date.now() - new Date(value).getTime();
@@ -122,7 +123,7 @@ export default async function OperatorListingsPage() {
                         </div>
                         <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                           <div className="label-caps text-secondary mb-1">Price</div>
-                          <div className="text-sm text-on-background">{listing.price || "Price on request"}</div>
+                          <div className="text-sm text-on-background">{formatListingPrice(listing.price) || "Price on request"}</div>
                         </div>
                       </div>
 

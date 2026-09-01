@@ -11,6 +11,7 @@ import { TableWrapper } from "@/components/ui/TableWrapper";
 import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { formatDate } from "@/lib/format/date";
+import { formatListingPrice } from "@/lib/format/listing-price";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
 import { createReferralCampaignAction, toggleReferralCampaignAction } from "../AdminPromotions/actions";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
@@ -547,7 +548,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                           </div>
                         </td>
                         <td className="text-sm text-on-surface-variant">{tour.featured ? "Homepage hero" : "Editorial feature"}</td>
-                        <td className="text-sm text-on-surface-variant">{tour.price ?? "No price"}</td>
+                        <td className="text-sm text-on-surface-variant">{formatListingPrice(tour.price) ?? "No price"}</td>
                         <td>
                           <Badge tone={tour.featured ? "accent" : "soft"}>{tour.featured ? "Live" : "Queued"}</Badge>
                         </td>

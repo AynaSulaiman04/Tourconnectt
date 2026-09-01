@@ -25,6 +25,7 @@ import type {
 import type { ItineraryDay } from "@/lib/ai/itinerary-draft";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatDate } from "@/lib/format/date";
+import { formatListingPrice } from "@/lib/format/listing-price";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 
 type ConciergeClientMessage = {
@@ -1726,7 +1727,7 @@ export function ConciergeChatClient({
                           <span>•</span>
                           <span>{listing.duration}</span>
                           <span>•</span>
-                          <span>{listing.price ?? "Price on request"}</span>
+                          <span>{formatListingPrice(listing.price) ?? "Price on request"}</span>
                         </div>
                         <p className="recommendation-copy" style={{ marginTop: "0.55rem" }}>
                           Operator: {listing.operator_name}

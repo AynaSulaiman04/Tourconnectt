@@ -11,7 +11,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import { SignOutButton } from "./SignOutButton";
 
 type SidebarNavProps = {
-  variant: Extract<NavbarVariant, "admin" | "operator">;
+  variant: Extract<NavbarVariant, "admin" | "operator" | "traveler">;
   authResolved?: boolean;
   travelerProfile?: {
     id?: string;
@@ -45,7 +45,9 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
 
   const profile = travelerProfile ?? sessionProfile ?? null;
   const currentUserId = profile?.id ?? null;
-  const currentRole = profile?.role ?? (variant === "operator" ? "operator" : "admin");
+  const currentRole =
+    profile?.role ??
+    (variant === "operator" ? "operator" : variant === "traveler" ? "traveler" : "admin");
 
   useEffect(() => {
     if (authResolved || travelerProfile) {
@@ -73,7 +75,8 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
 
   const items = config.items;
   const settingsItem = config.action;
-  const portalLabel = variant === "admin" ? "Admin" : "Operator";
+  const portalLabel =
+    variant === "admin" ? "Admin" : variant === "operator" ? "Operator" : "Traveller";
 
   return (
     <>

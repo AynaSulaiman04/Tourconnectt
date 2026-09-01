@@ -28,11 +28,12 @@ export const NAVBAR_CONFIG: Record<NavbarVariant, NavbarConfig> = {
   },
   traveler: {
     eyebrow: "CONNECTING YOU TO THE REAL CARIBBEAN",
-    action: { label: "Log in", href: "/LoginPage?redirect=/TravellerProfile" },
+    action: { label: "Profile", href: "/TravellerProfile", icon: "person" },
     items: [
-      { label: "Enquiry", href: "/Enquiry" },
-      { label: "Concierge", href: "/ConciergeChat" },
-      { label: "Profile", href: "/TravellerProfile" },
+      { label: "Enquiry", href: "/Enquiry", icon: "explore" },
+      { label: "Concierge", href: "/ConciergeChat", icon: "chat" },
+      { label: "Inbox", href: "/Messages", icon: "inbox" },
+      { label: "Profile", href: "/TravellerProfile", icon: "person" },
     ],
   },
   operator: {

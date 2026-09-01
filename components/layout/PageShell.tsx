@@ -30,7 +30,7 @@ export function PageShell({
   travelerProfile = null,
 }: PageShellProps) {
   const isPortal = variant !== "public";
-  const useSidebar = variant === "admin" || variant === "operator";
+  const useSidebar = variant === "admin" || variant === "operator" || variant === "traveler";
   const isFullBleed = contentClassName.includes("full-bleed") || contentClassName.includes("concierge-page-shell");
   const resolvedContentClassName = [
     isPortal && !isFullBleed ? "portal-shell-content" : "",
@@ -58,7 +58,7 @@ export function PageShell({
         <SidebarNav
           authResolved={authResolved}
           travelerProfile={travelerProfile}
-          variant={variant as "admin" | "operator"}
+          variant={variant as "admin" | "operator" | "traveler"}
         />
       ) : (
         <MainNavbar authResolved={authResolved} travelerProfile={travelerProfile} variant={variant} />

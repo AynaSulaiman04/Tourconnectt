@@ -8,6 +8,8 @@ import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/l
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getSiteContent } from "@/lib/site-content";
+import { getRequestLocale } from "@/lib/format/locale";
+import { formatListingPrice } from "@/lib/format/listing-price";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
@@ -131,13 +133,14 @@ export default async function LandingPage() {
   const authFlow = cookieStore.get("tt-auth-flow")?.value;
   const hasSession = hasSupabaseSessionCookie(cookieStore.getAll());
 
-  const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext] = await Promise.all([
+  const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext, locale] = await Promise.all([
     settleWithTimeout(getFeaturedInquiryListings(3), [], 2000),
     settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
     settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
     settleWithTimeout(getLandingHeroVideo(), null, 2000),
     getSiteContent(),
     hasSession ? getOptionalCurrentUserProfile() : Promise.resolve(null),
+    getRequestLocale(),
   ]);
   const { testimonials, reviewSummary } = landingReviews;
   if (authFlow === "recovery" || authFlow === "magic_link") {
@@ -190,7 +193,7 @@ export default async function LandingPage() {
           summary: listing.summary ?? null,
           imageUrl: listing.image_url ?? null,
           operatorName: listing.operator_name ?? null,
-          price: listing.price ?? null,
+          price: formatListingPrice(listing.price, locale) ?? null,
           listingHref: `/Enquiry?listing=${listing.id}`,
         }))}
         reviewSummary={reviewSummary}

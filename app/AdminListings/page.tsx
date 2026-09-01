@@ -8,6 +8,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
 import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
+import { formatListingPrice } from "@/lib/format/listing-price";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { updateListingModerationAction } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
@@ -310,7 +311,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                               {item.location} · {item.country}
                             </div>
                             <div className="text-xs uppercase tracking-[0.15em] text-on-surface-variant/70">
-                              {item.duration} · {item.price ?? "No price"}
+                              {item.duration} · {formatListingPrice(item.price) ?? "No price"}
                             </div>
                           </td>
 

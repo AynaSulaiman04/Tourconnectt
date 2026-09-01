@@ -5,6 +5,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { getOperatorListingById } from "@/lib/supabase/operator-listings";
 import { requireOperatorProfile } from "@/lib/supabase/operator";
+import { formatListingPrice } from "@/lib/format/listing-price";
 
 type OperatorListingViewPageProps = {
   params: Promise<{
@@ -184,7 +185,7 @@ export default async function OperatorListingViewPage({ params }: OperatorListin
                   <span className="meta-pill">{listing.location}</span>
                   <span className="meta-pill">{listing.country}</span>
                   <span className="meta-pill">{listing.duration}</span>
-                  <span className="meta-pill">{listing.price ?? "Price on request"}</span>
+                  <span className="meta-pill">{formatListingPrice(listing.price) ?? "Price on request"}</span>
                   <span className="meta-pill">{listing.is_active ? "Live" : "Draft"}</span>
                 </div>
               </div>
@@ -210,7 +211,7 @@ export default async function OperatorListingViewPage({ params }: OperatorListin
                   </div>
                   <div className="glass-panel detail-card">
                     <p>Price</p>
-                    <p>{listing.price ?? "Price on request"}</p>
+                    <p>{formatListingPrice(listing.price) ?? "Price on request"}</p>
                   </div>
                   <div className="glass-panel detail-card">
                     <p>Status</p>
