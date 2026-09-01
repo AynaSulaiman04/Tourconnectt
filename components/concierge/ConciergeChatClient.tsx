@@ -248,6 +248,36 @@ function loadInitialChatMessages(
   return toClientMessages(messages);
 }
 
+/** Emphasis only. Links are handled by the caller, which runs first. */
+function renderEmphasis(value: string, keyPrefix: string) {
+  const parts: ReactNode[] = [];
+  const pattern = /\*\*([^*]+)\*\*|__([^_]+)__|(?<!\*)\*([^*\n]+)\*(?!\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(value)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(value.slice(lastIndex, match.index));
+    }
+
+    const bold = match[1] ?? match[2];
+
+    if (bold) {
+      parts.push(<strong key={`${keyPrefix}-b-${match.index}`}>{bold}</strong>);
+    } else {
+      parts.push(<em key={`${keyPrefix}-i-${match.index}`}>{match[3]}</em>);
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < value.length) {
+    parts.push(value.slice(lastIndex));
+  }
+
+  return parts.length ? parts : [value];
+}
+
 function renderInlineText(value: string) {
   const urlPattern = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/gi;
   const parts: ReactNode[] = [];
@@ -256,7 +286,7 @@ function renderInlineText(value: string) {
 
   while ((match = urlPattern.exec(value)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(value.slice(lastIndex, match.index));
+      parts.push(...renderEmphasis(value.slice(lastIndex, match.index), `t-${match.index}`));
     }
 
     const url = match[0];
@@ -269,7 +299,7 @@ function renderInlineText(value: string) {
   }
 
   if (lastIndex < value.length) {
-    parts.push(value.slice(lastIndex));
+    parts.push(...renderEmphasis(value.slice(lastIndex), `t-${lastIndex}`));
   }
 
   return parts;
@@ -287,6 +317,32 @@ function renderMessageContent(content: string) {
     <>
       {blocks.map((block, blockIndex) => {
         const lines = block.split("\n");
+
+        // The model is asked to head each itinerary day with "### Day N: ...".
+        // Render those as real headings instead of leaking the hash marks, and
+        // keep any lines that follow in the same block.
+        const headingMatch = lines[0]?.match(/^\s*(#{1,4})\s+(.*)$/);
+
+        if (headingMatch) {
+          const rest = lines.slice(1).filter((line) => line.trim().length > 0);
+
+          return (
+            <div key={`block-${blockIndex}`} className="message-heading-block">
+              <p className="message-heading">{renderInlineText(headingMatch[2].trim())}</p>
+              {rest.length ? (
+                <p className="message-paragraph">
+                  {rest.map((line, lineIndex) => (
+                    <span key={`${blockIndex}-${lineIndex}`}>
+                      {renderInlineText(line.replace(/^\s*[-*•]\s+/, "• "))}
+                      {lineIndex < rest.length - 1 ? <br /> : null}
+                    </span>
+                  ))}
+                </p>
+              ) : null}
+            </div>
+          );
+        }
+
         const ordered = lines.every((line) => /^\s*\d+[\.)]\s+/.test(line));
         const unordered = lines.every((line) => /^\s*[-*•]\s+/.test(line));
 
@@ -977,6 +1033,19 @@ export function ConciergeChatClient({
           white-space: pre-wrap;
           word-break: break-word;
           overflow-wrap: anywhere;
+        }
+
+        .message-heading-block {
+          display: grid;
+          gap: 0.3rem;
+        }
+
+        .message-heading {
+          margin: 0;
+          font-weight: 700;
+          font-size: 0.95rem;
+          letter-spacing: -0.01em;
+          color: var(--secondary);
         }
 
         .message-list {

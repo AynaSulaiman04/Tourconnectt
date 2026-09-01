@@ -45,9 +45,14 @@
   margin: 0;
 }
 
+/* Small uppercase label used on admin panels. This selector list used to
+   include .section-title, which collides with the large display heading of the
+   same name on the public pages. Because this file is unlayered and
+   globals.css defines .section-title inside @layer components, this rule won
+   the cascade and forced every marketing page title to 12px uppercase. */
 .updated-text p:first-child,
 .stat-card p,
-.section-title,
+.panel-label,
 .approval-company,
 .update-item-meta {
   color: rgba(75, 70, 61, 0.6);
@@ -145,7 +150,7 @@
   margin-bottom: 28px;
 }
 
-.section-title {
+.panel-label {
   margin: 0;
   color: var(--on-background);
 }

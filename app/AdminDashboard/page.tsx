@@ -296,7 +296,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         <div className="content-grid">
           <section className="activity-card glass-panel">
             <div className="section-head">
-              <h4 className="section-title">Platform Activity</h4>
+              <h4 className="panel-label">Platform Activity</h4>
               <div className="tabs tc-filter-tabs">
                 {(["7d", "30d"] as const).map((range) => (
                   <Link
@@ -349,7 +349,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           <section className="right-column">
             <div className="approvals-card glass-panel">
               <div className="section-head">
-                <h4 className="section-title">Pending Approvals</h4>
+                <h4 className="panel-label">Pending Approvals</h4>
                 <span className="approval-badge">{workspace.pendingListings.length} New</span>
               </div>
 
@@ -384,7 +384,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
 
             <div className="updates-card glass-panel">
               <div className="section-head">
-                <h4 className="section-title">Admin Updates</h4>
+                <h4 className="panel-label">Admin Updates</h4>
                 <span className="approval-badge">{recentAdminUpdates.filter((item) => !item.read_at).length} New</span>
               </div>
 
@@ -416,7 +416,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
 
             <div className="payments-card glass-panel">
               <div className="section-head">
-                <h4 className="section-title">WiPay Collections</h4>
+                <h4 className="panel-label">WiPay Collections</h4>
                 <span className="approval-badge">{workspace.stats.paymentCount.toLocaleString()} Paid</span>
               </div>
 

@@ -21,9 +21,11 @@ export function InformationPage({
       <main className="content-shell">
         <section className="card-surface px-gutter py-section-gap">
           <p className="section-eyebrow">{eyebrow}</p>
-          <h1 className="section-title">{title}</h1>
-          <p className="section-copy mt-4 whitespace-pre-line">{body}</p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          {/* Capped for readability: the card runs the full content width, which
+              is far too long a measure for body copy. */}
+          <h1 className="section-title max-w-[46rem]">{title}</h1>
+          <p className="section-copy mt-6 max-w-[42rem] whitespace-pre-line">{body}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
             <Button href={actionHref} variant="primary">
               {actionLabel}
             </Button>

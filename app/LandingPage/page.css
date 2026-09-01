@@ -89,14 +89,13 @@
   display: block;
 }
 
-/* Warm scrim. The hero card sits on top of this, so it carries most of the
-   text-contrast work and lets the card stay translucent. */
+/* Light scrim only. The hero card below carries the text-contrast work, so this
+   stays subtle enough to keep the footage readable as footage. */
 .lp-hero-video-scrim {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 15%, rgba(20, 14, 10, 0.15), transparent 55%),
-    linear-gradient(180deg, rgba(20, 14, 10, 0.42), rgba(20, 14, 10, 0.55) 60%, rgba(20, 14, 10, 0.72));
+    linear-gradient(180deg, rgba(20, 14, 10, 0.34) 0%, rgba(20, 14, 10, 0.16) 28%, rgba(20, 14, 10, 0.2) 70%, rgba(20, 14, 10, 0.42) 100%);
 }
 
 .lp-hero[data-has-video="true"] .lp-hero-inner {
@@ -105,11 +104,12 @@
   margin: clamp(2.5rem, 6vw, 5.5rem) auto clamp(2.5rem, 6vw, 5.5rem);
   max-width: 72rem;
   border-color: rgba(255, 253, 251, 0.22);
+  /* Carries the text contrast, so the scrim above can stay light. */
   background:
-    radial-gradient(circle at 50% 0%, rgba(255, 253, 251, 0.12), transparent 40%),
-    linear-gradient(180deg, rgba(28, 21, 16, 0.5), rgba(28, 21, 16, 0.62));
-  backdrop-filter: blur(14px) saturate(120%);
-  box-shadow: 0 30px 90px rgba(14, 10, 7, 0.45);
+    radial-gradient(circle at 50% 0%, rgba(255, 253, 251, 0.1), transparent 40%),
+    linear-gradient(180deg, rgba(22, 16, 12, 0.62), rgba(22, 16, 12, 0.74));
+  backdrop-filter: blur(16px) saturate(115%);
+  box-shadow: 0 30px 90px rgba(14, 10, 7, 0.5);
 }
 
 /* Invert the hero copy so it reads against the video rather than the cream card. */

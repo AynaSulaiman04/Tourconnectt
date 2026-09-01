@@ -4,6 +4,22 @@ export type ItineraryDay = {
   detail: string;
 };
 
+/**
+ * The itinerary panel renders these as plain text, so any markdown the model
+ * used has to come off here. Previously only the title was cleaned and the
+ * detail line shipped literal "**Morning:**" into the UI.
+ */
+function stripMarkdown(value: string) {
+  return value
+    .replace(/`{1,3}/g, "")
+    .replace(/\*\*|__/g, "")
+    .replace(/[*_]/g, "")
+    .replace(/^#{1,6}\s*/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function extractItineraryDraft(content: string): ItineraryDay[] {
   const normalized = content.replace(/\r\n/g, "\n");
   const days: ItineraryDay[] = [];
@@ -28,8 +44,10 @@ export function extractItineraryDraft(content: string): ItineraryDay[] {
 
     days.push({
       day: dayNumber,
-      title: (match[3]?.trim() || lines[0] || `Day ${dayNumber}`).replace(/[*_]/g, ""),
-      detail: lines.slice(match[3]?.trim() ? 0 : 1).join(" · ") || lines[0] || "",
+      title: stripMarkdown(match[3]?.trim() || lines[0] || `Day ${dayNumber}`),
+      detail: stripMarkdown(
+        lines.slice(match[3]?.trim() ? 0 : 1).join(" · ") || lines[0] || "",
+      ),
     });
   }
 
@@ -47,7 +65,7 @@ export function extractItineraryDraft(content: string): ItineraryDay[] {
     days.push({
       day: dayNumber,
       title: `Day ${dayNumber}`,
-      detail: match[2].replace(/[*_]/g, "").trim(),
+      detail: stripMarkdown(match[2]),
     });
   }
 

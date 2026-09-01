@@ -51,3 +51,7 @@ next-env.d.ts
 /testing/
 /tmp-*.png
 /temp-snippet.txt
+
+# Source media. The hero video is uploaded to Supabase storage from
+# /AdminSettings, so the original does not belong in git.
+/Video/
