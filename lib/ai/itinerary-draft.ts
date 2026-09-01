@@ -14,7 +14,9 @@ function stripMarkdown(value: string) {
     .replace(/`{1,3}/g, "")
     .replace(/\*\*|__/g, "")
     .replace(/[*_]/g, "")
-    .replace(/^#{1,6}\s*/g, "")
+    // Heading hashes can appear mid-string once lines are joined, so this is
+    // not anchored to the start.
+    .replace(/#{1,6}\s*/g, "")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
@@ -34,8 +36,11 @@ export function extractItineraryDraft(content: string): ItineraryDay[] {
     }
 
     const start = match.index + match[0].length;
-    const nextDayMatch = normalized.slice(start).search(/\n\s*(?:#{1,3}\s*)?day\s*\d+/i);
-    const blockEnd = nextDayMatch >= 0 ? start + nextDayMatch : normalized.length;
+    // Stop at the next day, or at any following markdown heading. Without the
+    // heading case the final day absorbed everything after it — a trailing
+    // "### Budget snapshot" section ended up inside Day 3's detail.
+    const nextBlockMatch = normalized.slice(start).search(/\n\s*(?:#{1,6}\s*\S|(?:#{1,3}\s*)?day\s*\d+)/i);
+    const blockEnd = nextBlockMatch >= 0 ? start + nextBlockMatch : normalized.length;
     const block = normalized.slice(start, blockEnd).trim();
     const lines = block
       .split("\n")
