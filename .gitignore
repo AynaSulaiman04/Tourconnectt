@@ -55,3 +55,9 @@ next-env.d.ts
 # Source media. The hero video is uploaded to Supabase storage from
 # /AdminSettings, so the original does not belong in git.
 /Video/
+
+# Local Claude Code settings — user-specific, do not commit.
+/.claude/
+
+# Ad-hoc scratch scripts.
+/tmp-*.mjs
