@@ -8,8 +8,9 @@ import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/l
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supabase/profile";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getSiteContent } from "@/lib/site-content";
-import { getRequestLocale } from "@/lib/format/locale";
+import { getRequestGeo } from "@/lib/format/locale";
 import { formatListingPrice } from "@/lib/format/listing-price";
+import { currencyForCountry, getTtdRate } from "@/lib/format/currency-conversion";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
@@ -133,15 +134,17 @@ export default async function LandingPage() {
   const authFlow = cookieStore.get("tt-auth-flow")?.value;
   const hasSession = hasSupabaseSessionCookie(cookieStore.getAll());
 
-  const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext, locale] = await Promise.all([
+  const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext, geo] = await Promise.all([
     settleWithTimeout(getFeaturedInquiryListings(3), [], 2000),
     settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
     settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
     settleWithTimeout(getLandingHeroVideo(), null, 2000),
     getSiteContent(),
     hasSession ? getOptionalCurrentUserProfile() : Promise.resolve(null),
-    getRequestLocale(),
+    getRequestGeo(),
   ]);
+  const targetCurrency = currencyForCountry(geo.country);
+  const ttdRate = targetCurrency === "TTD" ? 1 : await settleWithTimeout(getTtdRate(targetCurrency), null, 1500);
   const { testimonials, reviewSummary } = landingReviews;
   if (authFlow === "recovery" || authFlow === "magic_link") {
     const supabase = await createSupabaseServerClient();
@@ -184,6 +187,7 @@ export default async function LandingPage() {
       variant="public"
     >
       <LandingPageView
+        displayCurrency={targetCurrency}
         listings={listings.map((listing) => ({
           id: listing.id,
           title: listing.title,
@@ -193,7 +197,12 @@ export default async function LandingPage() {
           summary: listing.summary ?? null,
           imageUrl: listing.image_url ?? null,
           operatorName: listing.operator_name ?? null,
-          price: formatListingPrice(listing.price, locale) ?? null,
+          price:
+            formatListingPrice(listing.price, {
+              locale: geo.locale,
+              targetCurrency,
+              ttdRate,
+            }) ?? null,
           listingHref: `/Enquiry?listing=${listing.id}`,
         }))}
         reviewSummary={reviewSummary}

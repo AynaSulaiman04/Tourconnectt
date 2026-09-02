@@ -208,6 +208,14 @@
   font-weight: 700;
 }
 
+.lp-currency-note {
+  margin: 0.75rem 0 0;
+  max-width: 30rem;
+  color: var(--on-surface-variant);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .lp-title {
   margin: 0.85rem auto 0;
   max-width: 18ch;

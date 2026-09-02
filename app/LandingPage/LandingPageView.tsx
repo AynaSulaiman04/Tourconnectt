@@ -39,6 +39,7 @@ type LandingPageViewProps = {
   showcaseImages: string[];
   heroVideo: { url: string; contentType: string | null } | null;
   siteContent: SiteContent;
+  displayCurrency?: string;
   reviewSummary: {
     averageRating: number;
     reviewCount: number;
@@ -146,6 +147,7 @@ export function LandingPageView({
   showcaseImages,
   heroVideo,
   siteContent,
+  displayCurrency,
 }: LandingPageViewProps) {
   const featuredListings = resolveListings(listings);
   const testimonialsToRender = resolveTestimonials(testimonials);
@@ -192,6 +194,11 @@ export function LandingPageView({
           <div>
             <p className="lp-section-eyebrow">Handpicked experiences</p>
             <h2 id="featured-listings">Featured listings</h2>
+            {displayCurrency && displayCurrency !== "TTD" ? (
+              <p className="lp-currency-note">
+                Prices shown in {displayCurrency} for reference. Bookings are billed in TTD (Trinidad &amp; Tobago Dollar).
+              </p>
+            ) : null}
           </div>
 
           <Button href="/Enquiry" variant="outline" className="btn-sm">
