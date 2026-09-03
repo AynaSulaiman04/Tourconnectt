@@ -11,6 +11,8 @@
  * same rows instead of duplicating them. It never touches rows it did not
  * create, except for the demotion pass described in `DEMOTE_NON_DEMO_LISTINGS`.
  */
+import fs from "node:fs";
+import path from "node:path";
 import pg from "pg";
 
 const DEMO_MARKER = "tt-connect-demo-dataset";
@@ -44,7 +46,7 @@ const LISTINGS = [
     price: "TTD 950",
     summary:
       "A full day on the water from Pigeon Point: Buccoo Reef by glass-bottom boat, a long swim stop at the Nylon Pool, and lunch served on deck. Small groups, local skipper, hotel pickup included.",
-    imageUrl: "/landing/slideshow/07-pigeon-point.webp",
+    imageUrl: "/landing/slideshow/20251222_133750.jpg",
     status: "live",
     featured: true,
   },
@@ -57,7 +59,7 @@ const LISTINGS = [
     price: "TTD 780",
     summary:
       "Guided birding through the Northern Range with a naturalist, followed by a gentle hike to a freshwater cascade. Ideal for first-time visitors and photographers. Breakfast and permits included.",
-    imageUrl: "/landing/slideshow/03-rainforest-waterfall.webp",
+    imageUrl: "/landing/slideshow/20260120_094637.jpg",
     status: "live",
     featured: true,
   },
@@ -70,7 +72,7 @@ const LISTINGS = [
     price: "TTD 1,650",
     summary:
       "A seasonal overnight on Trinidad's north coast to witness leatherback nesting with a licensed guide. Includes one night's accommodation, conservation permit, dinner and transfers from Port of Spain.",
-    imageUrl: "/landing/slideshow/06-leatherback-turtles.webp",
+    imageUrl: "/landing/slideshow/20250710_160750.jpg",
     status: "live",
     featured: true,
   },
@@ -83,7 +85,7 @@ const LISTINGS = [
     price: "TTD 620",
     summary:
       "An evening sail along Tobago's leeward coast with rum punch, steel pan and a swim stop before sunset. Private charter available for couples and small celebrations.",
-    imageUrl: "/landing/slideshow/05-beach-sunset.webp",
+    imageUrl: "/landing/slideshow/20250618_181026.jpg",
     status: "live",
     featured: false,
   },
@@ -96,7 +98,7 @@ const LISTINGS = [
     price: "TTD 690",
     summary:
       "Trace the island's cocoa and parang heritage through Lopinot valley: estate house, drying houses, a tasting led by the estate family, and a parang session with local musicians.",
-    imageUrl: "/landing/slideshow/04-heritage-tree.webp",
+    imageUrl: "/landing/slideshow/20260120_142255.jpg",
     status: "under_review",
     featured: false,
   },
@@ -109,7 +111,7 @@ const LISTINGS = [
     price: "TTD 480",
     summary:
       "The classic North Coast Road run with viewpoint stops, a bake and shark lunch at Maracas, and time to swim at Las Cuevas. Draft itinerary pending final pricing review.",
-    imageUrl: "/landing/slideshow/10-tropical-coast.webp",
+    imageUrl: "/landing/slideshow/dji_0406.jpg",
     status: "draft",
     featured: false,
   },
@@ -208,6 +210,24 @@ const KNOWLEDGE_SOURCES = [
       "Accessibility varies by experience: catamaran and sunset sail departures involve a short wet boarding, and the rainforest and waterfall walks include uneven ground and steps. Travellers should note mobility, dietary or medical requirements in the enquiry so the operator can adjust the itinerary or suggest an alternative. Support requests should include the email address used for the account.",
   },
 ];
+
+/**
+ * Listing covers point at files in public/. Those get renamed and replaced as
+ * the photo set changes, and a stale path shows up as a broken image on the
+ * storefront rather than as any kind of error — so fail loudly here instead.
+ */
+const missingImages = LISTINGS.filter(
+  (listing) =>
+    listing.imageUrl.startsWith("/") && !fs.existsSync(path.join("public", listing.imageUrl.slice(1))),
+);
+
+if (missingImages.length) {
+  throw new Error(
+    `These listing cover images are not in public/:\n${missingImages
+      .map((listing) => `  ${listing.imageUrl}  (${listing.title})`)
+      .join("\n")}\nUpdate LISTINGS[].imageUrl to files that exist.`,
+  );
+}
 
 const client = new pg.Client({ connectionString, ssl: { rejectUnauthorized: false } });
 await client.connect();

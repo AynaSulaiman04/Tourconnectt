@@ -135,7 +135,13 @@ export default async function LandingPage() {
   const hasSession = hasSupabaseSessionCookie(cookieStore.getAll());
 
   const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext, geo] = await Promise.all([
-    settleWithTimeout(getFeaturedInquiryListings(3), [], 2000),
+    // Featured listings are the point of the page, and the fallback for this
+    // one is the "No live listings are available yet" empty state — which is a
+    // lie when the query simply ran slowly. The measured round trip is
+    // 300-900ms, but a cold start plus a second query inside can exceed 2s, so
+    // this gets real headroom. The page is ISR-cached (revalidate above), so a
+    // slower render is paid at most once per window.
+    settleWithTimeout(getFeaturedInquiryListings(3), [], 10_000),
     settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
     settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
     settleWithTimeout(getLandingHeroVideo(), null, 2000),
