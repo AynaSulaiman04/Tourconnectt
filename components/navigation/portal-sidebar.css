@@ -12,6 +12,9 @@
 
 .page-shell-portal {
   display: flex;
+  /* .page-shell sets flex-direction: column, so without this the sidebar
+     stacks above the content instead of sitting beside it. */
+  flex-direction: row;
   align-items: stretch;
   min-height: 100vh;
   background: var(--background);

@@ -1670,7 +1670,13 @@
     background: rgba(248, 245, 241, 0.65);
   }
 
-  [class*="sidebar"]:not(.tc-inbox-sidebar):not([class*="tc-sidebar"]) {
+  /* Legacy sweep that hid leftover sidebars from an earlier layout. It matches
+     on any class containing "sidebar", so the portal navigation added later was
+     caught by it and forced to display:none !important — the admin, operator
+     and traveller portals rendered their sidebar into the DOM and then hid it.
+     Excluded by name rather than loosened, so the original clean-up still
+     applies to anything else. */
+  [class*="sidebar"]:not(.tc-inbox-sidebar):not([class*="tc-sidebar"]):not([class*="portal-sidebar"]) {
     display: none !important;
   }
 
