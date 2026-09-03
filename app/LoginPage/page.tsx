@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
+import { AuthHashHandler } from "./auth-hash-handler";
 import { LoginForm } from "./login-form";
 import { ForgotPasswordForm } from "./forgot-password-form";
 import { RecoveryForm } from "./recovery-form";
@@ -134,6 +135,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         }
       >
+        {/* Email-link sign-ins arrive with the session in the URL fragment and
+            are completed client-side. Mounted outside the mode branches because
+            a recovery link lands here before `mode=recovery` is set. */}
+        <AuthHashHandler />
         {isRecoveryMode ? (
           <RecoveryForm />
         ) : isForgotMode ? (

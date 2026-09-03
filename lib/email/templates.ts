@@ -122,6 +122,33 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
+export function signupConfirmationEmail(data: {
+  fullName: string;
+  confirmationUrl: string;
+}): EmailMessage {
+  return renderEmailShell({
+    title: "Confirm your Tour ConnecTT account",
+    preheader: "Confirm your email address to finish creating your account.",
+    heading: "confirm your account",
+    intro: `Hi ${displayValue(data.fullName, "traveller")}, thanks for joining Tour ConnecTT. Confirm your email address and you can start planning straight away.`,
+    sections: [
+      {
+        label: "Why this step",
+        value:
+          "Confirming your address lets operators reach you about your enquiries, and keeps your bookings and payments tied to an address you control.",
+      },
+      {
+        label: "If you did not sign up",
+        value: "Ignore this email and no account will be created. The link expires on its own.",
+      },
+    ],
+    cta: {
+      label: "Confirm my email",
+      href: data.confirmationUrl,
+    },
+  });
+}
+
 export function operatorReplyTravelerEmail(data: OperatorReplyData): EmailMessage {
   return renderEmailShell({
     title: `New reply from ${displayValue(data.operatorName, "your operator")}`,

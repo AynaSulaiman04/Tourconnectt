@@ -11,6 +11,7 @@ import {
   buildPreTourInstructionsEmail,
   operatorPaymentReceivedEmail,
   operatorReplyTravelerEmail,
+  signupConfirmationEmail,
   travelerPaymentSuccessEmail,
 } from "./templates";
 
@@ -134,6 +135,32 @@ function getAppUrl() {
 
 function cleanUrl(pathname: string) {
   return new URL(pathname, getAppUrl()).toString();
+}
+
+/**
+ * Sent from the app's own SMTP rather than by Supabase Auth. Supabase's
+ * built-in sender is capped at a handful of emails an hour, and once that cap
+ * is hit every signup fails, so the confirmation link is generated server-side
+ * and delivered through the same transport as the rest of the platform's mail.
+ */
+export async function sendSignupConfirmationEmail(params: {
+  to: string;
+  fullName: string;
+  confirmationUrl: string;
+}) {
+  try {
+    const message = signupConfirmationEmail({
+      fullName: params.fullName,
+      confirmationUrl: params.confirmationUrl,
+    });
+
+    return sendEmail({ to: params.to, ...message });
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unable to build the signup confirmation email.",
+    };
+  }
 }
 
 export async function sendInquiryConfirmationEmail(params: {
