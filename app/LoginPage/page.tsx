@@ -81,7 +81,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             }
           : authStatus === "error"
             ? {
-                message: "We could not complete the secure sign-in link. Please try again.",
+                // The callback passes the real provider reason through `reason`.
+                // Without it this was a fixed sentence that told a visitor
+                // nothing about a cancelled consent screen or a misconfigured
+                // Google client.
+                message:
+                  inactiveReason?.trim() ||
+                  "We could not complete the secure sign-in link. Please try again.",
                 success: false,
               }
             : authStatus === "inactive"
