@@ -148,10 +148,17 @@ The `Server:` header should stop saying `DPS/...` (GoDaddy) and start saying
 
 Once `https://tourconnectt.com` serves the app:
 
-1. **Google Cloud Console** → APIs & Services → Credentials → your OAuth client:
-   - Authorised JavaScript origin: `https://tourconnectt.com`
-   - Authorised redirect URI: `https://tourconnectt.com/api/google/calendar/callback`
-   - Must match `GOOGLE_REDIRECT_URI` exactly — no trailing slash.
+1. **Google** — see [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for the full
+   walkthrough. In short, one OAuth client covers both features, and it needs
+   three redirect URIs:
+   - `https://wwmymcndxgycezymrzfa.supabase.co/auth/v1/callback` — sign in with
+     Google. This one points at Supabase, not at your site, and leaving it out
+     is the usual cause of `redirect_uri_mismatch`.
+   - `https://tourconnectt.com/api/google/calendar/callback` — operator calendar.
+   - `http://localhost:3000/api/google/calendar/callback` — local development.
+
+   Also check the OAuth consent screen's publishing status: while it is in
+   **Testing**, only accounts listed as test users can sign in at all.
 2. **Supabase** → Authentication → URL Configuration:
    - Site URL: `https://tourconnectt.com`
    - Redirect URLs: add `https://tourconnectt.com/**`
