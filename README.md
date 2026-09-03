@@ -394,6 +394,48 @@ Both are managed from `/AdminSettings` and need no code change.
 
 ## Troubleshooting
 
+### The dev server hangs and the log repeats "Compaction failed"
+
+```
+Compaction failed: Another write batch or compaction is already active
+```
+
+Two processes are writing to `.next` at once. The usual cause is running a
+build (`npm run build` or `npm run build:next`) while `npm run dev` is still
+up: they share the `.next` directory, and the build corrupts the dev server's
+persistent cache. Requests then hang instead of erroring, so the app looks
+broken while the process is still alive.
+
+Recovery:
+
+```bash
+# stop every dev/build process for this project first, then
+npm run dev:clean
+```
+
+`dev:clean` deletes `.next` and starts a fresh dev server. Do not run a build
+and the dev server at the same time.
+
+### The dev server "exited" but the port is still in use
+
+`next dev` spawns a child that outlives its parent shell. Killing the wrapper
+leaves the real server holding port 3000, so the next start fails with
+`EADDRINUSE`. Find and stop the listener:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000 -State Listen |
+  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
+
+### Stale `.pid` files
+
+Older helper scripts wrote `.tmp-devserver.pid` and `.tmp-prodserver.pid`.
+These are not cleaned up on a crash, so they can name a process that no longer
+exists. They are gitignored and safe to delete; do not trust them as evidence
+that a server is running.
+
+### Other
+
 - Production hosting is linked through `.openai/hosting.json`; runtime credentials stay in the hosting environment and must never be committed.
 - Missing env variables: check `.env.local`.
 - Supabase table not found: run migrations in order.

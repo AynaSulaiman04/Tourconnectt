@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
     "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build && opennextjs-cloudflare build --skipNextBuild",
     "build:next": "next build",
     "build:worker": "npm run build",
