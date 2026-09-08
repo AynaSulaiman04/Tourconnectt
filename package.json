@@ -13,7 +13,10 @@
     "seed:admin": "node scripts/seed-admin.mjs",
     "seed:demo": "node scripts/seed-demo-accounts.mjs",
     "seed:demo-data": "node scripts/seed-demo-data.mjs",
-    "cleanup:test-accounts": "node scripts/cleanup-test-accounts.mjs"
+    "cleanup:test-accounts": "node scripts/cleanup-test-accounts.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs up",
+    "db:migrate:status": "node scripts/db-migrate.mjs status",
+    "db:baseline": "node scripts/db-migrate.mjs baseline"
   },
   "dependencies": {
     "@fontsource-variable/material-symbols-outlined": "^5.2.44",
@@ -38,6 +41,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
     "tailwindcss": "^4",
