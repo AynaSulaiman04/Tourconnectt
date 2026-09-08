@@ -3,10 +3,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { formatListingPrice } from "@/lib/format/listing-price";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { updateListingModerationAction } from "./actions";
@@ -138,7 +136,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
   const featuredListings = workspace.listings.filter((listing) => listing.featured).length;
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -416,6 +414,6 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

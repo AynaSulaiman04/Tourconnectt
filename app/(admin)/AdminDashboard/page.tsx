@@ -1,14 +1,19 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { PageShell } from "@/components/layout/PageShell";
 import { StatusMessage } from "@/components/ui/StatusMessage";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { getRecentPlatformNotifications } from "@/lib/supabase/notifications";
 import { isPendingWiPayPayment, isSuccessfulWiPayPayment } from "@/lib/payments/wipay";
+import {
+  buildAttentionItems,
+  buildFunnel,
+  buildHealthMetrics,
+  summarise,
+} from "@/lib/admin/overview-health";
+import "./overview.css";
 
 type DashboardRange = "7d" | "30d" | "1y";
 type PaymentStatusFilter = "all" | "paid" | "pending" | "failed";
@@ -42,57 +47,6 @@ function getRangeStart(range: DashboardRange) {
   now.setDate(now.getDate() - (range === "7d" ? 7 : 30));
   now.setHours(0, 0, 0, 0);
   return now;
-}
-
-function buildActivitySeries(events: Awaited<ReturnType<typeof getPlatformEvents>>, range: DashboardRange) {
-  const start = getRangeStart(range);
-  const filtered = events.filter((event) => new Date(event.created_at) >= start);
-
-  if (range === "1y") {
-    const months = Array.from({ length: 12 }, (_, index) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - (11 - index));
-      date.setDate(1);
-      date.setHours(0, 0, 0, 0);
-      return date;
-    });
-    const buckets = new Map<string, number>(months.map((date) => [date.toISOString().slice(0, 7), 0]));
-
-    filtered.forEach((event) => {
-      const key = new Date(event.created_at).toISOString().slice(0, 7);
-      if (buckets.has(key)) {
-        buckets.set(key, (buckets.get(key) ?? 0) + 1);
-      }
-    });
-
-    return {
-      labels: months.map((date) => formatDate(date)),
-      counts: months.map((date) => buckets.get(date.toISOString().slice(0, 7)) ?? 0),
-      total: filtered.length,
-    };
-  }
-
-  const days = Array.from({ length: range === "7d" ? 7 : 30 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - ((range === "7d" ? 7 : 30) - 1 - index));
-    date.setHours(0, 0, 0, 0);
-    return date;
-  });
-
-  const buckets = new Map<string, number>(days.map((date) => [date.toISOString().slice(0, 10), 0]));
-
-  filtered.forEach((event) => {
-    const key = new Date(event.created_at).toISOString().slice(0, 10);
-    if (buckets.has(key)) {
-      buckets.set(key, (buckets.get(key) ?? 0) + 1);
-    }
-  });
-
-  return {
-    labels: days.map((date) => formatDate(date)),
-    counts: days.map((date) => buckets.get(date.toISOString().slice(0, 10)) ?? 0),
-    total: filtered.length,
-  };
 }
 
 function buildActivityBreakdown(events: Awaited<ReturnType<typeof getPlatformEvents>>, range: DashboardRange) {
@@ -167,17 +121,12 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
   const workspace = await getAdminWorkspaceData();
   const platformEvents = await getPlatformEvents(2000);
   const recentAdminUpdates = await getRecentPlatformNotifications(workspace.profile.id, 3);
-  const activitySeries = buildActivitySeries(platformEvents, selectedRange);
   const activityBreakdown = buildActivityBreakdown(platformEvents, selectedRange);
   const lastUpdated =
     workspace.recentListings[0]?.updated_at ??
     workspace.recentBookings[0]?.updated_at ??
     workspace.profile.updated_at;
   const selectedStart = getRangeStart(selectedRange);
-  const visibleListings = workspace.listings.filter((listing) => new Date(listing.created_at) >= selectedStart);
-  const visibleInquiries = workspace.inquiries.filter((inquiry) => new Date(inquiry.created_at) >= selectedStart);
-  const visibleUsers = workspace.users.filter((user) => new Date(user.created_at) >= selectedStart);
-  const visibleOperators = visibleUsers.filter((user) => user.role === "operator");
   const selectedRangeLabel = selectedRange === "7d" ? "7 days" : selectedRange === "30d" ? "30 days" : "12 months";
   const visiblePayments = workspace.recentPayments.filter((payment) => {
     if (selectedPaymentStatus === "paid") {
@@ -213,6 +162,17 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
     return segments;
   }, []);
   const dashboardHref = buildDashboardHref(selectedRange, selectedPaymentStatus);
+  const money = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "TTD",
+      maximumFractionDigits: 0,
+    }).format(value);
+  const attentionItems = buildAttentionItems(workspace);
+  const healthMetrics = buildHealthMetrics(workspace, selectedStart, selectedRangeLabel, money);
+  const funnel = buildFunnel(workspace);
+  const health = summarise(attentionItems);
+  const peakActivity = Math.max(1, ...workspace.activityTimeline.map((day) => day.count));
   const withdrawalMessage = resolvedSearchParams.withdrawal === "requested" ? "Withdrawal request sent." : null;
   const withdrawalErrorMessage =
     resolvedSearchParams.withdrawal_error === "no_balance"
@@ -222,16 +182,33 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         : null;
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
 
       <main className="portal-list-page">
-        <header className="page-header">
+        <header className="page-header ov-header">
           <div>
             <span className="admin-label">Administrator</span>
-            <h1>Executive Overview</h1>
+            <h1>Overview</h1>
+            <p className={`ov-health ov-health-${health.severity}`}>
+              <span className="ov-health-dot" aria-hidden="true" />
+              {health.headline}
+            </p>
           </div>
 
           <div className="header-right flex-wrap">
+            <div className="ov-range" role="group" aria-label="Reporting period">
+              {(["7d", "30d", "1y"] as const).map((range) => (
+                <Link
+                  key={range}
+                  className={`ov-range-pill ${range === selectedRange ? "is-active" : ""}`}
+                  href={buildDashboardHref(range, selectedPaymentStatus)}
+                  aria-current={range === selectedRange ? "true" : undefined}
+                >
+                  {range === "7d" ? "7 days" : range === "30d" ? "30 days" : "12 months"}
+                </Link>
+              ))}
+            </div>
+
             <div className="updated-text">
               <p>Last Updated</p>
               <p>{formatDate(lastUpdated)}</p>
@@ -271,21 +248,84 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           </div>
         ) : null}
 
-        <section className="stats-grid">
-          {[
-            ["Activity Events", activitySeries.total.toLocaleString(), selectedRangeLabel, false],
-            ["Enquiries", visibleInquiries.length.toLocaleString(), "in selected range", false],
-            ["Listings", visibleListings.length.toLocaleString(), "published or updated", false],
-            ["Operators", visibleOperators.length.toLocaleString(), "new or active in range", false],
-          ].map(([label, value, change, isError]) => (
-            <div key={label as string} className="stat-card glass-panel">
-              <p>{label}</p>
-              <div className="stat-row">
-                <h3>{value}</h3>
-                <span className={`stat-change ${isError ? "error" : ""}`}>{change}</span>
-              </div>
-            </div>
-          ))}
+        <section className="ov-attention" aria-labelledby="needs-attention">
+          <h2 className="ov-section-title" id="needs-attention">
+            Needs attention
+          </h2>
+          <div className="ov-attention-grid">
+            {attentionItems.map((item) => (
+              <Link
+                className={`ov-attention-card is-${item.severity}`}
+                href={item.href}
+                key={item.id}
+              >
+                <span className="ov-attention-count">{item.count}</span>
+                <span className="ov-attention-label">{item.label}</span>
+                <span className="ov-attention-detail">{item.detail}</span>
+                <span className="ov-attention-go" aria-hidden="true">
+                  {item.count > 0 ? "Review →" : "All clear"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="ov-metrics" aria-labelledby="platform-health">
+          <h2 className="ov-section-title" id="platform-health">
+            Platform
+          </h2>
+          <div className="ov-metric-grid">
+            {healthMetrics.map((metric) => (
+              <Link className="ov-metric" href={metric.href} key={metric.id}>
+                <span className="ov-metric-label">{metric.label}</span>
+                <strong className="ov-metric-value">{metric.value}</strong>
+                <span
+                  className={`ov-metric-delta ${
+                    metric.delta === null ? "" : metric.delta >= 0 ? "is-up" : "is-down"
+                  }`}
+                >
+                  {metric.delta === null
+                    ? metric.deltaLabel
+                    : `${metric.delta >= 0 ? "▲" : "▼"} ${Math.abs(metric.delta).toFixed(0)}% ${metric.deltaLabel}`}
+                </span>
+                <span className="ov-metric-hint">{metric.hint}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="ov-funnel" aria-labelledby="conversion">
+          <h2 className="ov-section-title" id="conversion">
+            Enquiry to payment
+          </h2>
+          <div className="ov-funnel-track">
+            {[
+              { label: "Enquiries", value: funnel.enquiries, pct: 100, href: "/AdminBookings" },
+              {
+                label: "Confirmed",
+                value: funnel.confirmed,
+                pct: funnel.confirmRate,
+                href: "/AdminBookings",
+              },
+              {
+                label: "Paid",
+                value: funnel.paid,
+                pct: funnel.enquiries > 0 ? (funnel.paid / funnel.enquiries) * 100 : 0,
+                href: "/AdminBookings?tab=payments&paymentStatus=paid",
+              },
+            ].map((stage) => (
+              <Link className="ov-funnel-stage" href={stage.href} key={stage.label}>
+                <span className="ov-funnel-head">
+                  <span className="ov-funnel-label">{stage.label}</span>
+                  <strong className="ov-funnel-value">{stage.value.toLocaleString()}</strong>
+                </span>
+                <span className="ov-funnel-bar" aria-hidden="true">
+                  <span className="ov-funnel-fill" style={{ width: `${Math.max(2, stage.pct)}%` }} />
+                </span>
+                <span className="ov-funnel-pct">{stage.pct.toFixed(0)}% of enquiries</span>
+              </Link>
+            ))}
+          </div>
         </section>
 
         <div className="content-grid">
@@ -337,8 +377,26 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                   ))}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="ov-activity-empty">
+                <p>No activity recorded in the last {selectedRangeLabel}.</p>
+                <p className="ov-activity-empty-hint">
+                  Events appear here as listings, enquiries, bookings and users change.
+                </p>
+              </div>
+            )}
 
+            <div className="ov-spark" aria-label="Activity over the last 7 days">
+              {workspace.activityTimeline.map((day) => (
+                <span className="ov-spark-col" key={day.day} title={`${day.day}: ${day.count}`}>
+                  <span
+                    className="ov-spark-bar"
+                    style={{ height: `${Math.round((day.count / peakActivity) * 100)}%` }}
+                  />
+                  <span className="ov-spark-day">{day.day.slice(5)}</span>
+                </span>
+              ))}
+            </div>
           </section>
 
           <section className="right-column">
@@ -498,7 +556,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           </section>
         </div>
       </main>
-    </PageShell>
+    </>
   );
 }
 

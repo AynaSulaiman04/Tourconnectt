@@ -3,11 +3,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { updateTravelerCareProfileAction, updateUserAccessAction } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
@@ -138,7 +136,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   const underReviewUsers = workspace.users.filter((user) => getUserStatus(user) === "under_review").length;
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -519,6 +517,6 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

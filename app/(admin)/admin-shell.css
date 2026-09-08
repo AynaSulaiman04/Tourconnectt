@@ -1,0 +1,77 @@
+/* Admin workspace shell.
+   The public footer is deliberately absent from this layout, so the content
+   column owns the full height and there is one scroll region, not two. */
+.admin-shell .page-shell-portal-main > .page-shell-inner {
+  padding-bottom: 3.5rem;
+}
+
+/* Loading skeleton -------------------------------------------------------
+   Rendered in the content column while a page resolves. The sidebar stays
+   mounted and interactive behind it, so switching sections feels immediate. */
+.admin-skeleton {
+  display: grid;
+  gap: 1.25rem;
+  padding: 0.5rem 0 0;
+}
+
+.admin-skel {
+  display: block;
+  border-radius: 0.85rem;
+  background: linear-gradient(
+    90deg,
+    rgba(30, 20, 15, 0.05) 25%,
+    rgba(30, 20, 15, 0.09) 37%,
+    rgba(30, 20, 15, 0.05) 63%
+  );
+  background-size: 400% 100%;
+  animation: admin-skel-sheen 1.4s ease-in-out infinite;
+}
+
+.admin-skeleton-head {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-skel-eyebrow {
+  width: 8rem;
+  height: 0.75rem;
+  border-radius: 999px;
+}
+
+.admin-skel-title {
+  width: min(28rem, 70%);
+  height: 2.25rem;
+}
+
+.admin-skeleton-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
+
+.admin-skel-tile {
+  height: 6.5rem;
+}
+
+.admin-skel-panel {
+  height: 16rem;
+}
+
+.admin-skel-panel-short {
+  height: 9rem;
+}
+
+@keyframes admin-skel-sheen {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-skel {
+    animation: none;
+  }
+}

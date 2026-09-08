@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import type { TravelerProfile } from "@/lib/supabase/profile-types";
 import { NAVBAR_CONFIG, type NavbarVariant } from "./nav-config";
@@ -21,6 +21,43 @@ type SidebarNavProps = {
   } | null;
 };
 
+const COLLAPSE_STORAGE_KEY = "tt-portal-sidebar-collapsed";
+
+const collapseListeners = new Set<() => void>();
+
+function subscribeToCollapse(onChange: () => void) {
+  collapseListeners.add(onChange);
+  // Keep multiple tabs in step.
+  window.addEventListener("storage", onChange);
+  return () => {
+    collapseListeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function getCollapsed() {
+  try {
+    return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === "1";
+  } catch {
+    // Private browsing and blocked site data both throw. Stay expanded.
+    return false;
+  }
+}
+
+/** The server cannot know the preference, so it renders expanded. */
+function getCollapsedOnServer() {
+  return false;
+}
+
+function setCollapsedPreference(next: boolean) {
+  try {
+    window.localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? "1" : "0");
+  } catch {
+    // The preference simply will not persist.
+  }
+  collapseListeners.forEach((listener) => listener());
+}
+
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -31,6 +68,16 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
   const [sessionProfile, setSessionProfile] = useState<SidebarNavProps["travelerProfile"] | undefined>(undefined);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerPathname, setDrawerPathname] = useState(pathname);
+  // Desktop rail collapse, read straight from localStorage.
+  const collapsed = useSyncExternalStore(
+    subscribeToCollapse,
+    getCollapsed,
+    getCollapsedOnServer,
+  );
+
+  function toggleCollapsed() {
+    setCollapsedPreference(!collapsed);
+  }
 
   // Close the mobile drawer on navigation. Adjusted during render rather than
   // in an effect: an effect that calls setState synchronously causes a second
@@ -121,7 +168,10 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
       </div>
 
       <aside
-        className={`portal-sidebar portal-sidebar-${variant} ${mobileOpen ? "is-open" : ""}`}
+        className={`portal-sidebar portal-sidebar-${variant} ${mobileOpen ? "is-open" : ""} ${
+          collapsed ? "is-collapsed" : ""
+        }`}
+        data-collapsed={collapsed ? "true" : undefined}
         aria-label={`${portalLabel} portal navigation`}
       >
         <div className="portal-sidebar-brand">
@@ -133,11 +183,23 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
             />
             <p className="portal-sidebar-role">{portalLabel} portal</p>
           </div>
-          {currentUserId && currentRole ? (
-            <div className="portal-sidebar-brand-actions">
+          <div className="portal-sidebar-brand-actions">
+            {currentUserId && currentRole ? (
               <NotificationCenter profileId={currentUserId} role={currentRole} />
-            </div>
-          ) : null}
+            ) : null}
+            <button
+              type="button"
+              className="portal-sidebar-collapse"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!collapsed}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M3 4h2v16H3zM8.7 7.4 10.1 6l6 6-6 6-1.4-1.4L13.3 12z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <nav className="portal-sidebar-nav" aria-label="Primary navigation">
@@ -153,6 +215,7 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
                         href={item.href}
                         aria-current={active ? "page" : undefined}
                         className={`portal-sidebar-link ${active ? "is-active" : ""}`}
+                        title={collapsed ? item.label : undefined}
                       >
                         {item.icon ? (
                           <span className="material-symbols-outlined portal-sidebar-icon" aria-hidden="true">

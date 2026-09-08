@@ -1,5 +1,6 @@
 :root {
   --portal-sidebar-width: 16rem;
+  --portal-sidebar-width-collapsed: 4.25rem;
   --portal-sidebar-bg: #fdfaf6;
   --portal-sidebar-border: rgba(30, 20, 15, 0.08);
   --portal-sidebar-hover: rgba(30, 20, 15, 0.04);
@@ -374,5 +375,109 @@
 
   .portal-sidebar-scrim {
     display: block;
+  }
+}
+
+/* Collapsible rail ------------------------------------------------------
+   Collapsing narrows the sidebar to icons rather than hiding it, so the
+   current section stays visible and every destination is still one click
+   away. The width is a variable so the content column follows automatically. */
+.portal-sidebar-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--portal-sidebar-fg-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.portal-sidebar-collapse:hover {
+  background: var(--portal-sidebar-hover);
+  border-color: var(--portal-sidebar-border);
+  color: var(--portal-sidebar-fg);
+}
+
+.portal-sidebar-collapse svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: currentColor;
+  transition: transform 180ms ease;
+}
+
+.portal-sidebar.is-collapsed .portal-sidebar-collapse svg {
+  transform: rotate(180deg);
+}
+
+@media (min-width: 901px) {
+  .portal-sidebar.is-collapsed {
+    width: var(--portal-sidebar-width-collapsed);
+    flex-basis: var(--portal-sidebar-width-collapsed);
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Text disappears; icons, the toggle and the avatar remain. */
+  .portal-sidebar.is-collapsed .portal-sidebar-label,
+  .portal-sidebar.is-collapsed .portal-sidebar-section-title,
+  .portal-sidebar.is-collapsed .portal-sidebar-role,
+  .portal-sidebar.is-collapsed .portal-sidebar-logo,
+  .portal-sidebar.is-collapsed .portal-sidebar-user-meta,
+  .portal-sidebar.is-collapsed .portal-sidebar-signout span:not(.material-symbols-outlined) {
+    display: none;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-brand-meta {
+    display: none;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-brand-actions {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-link,
+  .portal-sidebar.is-collapsed .portal-sidebar-signout {
+    justify-content: center;
+    padding-inline: 0.5rem;
+  }
+
+  /* The active marker hangs off the link's left edge; there is no room for it
+     in the narrow rail, so mark the link itself instead. */
+  .portal-sidebar.is-collapsed .portal-sidebar-link.is-active::before {
+    display: none;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-user {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-section-list {
+    gap: 0.25rem;
+  }
+
+  /* Keeps a hairline of separation between groups now the titles are gone. */
+  .portal-sidebar.is-collapsed .portal-sidebar-nav > div + div {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--portal-sidebar-border);
+  }
+}
+
+@media (max-width: 900px) {
+  /* The drawer is already a full-width overlay; collapsing it is meaningless. */
+  .portal-sidebar-collapse {
+    display: none;
   }
 }

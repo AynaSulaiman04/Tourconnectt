@@ -2,10 +2,8 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getLandingSlideshowImages } from "@/lib/supabase/analytics";
 import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
@@ -64,7 +62,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
   ];
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <style>{`
           .admin-settings-toggle:focus-visible {
@@ -453,6 +451,6 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

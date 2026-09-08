@@ -2,10 +2,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import {
   updateInquiryPaymentAmountAction,
@@ -231,7 +229,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
   };
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -713,6 +711,6 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

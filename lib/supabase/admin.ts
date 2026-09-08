@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { redirect } from "next/navigation";
 import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "./profile";
 import { normalizeMediaSource } from "./media";
@@ -146,7 +148,12 @@ function channelFromInquiry(inquiry: TravelerInquiry) {
   return "Email";
 }
 
-export async function requireAdminProfile() {
+/**
+ * Wrapped in React's request cache: the admin layout resolves the profile to
+ * render the sidebar, and each page resolves it again for its own guard. Without
+ * this that is two identical round trips on every admin navigation.
+ */
+export const requireAdminProfile = cache(async function requireAdminProfile() {
   const profileContext = await getOptionalCurrentUserProfile();
 
   if (!profileContext?.profile) {
@@ -158,7 +165,7 @@ export async function requireAdminProfile() {
   }
 
   return profileContext.profile;
-}
+});
 
 async function fetchAllListings() {
   const admin = createSupabaseServiceRoleClient();
