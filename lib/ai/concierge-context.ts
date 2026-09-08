@@ -284,7 +284,7 @@ export async function getRelevantListings(query: string, limit = 5, tripIntent?:
         image_url: listing.image_url,
         reason: "A helpful current option from TT Connect.",
         score: listing.score,
-        href: `/Enquiry?listing=${listing.id}`,
+        href: `/Experiences/${listing.id}`,
       }));
     }
 
@@ -300,7 +300,7 @@ export async function getRelevantListings(query: string, limit = 5, tripIntent?:
       image_url: listing.image_url,
       reason: buildListingReason(listing, searchQuery, listing.score),
       score: listing.score,
-      href: `/Enquiry?listing=${listing.id}`,
+      href: `/Experiences/${listing.id}`,
     }));
   } catch (error) {
     if (isFetchFailedError(error)) {

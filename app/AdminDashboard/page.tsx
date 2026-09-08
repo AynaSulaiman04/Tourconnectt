@@ -1,7 +1,6 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { PortalQuickLinks } from "@/components/admin/PortalQuickLinks";
 import { PageShell } from "@/components/layout/PageShell";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
@@ -260,10 +259,6 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
             </div>
           </div>
         </header>
-
-        <div style={{ marginBottom: 24 }}>
-          <PortalQuickLinks variant="admin" />
-        </div>
 
         {withdrawalMessage ? (
           <div className="mb-6">

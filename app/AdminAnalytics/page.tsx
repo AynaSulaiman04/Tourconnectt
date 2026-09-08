@@ -13,7 +13,7 @@ import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { formatDate } from "@/lib/format/date";
 import { formatListingPrice } from "@/lib/format/listing-price";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
-import { createReferralCampaignAction, toggleReferralCampaignAction } from "../AdminPromotions/actions";
+import { createReferralCampaignAction, toggleReferralCampaignAction } from "./promotions-actions";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
 import {
   PLATFORM_ADMIN_COMMISSION_RATE,
@@ -497,9 +497,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                 <Button href="/AdminBookings?tab=payments&paymentStatus=paid" variant="outline">
                   Open paid payments
                 </Button>
-                <Button href="/AdminDashboard" variant="ghost">
-                  Open dashboard
-                </Button>
               </div>
             </GlassPanel>
           </div>
@@ -595,18 +592,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               </div>
             </GlassPanel>
 
-            <GlassPanel className="p-gutter">
-              <div className="label-caps text-secondary mb-2">Quick actions</div>
-              <p className="section-copy">Move between analytics, bookings, and listing moderation without leaving the admin surface.</p>
-              <div className="mt-4 tc-filter-tabs">
-                <Button href="/AdminBookings" variant="outline" className="tc-filter-pill">
-                  Open bookings
-                </Button>
-                <Button href="/AdminListings" variant="ghost" className="tc-filter-pill">
-                  Open listings
-                </Button>
-              </div>
-            </GlassPanel>
           </div>
         </section>
 

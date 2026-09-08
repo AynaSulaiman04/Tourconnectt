@@ -142,14 +142,9 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
       <main className="portal-list-page">
         <SectionHeader
           level={1}
-          eyebrow="Admin users"
-          title="Control platform access across travellers and operators."
+          eyebrow="CRM"
+          title="Traveller and operator records."
           description="Review credentials, verify operators, manage access tiers, and keep the account surface aligned with Tour ConnecTT policy."
-          action={
-            <Button href="/AdminSettings" variant="outline">
-              Workspace Settings
-            </Button>
-          }
         />
         {actionMessage ? (
           <div className="mt-6">
@@ -520,14 +515,6 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
               <p className="section-copy">
                 Keep the admin surface separate from operator tools so the platform can maintain centralized control without confusing the role experience.
               </p>
-              <div className="mt-6 admin-action-group">
-                <Button href="/AdminDashboard" variant="outline">
-                  Dashboard
-                </Button>
-                <Button href="/AdminAnalytics" variant="primary">
-                  Analytics
-                </Button>
-              </div>
             </GlassPanel>
           </div>
         </section>

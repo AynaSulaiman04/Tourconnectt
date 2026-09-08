@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { calculateListingCompletion } from "@/lib/operator-listing-completion";
 import type { OperatorListingDraftRecord } from "@/lib/supabase/operator-listings";
+import { CATEGORIES, ISLANDS, PRICE_BASES, PRICE_CURRENCIES } from "@/lib/listing-taxonomy";
 
 type ListingEditorProps = {
   operatorName: string;
@@ -19,7 +20,10 @@ type ListingFormState = {
   duration: string;
   summary: string;
   category: string;
+  island: string;
   price: string;
+  price_currency: string;
+  price_basis: string;
   availability: string;
   capacity: string;
   itinerary: string;
@@ -70,7 +74,10 @@ function buildInitialState(initialDraft: OperatorListingDraftRecord | null): Lis
     duration: initialDraft?.duration ?? "",
     summary: initialDraft?.summary ?? "",
     category: initialDraft?.category ?? "",
+    island: initialDraft?.island ?? "",
     price: initialDraft?.price ?? "",
+    price_currency: initialDraft?.price_currency ?? "TTD",
+    price_basis: initialDraft?.price_basis ?? "per_person",
     availability: initialDraft?.availability ?? "",
     capacity: initialDraft?.capacity?.toString() ?? "",
     itinerary: initialDraft?.itinerary ?? "",
@@ -176,7 +183,10 @@ export function ListingEditor({
         duration: formState.duration,
         summary: formState.summary,
         category: formState.category,
+        island: formState.island,
         price: formState.price,
+        price_currency: formState.price_currency,
+        price_basis: formState.price_basis,
         availability: formState.availability,
         capacity: formState.capacity,
         itinerary: formState.itinerary,
@@ -271,7 +281,10 @@ export function ListingEditor({
       formData.set("duration", formState.duration);
       formData.set("summary", formState.summary);
       formData.set("category", formState.category);
+      formData.set("island", formState.island);
       formData.set("price", formState.price);
+      formData.set("price_currency", formState.price_currency);
+      formData.set("price_basis", formState.price_basis);
       formData.set("availability", formState.availability);
       formData.set("capacity", formState.capacity);
       formData.set("itinerary", formState.itinerary);
@@ -629,7 +642,7 @@ function CoreNarrativeSection({
             <FieldLabel label="Price" />
             <input
               className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 placeholder:text-on-surface-variant"
-              placeholder="e.g. $1,250"
+              placeholder="e.g. 1,250"
               type="text"
               value={formState.price}
               onChange={(event) => onChange("price", event.target.value)}
@@ -637,14 +650,65 @@ function CoreNarrativeSection({
           </div>
 
           <div>
+            <FieldLabel label="Island" />
+            <select
+              className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 text-on-surface"
+              value={formState.island}
+              onChange={(event) => onChange("island", event.target.value)}
+            >
+              <option value="">Select island</option>
+              {ISLANDS.map((island) => (
+                <option key={island.slug} value={island.slug}>
+                  {island.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <FieldLabel label="Primary Category" />
-            <input
-              className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 placeholder:text-on-surface-variant"
-              placeholder="e.g. Rainforest and Waterfall Adventure"
-              type="text"
+            <select
+              className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 text-on-surface"
               value={formState.category}
               onChange={(event) => onChange("category", event.target.value)}
-            />
+            >
+              <option value="">Select category</option>
+              {CATEGORIES.map((category) => (
+                <option key={category.slug} value={category.slug}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <FieldLabel label="Price currency" />
+            <select
+              className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 text-on-surface"
+              value={formState.price_currency}
+              onChange={(event) => onChange("price_currency", event.target.value)}
+            >
+              {PRICE_CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <FieldLabel label="Price applies" />
+            <select
+              className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-secondary focus:ring-0 py-3 px-0 text-on-surface"
+              value={formState.price_basis}
+              onChange={(event) => onChange("price_basis", event.target.value)}
+            >
+              {PRICE_BASES.map((basis) => (
+                <option key={basis.slug} value={basis.slug}>
+                  {basis.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

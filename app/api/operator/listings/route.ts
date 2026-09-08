@@ -30,7 +30,10 @@ function buildSyntheticDraft(
     duration: string | null;
     summary: string | null;
     category: string | null;
+    island: string | null;
     price: string | null;
+    price_currency: string | null;
+    price_basis: string | null;
     availability: string | null;
     capacity: number | null;
     itinerary: string | null;
@@ -140,7 +143,7 @@ export async function POST(request: Request) {
       .eq("id", draftId)
       .eq("operator_id", profileContext.profile.id)
       .select(
-        "id,operator_id,title,location,country,duration,summary,category,price,availability,capacity,itinerary,inclusions,exclusions,contact_name,contact_email,contact_phone,image_url,image_base64,is_published,published_listing_id,created_at,updated_at",
+        "id,operator_id,title,location,country,duration,summary,category,island,price,price_currency,price_basis,availability,capacity,itinerary,inclusions,exclusions,contact_name,contact_email,contact_phone,image_url,image_base64,is_published,published_listing_id,created_at,updated_at",
       )
       .maybeSingle();
 
@@ -161,7 +164,7 @@ export async function POST(request: Request) {
       .from("operator_listing_drafts")
       .insert(draftPayload)
       .select(
-        "id,operator_id,title,location,country,duration,summary,category,price,availability,capacity,itinerary,inclusions,exclusions,contact_name,contact_email,contact_phone,image_url,image_base64,is_published,published_listing_id,created_at,updated_at",
+        "id,operator_id,title,location,country,duration,summary,category,island,price,price_currency,price_basis,availability,capacity,itinerary,inclusions,exclusions,contact_name,contact_email,contact_phone,image_url,image_base64,is_published,published_listing_id,created_at,updated_at",
       )
       .single();
 
@@ -219,6 +222,10 @@ export async function POST(request: Request) {
       image_url: draftRecord.image_base64 ? null : draftRecord.image_url,
       image_base64: draftRecord.image_base64,
       price: draftRecord.price,
+      island: draftRecord.island,
+      category: draftRecord.category,
+      price_currency: draftRecord.price_currency,
+      price_basis: draftRecord.price_basis,
       operator_id: profileContext.profile.id,
       operator_name: profileContext.profile.full_name,
       featured: false,

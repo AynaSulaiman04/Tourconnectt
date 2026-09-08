@@ -1,5 +1,7 @@
 import "server-only";
 
+import { CATEGORIES, ISLANDS, PRICE_BASES, PRICE_CURRENCIES } from "@/lib/listing-taxonomy";
+
 const MEBIBYTE = 1024 * 1024;
 
 export const MAX_LISTING_IMAGE_BYTES = 2 * MEBIBYTE;
@@ -19,7 +21,10 @@ const TEXT_LIMITS = {
   duration: 80,
   summary: 5_000,
   category: 120,
+  island: 20,
   price: 80,
+  price_currency: 8,
+  price_basis: 20,
   availability: 20,
   itinerary: 5_000,
   inclusions: 5_000,
@@ -39,7 +44,10 @@ const ALLOWED_FIELDS = new Set([
   "duration",
   "summary",
   "category",
+  "island",
   "price",
+  "price_currency",
+  "price_basis",
   "availability",
   "capacity",
   "itinerary",
@@ -54,6 +62,12 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 const ALLOWED_AVAILABILITY = new Set(["morning", "afternoon", "evening", "flexible"]);
+// Island, category, currency and basis are constrained by check constraints in
+// the database, so reject a bad value here rather than letting the insert fail.
+const ALLOWED_ISLANDS = new Set<string>(ISLANDS.map((island) => island.slug));
+const ALLOWED_CATEGORIES = new Set<string>(CATEGORIES.map((category) => category.slug));
+const ALLOWED_PRICE_CURRENCIES = new Set<string>(PRICE_CURRENCIES);
+const ALLOWED_PRICE_BASES = new Set<string>(PRICE_BASES.map((basis) => basis.slug));
 const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 type ListingTextField = keyof typeof TEXT_LIMITS;
@@ -360,7 +374,10 @@ export async function readValidatedOperatorListingInput(
     duration: getBoundedText(formData, "duration"),
     summary: getBoundedText(formData, "summary"),
     category: getBoundedText(formData, "category"),
+    island: getBoundedText(formData, "island"),
     price: getBoundedText(formData, "price"),
+    price_currency: getBoundedText(formData, "price_currency"),
+    price_basis: getBoundedText(formData, "price_basis"),
     availability: getBoundedText(formData, "availability"),
     capacity: parseCapacity(formData),
     itinerary: getBoundedText(formData, "itinerary"),
@@ -373,6 +390,22 @@ export async function readValidatedOperatorListingInput(
 
   if (values.availability && !ALLOWED_AVAILABILITY.has(values.availability)) {
     throw new OperatorListingInputError("Availability value is invalid.");
+  }
+
+  if (values.island && !ALLOWED_ISLANDS.has(values.island)) {
+    throw new OperatorListingInputError("Island value is invalid.");
+  }
+
+  if (values.category && !ALLOWED_CATEGORIES.has(values.category)) {
+    throw new OperatorListingInputError("Category value is invalid.");
+  }
+
+  if (values.price_currency && !ALLOWED_PRICE_CURRENCIES.has(values.price_currency)) {
+    throw new OperatorListingInputError("Price currency is invalid.");
+  }
+
+  if (values.price_basis && !ALLOWED_PRICE_BASES.has(values.price_basis)) {
+    throw new OperatorListingInputError("Price basis is invalid.");
   }
 
   if (values.contact_email && !EMAIL_PATTERN.test(values.contact_email)) {

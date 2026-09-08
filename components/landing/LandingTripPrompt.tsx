@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -69,13 +68,10 @@ export function LandingTripPrompt() {
         <Button type="submit" variant="outline" className="lp-trip-prompt-submit btn-sm" disabled={!value.trim()}>
           Plan my trip
         </Button>
-        <Link className="lp-trip-prompt-link" href="/Enquiry">
-          Use detailed enquiry form
-        </Link>
       </div>
       <p className="lp-trip-prompt-helper">
-        Describe your ideal holiday in plain English. Concierge understands flights, hotels, attractions,
-        transport, and schedules from one conversation — then builds an itinerary you refine in chat.
+        Describe your ideal trip. Concierge understands flights, hotels, attractions, transport, and
+        schedules from one conversation — then builds an itinerary you refine in chat.
       </p>
     </form>
   );

@@ -1,0 +1,361 @@
+.xd-page {
+  padding: 1.75rem var(--space-margin-mobile) 5rem;
+}
+
+@media (min-width: 768px) {
+  .xd-page {
+    padding-left: var(--space-margin-desktop);
+    padding-right: var(--space-margin-desktop);
+  }
+}
+
+.xd-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--on-surface-variant);
+  font-size: 0.78rem;
+}
+
+.xd-crumbs a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+.xd-crumbs a:hover {
+  text-decoration: underline;
+}
+
+.xd-crumb-current {
+  color: var(--on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18rem;
+}
+
+.xd-head {
+  margin-top: 1.1rem;
+}
+
+.xd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.xd-tag {
+  display: inline-flex;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(167, 67, 31, 0.24);
+  border-radius: 999px;
+  background: rgba(243, 222, 214, 0.62);
+  color: var(--secondary);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.xd-tag-quiet {
+  border-color: var(--outline-variant);
+  background: rgba(30, 20, 15, 0.04);
+  color: var(--on-surface-variant);
+}
+
+.xd-title {
+  margin: 0.7rem 0 0;
+  max-width: 34rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  font-weight: 300;
+  color: var(--on-surface);
+}
+
+.xd-meta {
+  margin: 0.6rem 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.95rem;
+}
+
+.xd-media {
+  position: relative;
+  margin-top: 1.5rem;
+  aspect-ratio: 16 / 9;
+  max-height: 30rem;
+  overflow: hidden;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.5rem;
+  background: rgba(30, 20, 15, 0.05);
+}
+
+.xd-media img {
+  object-fit: cover;
+}
+
+.xd-media-fallback {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.xd-media-fallback p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Body layout ---------------------------------------------------------- */
+
+.xd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: 2.5rem;
+  align-items: start;
+  margin-top: 2.25rem;
+}
+
+@media (max-width: 1000px) {
+  .xd-layout {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+}
+
+.xd-block {
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--outline-variant);
+  margin-bottom: 1.75rem;
+}
+
+.xd-block:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.xd-block h2 {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.xd-copy {
+  margin: 0;
+  max-width: 42rem;
+  color: var(--on-surface-variant);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.xd-prewrap {
+  white-space: pre-line;
+}
+
+.xd-include-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.5rem;
+}
+
+.xd-include-title {
+  margin: 0 0 0.6rem;
+  color: var(--on-surface);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.xd-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xd-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--on-surface-variant);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.xd-list .material-symbols-outlined {
+  font-size: 1.15rem;
+  flex: 0 0 auto;
+}
+
+.xd-yes {
+  color: #2f7a4d;
+}
+
+.xd-no {
+  color: var(--on-surface-variant);
+  opacity: 0.7;
+}
+
+.xd-operator {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1.1rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.1rem;
+  background: rgba(255, 253, 251, 0.85);
+}
+
+.xd-operator-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: rgba(167, 67, 31, 0.12);
+  color: var(--secondary);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.xd-operator-name {
+  margin: 0;
+  color: var(--on-surface);
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.xd-operator-copy {
+  margin: 0.35rem 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* Booking panel -------------------------------------------------------- */
+
+.xd-side {
+  position: sticky;
+  top: 5.5rem;
+}
+
+@media (max-width: 1000px) {
+  .xd-side {
+    position: static;
+  }
+}
+
+.xd-booking {
+  display: grid;
+  gap: 1rem;
+  padding: 1.4rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.35rem;
+  background: rgba(255, 253, 251, 0.95);
+  box-shadow: var(--shadow-soft);
+}
+
+.xd-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.xd-price strong {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+
+.xd-price-tbc {
+  font-size: 1.3rem !important;
+}
+
+.xd-price-basis {
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.xd-price-approx {
+  flex-basis: 100%;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+}
+
+.xd-price-approx::before {
+  content: "≈ ";
+}
+
+.xd-facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--outline-variant);
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.xd-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.xd-facts dt {
+  color: var(--on-surface-variant);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.xd-facts dd {
+  margin: 0;
+  color: var(--on-surface);
+  font-size: 0.92rem;
+  text-align: right;
+}
+
+.xd-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+.xd-note {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.xd-secondary {
+  color: var(--secondary);
+  font-size: 0.86rem;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.xd-back {
+  margin-top: 2.5rem;
+}

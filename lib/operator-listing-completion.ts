@@ -10,7 +10,10 @@ export type OperatorListingDraftLike = {
   duration?: string | null;
   summary?: string | null;
   category?: string | null;
+  island?: string | null;
   price?: string | null;
+  price_currency?: string | null;
+  price_basis?: string | null;
   availability?: string | null;
   capacity?: number | string | null;
   itinerary?: string | null;
@@ -30,6 +33,7 @@ const REQUIRED_FIELDS: Array<keyof OperatorListingDraftLike> = [
   "duration",
   "summary",
   "category",
+  "island",
   "price",
   "availability",
   "capacity",
@@ -44,7 +48,18 @@ const REQUIRED_FIELDS: Array<keyof OperatorListingDraftLike> = [
 export const LISTING_COMPLETION_SECTIONS: ListingCompletionSection[] = [
   {
     label: "Core Narrative",
-    fields: ["title", "location", "country", "duration", "summary", "category", "price", "availability", "capacity"],
+    fields: [
+      "title",
+      "location",
+      "country",
+      "island",
+      "duration",
+      "summary",
+      "category",
+      "price",
+      "availability",
+      "capacity",
+    ],
   },
   {
     label: "Visual Gallery",

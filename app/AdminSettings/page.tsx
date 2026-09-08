@@ -79,12 +79,6 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
           description="Manage identity, access, moderation rules, and alert routing from one clean admin control surface."
           action={
             <div className="flex flex-wrap gap-3">
-              <Button href="/AdminContent" variant="outline" className="gap-2">
-                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                  home
-                </span>
-                Home & content
-              </Button>
               <form action={signOutAdminAction}>
                 <Button variant="outline" type="submit">
                   Sign out
@@ -240,9 +234,6 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                 </div>
 
                 <div className="tc-filter-actions">
-                  <Button href="/AdminListings" variant="outline" className="tc-filter-pill">
-                    Review Listings
-                  </Button>
                   <Button type="submit" variant="primary" className="tc-filter-primary">
                     Save Policy &amp; Alerts
                   </Button>
@@ -335,11 +326,6 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                     ))}
                   </div>
 
-                  <div className="mt-5 admin-action-group">
-                    <Button href="/AdminAnalytics" variant="outline">
-                      View Platform Analytics
-                    </Button>
-                  </div>
                 </div>
               </div>
             </GlassPanel>
@@ -353,14 +339,6 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3 md:justify-end">
-                  <Button variant="outline" href="/AdminDashboard">
-                    Back to Dashboard
-                  </Button>
-                  <Button variant="primary" href="/AdminUsers">
-                    Manage Users
-                  </Button>
-                </div>
               </div>
             </GlassPanel>
 

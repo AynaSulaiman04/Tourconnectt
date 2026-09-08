@@ -64,14 +64,6 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
           eyebrow="Admin content"
           title="Home page and public content."
           description="Manage the landing hero, featured listings, slideshow timing, and approved public copy from one workspace."
-          action={
-            <Button href="/AdminSettings" variant="outline" className="gap-2">
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                settings
-              </span>
-              Admin settings
-            </Button>
-          }
         />
         {savedMessage ? (
           <div className="mt-6">

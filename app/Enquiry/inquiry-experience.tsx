@@ -394,9 +394,19 @@ export function InquiryExperience({
                   </div>
 
                   <div className="listing-actions">
-                    <Link className="button primary" href={isAuthenticated ? `/Messages?listing=${listing.id}` : "/SignUp"}>
-                      Message Operator
+                    <Link
+                      className="button primary"
+                      href={
+                        isAuthenticated
+                          ? `/Messages?listing=${listing.id}`
+                          : `/Enquiry?listing=${listing.id}#request-form`
+                      }
+                    >
+                      {isAuthenticated ? "Message Operator" : "Enquire about this"}
                     </Link>
+                    {isAuthenticated ? null : (
+                      <p className="listing-guest-note">No account needed — just your email.</p>
+                    )}
                   </div>
                 </article>
               ))

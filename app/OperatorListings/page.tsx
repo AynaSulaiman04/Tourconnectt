@@ -192,9 +192,6 @@ export default async function OperatorListingsPage() {
                 <Link className="btn-primary btn-sm" href="/CreateListing">
                   Create Listing
                 </Link>
-                <Link className="btn-outline btn-sm" href="/OperatorDashboard">
-                  Back to Dashboard
-                </Link>
               </div>
             </GlassPanel>
           </div>

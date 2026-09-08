@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import type { TravelerProfile } from "@/lib/supabase/profile-types";
 import { NAVBAR_CONFIG, type NavbarVariant } from "./nav-config";
 import { NotificationCenter } from "./NotificationCenter";
@@ -75,22 +76,49 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
   const settingsItem = config.action;
   const portalLabel =
     variant === "admin" ? "Admin" : variant === "operator" ? "Operator" : "Traveller";
+  // The account destination is pinned to the footer, so it must never also
+  // appear in the body of the list.
   const workspaceItems = config.items.filter((item) => item.href !== settingsItem.href);
+
+  // Group in first-seen order so the config file's ordering is what ships.
+  const sections: Array<{ title: string; items: typeof workspaceItems }> = [];
+  for (const item of workspaceItems) {
+    const title = item.section ?? "Workspace";
+    const existing = sections.find((section) => section.title === title);
+
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      sections.push({ title, items: [item] });
+    }
+  }
   const roleLabel = currentRole ? currentRole.charAt(0).toUpperCase() + currentRole.slice(1) : portalLabel;
 
   return (
     <>
-      <button
-        type="button"
-        className="portal-sidebar-mobile-toggle"
-        aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
-        aria-expanded={mobileOpen}
-        onClick={() => setMobileOpen((prev) => !prev)}
-      >
-        <span className="material-symbols-outlined" aria-hidden="true">
-          {mobileOpen ? "close" : "menu"}
-        </span>
-      </button>
+      <div className="portal-sidebar-mobile-bar">
+        <button
+          type="button"
+          className="portal-sidebar-mobile-toggle"
+          aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen((prev) => !prev)}
+        >
+          <svg className="portal-sidebar-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            {mobileOpen ? (
+              <path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4L10.6 10.6l6.3-6.3z" />
+            ) : (
+              <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" />
+            )}
+          </svg>
+        </button>
+
+        <BrandLogo
+          className="portal-sidebar-mobile-logo"
+          href="/LandingPage"
+          linkClassName="portal-sidebar-mobile-brand"
+        />
+      </div>
 
       <aside
         className={`portal-sidebar portal-sidebar-${variant} ${mobileOpen ? "is-open" : ""}`}
@@ -98,7 +126,11 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
       >
         <div className="portal-sidebar-brand">
           <div className="portal-sidebar-brand-meta">
-            <p className="portal-sidebar-brand-name">Tour ConnecTT</p>
+            <BrandLogo
+              className="portal-sidebar-logo-image"
+              href="/LandingPage"
+              linkClassName="portal-sidebar-logo"
+            />
             <p className="portal-sidebar-role">{portalLabel} portal</p>
           </div>
           {currentUserId && currentRole ? (
@@ -109,30 +141,32 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
         </div>
 
         <nav className="portal-sidebar-nav" aria-label="Primary navigation">
-          <div>
-            <p className="portal-sidebar-section-title">Workspace</p>
-            <ul className="portal-sidebar-section-list">
-              {workspaceItems.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={`portal-sidebar-link ${active ? "is-active" : ""}`}
-                    >
-                      {item.icon ? (
-                        <span className="material-symbols-outlined portal-sidebar-icon" aria-hidden="true">
-                          {item.icon}
-                        </span>
-                      ) : null}
-                      <span className="portal-sidebar-label">{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          {sections.map((section) => (
+            <div key={section.title}>
+              <p className="portal-sidebar-section-title">{section.title}</p>
+              <ul className="portal-sidebar-section-list">
+                {section.items.map((item) => {
+                  const active = isActive(pathname, item.href);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={`portal-sidebar-link ${active ? "is-active" : ""}`}
+                      >
+                        {item.icon ? (
+                          <span className="material-symbols-outlined portal-sidebar-icon" aria-hidden="true">
+                            {item.icon}
+                          </span>
+                        ) : null}
+                        <span className="portal-sidebar-label">{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
 
           <div>
             <p className="portal-sidebar-section-title">Account</p>

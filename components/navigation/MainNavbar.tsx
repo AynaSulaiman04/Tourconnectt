@@ -158,12 +158,12 @@ export function MainNavbar({ variant = "public", authResolved = false, travelerP
         <div className="top-nav-actions">
           <details className="mobile-nav" ref={mobileRef}>
             <summary className="btn-icon mobile-nav-toggle" aria-label="Open navigation menu">
-              <span className="material-symbols-outlined mobile-nav-open-icon" aria-hidden="true">
-                menu
-              </span>
-              <span className="material-symbols-outlined mobile-nav-close-icon" aria-hidden="true">
-                close
-              </span>
+              <svg className="mobile-nav-open-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" />
+              </svg>
+              <svg className="mobile-nav-close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4L10.6 10.6l6.3-6.3z" />
+              </svg>
             </summary>
             <nav className="mobile-nav-menu" aria-label="Mobile navigation">
               {visibleItems.map((item) => {

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
@@ -239,11 +238,6 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
           eyebrow="Booking oversight"
           title="Monitor every booking request from one place."
           description="This dedicated admin surface keeps enquiry flow, booking status, and customer communication visible without mixing it into operator tools."
-          action={
-            <Button href="/AdminAnalytics" variant="outline">
-              Analytics Hub
-            </Button>
-          }
         />
         {actionMessage ? (
           <div className="mt-6">
@@ -715,14 +709,6 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
               <p className="section-copy">
                 Keep this page available for platform-wide oversight while operators continue managing their own enquiry inboxes.
               </p>
-                <div className="mt-6 admin-action-group">
-                  <Link className="btn-outline" href="/AdminDashboard">
-                    Dashboard
-                  </Link>
-                <Button href="/AdminAnalytics" variant="primary">
-                  Analytics
-                </Button>
-              </div>
             </GlassPanel>
           </div>
         </section>

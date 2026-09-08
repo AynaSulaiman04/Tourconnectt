@@ -9,7 +9,8 @@ import { getOptionalCurrentUserProfile, getRoleDashboardRoute } from "@/lib/supa
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getSiteContent } from "@/lib/site-content";
 import { getRequestGeo } from "@/lib/format/locale";
-import { formatListingPrice } from "@/lib/format/listing-price";
+import { formatListingPriceLabel } from "@/lib/format/listing-price-label";
+import { resolveIsland } from "@/lib/listing-taxonomy";
 import { currencyForCountry, getTtdRate } from "@/lib/format/currency-conversion";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
@@ -26,6 +27,8 @@ type ReviewRow = {
 };
 
 const LANDING_SHOWCASE_LIMIT = 24;
+/** Enough to fill both island sections; the full catalogue lives on /Experiences. */
+const LANDING_LISTING_LIMIT = 6;
 const DEFAULT_SHOWCASE_IMAGES = DEFAULT_LANDING_SLIDESHOW_IMAGES;
 
 function isMissingRelationOrSchemaError(error: { code?: string | null; message?: string | null } | null) {
@@ -141,7 +144,7 @@ export default async function LandingPage() {
     // 300-900ms, but a cold start plus a second query inside can exceed 2s, so
     // this gets real headroom. The page is ISR-cached (revalidate above), so a
     // slower render is paid at most once per window.
-    settleWithTimeout(getFeaturedInquiryListings(3), [], 10_000),
+    settleWithTimeout(getFeaturedInquiryListings(LANDING_LISTING_LIMIT), [], 10_000),
     settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
     settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
     settleWithTimeout(getLandingHeroVideo(), null, 2000),
@@ -193,7 +196,6 @@ export default async function LandingPage() {
       variant="public"
     >
       <LandingPageView
-        displayCurrency={targetCurrency}
         listings={listings.map((listing) => ({
           id: listing.id,
           title: listing.title,
@@ -203,13 +205,16 @@ export default async function LandingPage() {
           summary: listing.summary ?? null,
           imageUrl: listing.image_url ?? null,
           operatorName: listing.operator_name ?? null,
-          price:
-            formatListingPrice(listing.price, {
-              locale: geo.locale,
-              targetCurrency,
-              ttdRate,
-            }) ?? null,
-          listingHref: `/Enquiry?listing=${listing.id}`,
+          category: listing.category ?? null,
+          island: resolveIsland(listing),
+          price: formatListingPriceLabel({
+            price: listing.price,
+            currency: listing.price_currency,
+            basis: listing.price_basis,
+            locale: geo.locale,
+            targetCurrency,
+            ttdRate,
+          }),
         }))}
         reviewSummary={reviewSummary}
         testimonials={testimonials}

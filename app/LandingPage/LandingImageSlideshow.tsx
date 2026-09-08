@@ -16,26 +16,43 @@ export function LandingImageSlideshow({ images, intervalMs = DEFAULT_SLIDESHOW_I
   const [activeIndex, setActiveIndex] = useState(0);
   const normalizedIndex = safeImages.length ? activeIndex % safeImages.length : 0;
 
+  // Only the outgoing, current, and incoming slides are mounted. Every slide
+  // occupies the same absolutely-positioned box, so the browser counts them all
+  // as in-viewport and `loading="lazy"` defers nothing -- all 24 full-width
+  // images were fetched on load. Keeping the previous one mounted lets the
+  // crossfade finish.
+  const mounted = useMemo(() => {
+    const total = safeImages.length;
+
+    if (total === 0) {
+      return new Set<number>();
+    }
+
+    return new Set<number>([
+      normalizedIndex,
+      (normalizedIndex + 1) % total,
+      (normalizedIndex - 1 + total) % total,
+    ]);
+  }, [normalizedIndex, safeImages.length]);
+
   useEffect(() => {
     if (!safeImages.length) {
       return;
     }
 
-    const preloadIndexes = new Set([
-      normalizedIndex,
-      (normalizedIndex + 1) % safeImages.length,
-    ]);
+    // Warm only the next slide. Preloading through a bare Image() bypasses the
+    // optimizer and fetches the full-size original, so this is deliberately
+    // limited to the one frame that is about to appear.
+    const nextIndex = (normalizedIndex + 1) % safeImages.length;
+    const imageUrl = safeImages[nextIndex];
 
-    preloadIndexes.forEach((index) => {
-      const imageUrl = safeImages[index];
-      if (!imageUrl) {
-        return;
-      }
+    if (!imageUrl) {
+      return;
+    }
 
-      const preload = new window.Image();
-      preload.decoding = "async";
-      preload.src = imageUrl;
-    });
+    const preload = new window.Image();
+    preload.decoding = "async";
+    preload.src = imageUrl;
   }, [normalizedIndex, safeImages]);
 
   useEffect(() => {
@@ -71,24 +88,26 @@ export function LandingImageSlideshow({ images, intervalMs = DEFAULT_SLIDESHOW_I
   return (
     <section className="lp-showcase" aria-label="Featured destinations slideshow">
       <div className="lp-showcase-frame">
-        {safeImages.map((image, index) => (
-          <div
-            key={image}
-            className={`lp-showcase-slide ${index === normalizedIndex ? "is-active" : ""}`}
-            aria-hidden={index !== normalizedIndex}
-          >
-            <Image
-              fill
-              alt={`Featured Trinidad and Tobago destination ${index + 1}`}
-              className="lp-showcase-image"
-              quality={85}
-              sizes="100vw"
-              src={image}
-              loading={index === 0 ? "eager" : "lazy"}
-              unoptimized={shouldServeImageUnoptimized(image)}
-            />
-          </div>
-        ))}
+        {safeImages.map((image, index) =>
+          mounted.has(index) ? (
+            <div
+              key={image}
+              className={`lp-showcase-slide ${index === normalizedIndex ? "is-active" : ""}`}
+              aria-hidden={index !== normalizedIndex}
+            >
+              <Image
+                fill
+                alt={`Featured Trinidad and Tobago destination ${index + 1}`}
+                className="lp-showcase-image"
+                quality={75}
+                sizes="(max-width: 768px) 100vw, 1600px"
+                src={image}
+                priority={index === 0}
+                unoptimized={shouldServeImageUnoptimized(image)}
+              />
+            </div>
+          ) : null,
+        )}
       </div>
 
       {safeImages.length > 1 ? (

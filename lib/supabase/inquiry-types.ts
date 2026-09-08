@@ -7,6 +7,15 @@ export type TourListing = {
   summary: string;
   image_url: string | null;
   price: string | null;
+  /**
+   * Fixed taxonomy; see lib/listing-taxonomy.ts. Optional because the operator
+   * and admin queries do not select them, and because they are null on rows
+   * published before the browse migration ran.
+   */
+  island?: string | null;
+  category?: string | null;
+  price_currency?: string | null;
+  price_basis?: string | null;
   operator_id: string | null;
   operator_name: string;
   featured: boolean;

@@ -21,6 +21,22 @@ const COMPANY_LINKS = [
   { href: "/Careers", label: "Careers" },
 ];
 
+// Public profiles the footer icons link out to. The X account was a dead
+// placeholder pointing at x.com's homepage, so it is no longer listed.
+const SOCIAL_LINKS = [
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/tourconnectt/",
+    // Instagram glyph: rounded square, lens, and flash dot.
+    path: "M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9Zm4.5 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm5.3-2.9a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z",
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/tourconnectt/",
+    path: "M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.8-1.6 1.6V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12Z",
+  },
+];
+
 const SUPPORT_LINKS = [
   { href: "/HelpCenter", label: "Help centre" },
   { href: "/TermsOfService", label: "Terms of service" },
@@ -86,15 +102,20 @@ export async function SiteFooter({ variant = "public" }: SiteFooterProps) {
           <Link href="/PrivacyPolicy">Privacy</Link>
           <Link href="/TermsOfService">Terms</Link>
           <div className="site-footer-socials" aria-label="Social links">
-            <a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram">
-              ig
-            </a>
-            <a href="https://www.facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook">
-              f
-            </a>
-            <a href="https://www.x.com/" target="_blank" rel="noreferrer" aria-label="X">
-              x
-            </a>
+            {SOCIAL_LINKS.map((social) => (
+              <a
+                key={social.label}
+                href={social.href}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={social.label}
+                title={social.label}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d={social.path} />
+                </svg>
+              </a>
+            ))}
           </div>
         </div>
       </div>
