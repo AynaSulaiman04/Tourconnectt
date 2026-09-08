@@ -14,11 +14,15 @@ changing it does nothing for the deployed site.
 
 | Variable | Value | If it is wrong |
 |---|---|---|
-| `NEXT_PUBLIC_APP_URL` | `https://tourconnectt.com` | Every email link and the WiPay return URL point at localhost |
+| `NEXT_PUBLIC_APP_URL` | `https://tourconnectt.com` | Email links and the WiPay return URL fall back to the Vercel production domain, or to localhost if that is unavailable too |
 | `GOOGLE_REDIRECT_URI` | `https://tourconnectt.com/api/google/calendar/callback` | Operator calendar connection fails |
 | `WIPAY_ENVIRONMENT` | `live` to take real money, `sandbox` to rehearse | `sandbox` takes no real payments |
 
-No trailing slash on `NEXT_PUBLIC_APP_URL`.
+Trailing slashes are stripped automatically, so `https://tourconnectt.com/` is
+fine. If `NEXT_PUBLIC_APP_URL` is missing entirely, `lib/app-url.ts` falls back
+to Vercel's `VERCEL_PROJECT_PRODUCTION_URL` before localhost — so a forgotten
+variable degrades to the right host rather than emailing customers localhost
+links. Set it explicitly anyway.
 
 ### Copy across from `.env.local` unchanged
 

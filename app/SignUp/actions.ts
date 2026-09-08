@@ -6,6 +6,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { recordAdminNotifications } from "@/lib/supabase/notifications";
 import { sendSignupConfirmationEmail } from "@/lib/email/mailer";
 import { initialSignupFormState, type SignupFormState } from "./types";
+import { getAppUrl } from "@/lib/app-url";
 
 type AccountRole = "traveler" | "operator" | "admin";
 
@@ -45,7 +46,7 @@ function mapAuthError(message: string) {
 }
 
 function getAppOrigin() {
-  return (process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
+  return getAppUrl();
 }
 
 async function runSignupAction(role: AccountRole, redirectTo: string, formData: FormData) {
