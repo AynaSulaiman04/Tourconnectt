@@ -1,0 +1,70 @@
+/* Analytics activity chart.
+   Same mark spec as the overview: a capped bar width with the band's leftover
+   left as air, a 4px rounded data-end square at the baseline, no border around
+   the mark, and a hairline baseline rule rather than a filled track. */
+.ac-chart {
+  display: grid;
+  align-items: end;
+  gap: 0.25rem;
+  height: 16rem;
+  margin-top: 1.5rem;
+  padding-bottom: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .ac-chart {
+    gap: 0.75rem;
+  }
+}
+
+.ac-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  height: 100%;
+}
+
+.ac-track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.ac-bar {
+  width: min(100%, 24px);
+  border-radius: 4px 4px 0 0;
+  background: #a7431f;
+  transition: height 220ms ease;
+}
+
+/* A zero-count column draws nothing; a small one stays visible at 2px without
+   its height being inflated. */
+.ac-bar[style*="height: 0"] {
+  min-height: 0;
+}
+
+.ac-bar:not([style*="height: 0"]) {
+  min-height: 2px;
+}
+
+.ac-label {
+  min-height: 2rem;
+  color: var(--on-surface-variant);
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-bar {
+    transition: none;
+  }
+}

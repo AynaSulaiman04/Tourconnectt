@@ -1,0 +1,568 @@
+/* Admin overview.
+   Everything below is driven by real records from the workspace query; there
+   are no decorative numbers. Layout uses intrinsic heights throughout — the
+   previous version pinned panels to 390px and 620px, which left large empty
+   boxes whenever a panel had little to show. */
+
+.ov-header {
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.ov-header h1 {
+  margin-bottom: 0.5rem;
+}
+
+/* Health headline ------------------------------------------------------ */
+
+.ov-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.35rem 0.8rem 0.35rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ov-health-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.ov-health-ok {
+  border-color: rgba(47, 122, 77, 0.28);
+  background: rgba(47, 122, 77, 0.08);
+  color: #2f7a4d;
+}
+
+.ov-health-warn {
+  border-color: rgba(180, 122, 22, 0.32);
+  background: rgba(180, 122, 22, 0.1);
+  color: #8a5c0d;
+}
+
+.ov-health-critical {
+  border-color: rgba(197, 22, 29, 0.32);
+  background: rgba(197, 22, 29, 0.09);
+  color: var(--error, #c5161d);
+}
+
+/* Range selector ------------------------------------------------------- */
+
+.ov-range {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 999px;
+  background: rgba(255, 253, 251, 0.9);
+}
+
+.ov-range-pill {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  color: var(--on-surface-variant);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.ov-range-pill:hover {
+  background: rgba(30, 20, 15, 0.05);
+  color: var(--on-surface);
+}
+
+.ov-range-pill.is-active {
+  background: rgba(167, 67, 31, 0.12);
+  color: var(--secondary);
+}
+
+/* Section scaffolding -------------------------------------------------- */
+
+.ov-section-title {
+  margin: 0 0 1rem;
+  color: var(--secondary);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ov-attention,
+.ov-metrics,
+.ov-funnel {
+  margin-bottom: 2.25rem;
+}
+
+/* Needs attention ------------------------------------------------------ */
+
+.ov-attention-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.ov-attention-card {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--outline-variant);
+  border-left-width: 3px;
+  border-radius: 1rem;
+  background: rgba(255, 253, 251, 0.94);
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.ov-attention-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(52, 43, 36, 0.1);
+}
+
+.ov-attention-card.is-critical {
+  border-left-color: var(--error, #c5161d);
+}
+
+.ov-attention-card.is-warn {
+  border-left-color: #b47a16;
+}
+
+.ov-attention-card.is-ok {
+  border-left-color: rgba(47, 122, 77, 0.5);
+}
+
+.ov-attention-count {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 400;
+  color: var(--on-surface);
+}
+
+.ov-attention-card.is-ok .ov-attention-count {
+  color: var(--on-surface-variant);
+  opacity: 0.55;
+}
+
+.ov-attention-label {
+  color: var(--on-surface);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.ov-attention-detail {
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ov-attention-go {
+  margin-top: 0.35rem;
+  color: var(--secondary);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ov-attention-card.is-ok .ov-attention-go {
+  color: rgba(47, 122, 77, 0.85);
+}
+
+/* Platform metrics ----------------------------------------------------- */
+
+.ov-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+
+.ov-metric {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1rem;
+  background: rgba(255, 253, 251, 0.94);
+  text-decoration: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.ov-metric:hover {
+  border-color: rgba(167, 67, 31, 0.24);
+  box-shadow: 0 12px 28px rgba(52, 43, 36, 0.08);
+}
+
+.ov-metric-label {
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ov-metric-value {
+  font-family: var(--font-display);
+  font-size: 2.05rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 300;
+  color: var(--on-surface);
+}
+
+.ov-metric-delta {
+  color: var(--on-surface-variant);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.ov-metric-delta.is-up {
+  color: #2f7a4d;
+}
+
+.ov-metric-delta.is-down {
+  color: var(--error, #c5161d);
+}
+
+.ov-metric-hint {
+  color: var(--on-surface-variant);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* Conversion funnel ---------------------------------------------------- */
+
+.ov-funnel-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.ov-funnel-stage {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1rem;
+  background: rgba(255, 253, 251, 0.94);
+  text-decoration: none;
+}
+
+.ov-funnel-stage:hover {
+  border-color: rgba(167, 67, 31, 0.24);
+}
+
+.ov-funnel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ov-funnel-label {
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ov-funnel-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1;
+  font-weight: 300;
+  color: var(--on-surface);
+}
+
+.ov-funnel-bar {
+  display: block;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(30, 20, 15, 0.07);
+  overflow: hidden;
+}
+
+.ov-funnel-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--secondary), #b47a16);
+}
+
+.ov-funnel-pct {
+  color: var(--on-surface-variant);
+  font-size: 0.74rem;
+}
+
+/* Activity panel ------------------------------------------------------- */
+
+.ov-activity-empty {
+  display: grid;
+  place-content: center;
+  gap: 0.35rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+
+.ov-activity-empty p {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.ov-activity-empty-hint {
+  font-size: 0.8rem !important;
+  opacity: 0.8;
+}
+
+/* Gap fixes -----------------------------------------------------------
+   These panels were pinned to fixed heights and separated by 32-72px gaps,
+   which left visible holes whenever a panel had little content. Heights are
+   now intrinsic and the rhythm is tighter. */
+.portal-list-page .stats-grid {
+  margin-bottom: 2.25rem;
+}
+
+.portal-list-page .content-grid {
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.portal-list-page .activity-card {
+  min-height: 0;
+  padding: 1.5rem;
+}
+
+.portal-list-page .right-column {
+  min-height: 0;
+  gap: 1.5rem;
+}
+
+.portal-list-page .approvals-card,
+.portal-list-page .updates-card {
+  padding: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .ov-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ov-range {
+    align-self: flex-start;
+  }
+}
+
+/* Charts ---------------------------------------------------------------
+   Part-to-whole across at most five classes, so a stacked bar rather than a
+   donut: exact comparison of close values is what a reader needs here, and a
+   donut is the wrong form for that.
+
+   Hues are validated against the cream admin surface (lightness band, chroma
+   floor, CVD separation, normal-vision floor). The two lighter hues sit under
+   3:1 contrast, which is permitted only because every class is directly
+   labelled with its count and share below. */
+
+.ov-chart {
+  display: grid;
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ov-stack {
+  display: flex;
+  width: 100%;
+  height: 1.5rem;
+  /* The gap is drawn in the surface colour, never a stroke around segments. */
+  gap: 2px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(30, 20, 15, 0.05);
+}
+
+.ov-stack-seg {
+  display: block;
+  min-width: 3px;
+  height: 100%;
+}
+
+/* Square where segments meet, 4px rounded at the two outer data-ends. */
+.ov-stack-seg:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.ov-stack-seg:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.ov-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ov-legend-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0;
+}
+
+.ov-legend-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+/* Text keeps its own ink; the swatch beside it carries the identity. */
+.ov-legend-label {
+  color: var(--on-surface);
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-legend-value {
+  color: var(--on-surface);
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-legend-pct {
+  color: var(--on-surface-variant);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* 7-day columns. Capped thickness with the band's leftover left as air, a 4px
+   rounded data-end, square on the baseline, and a hairline baseline rule. */
+.ov-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 6rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.ov-spark-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  height: 100%;
+  min-width: 0;
+}
+
+.ov-spark-bar {
+  width: min(100%, 24px);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: #a7431f;
+}
+
+.ov-spark-day {
+  color: var(--on-surface-variant);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Panel structure -------------------------------------------------------
+   The lower panels each had their own paddings, heading sizes and rhythm.
+   These give them one shared structure so the page reads as a single sheet. */
+.portal-list-page .section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.portal-list-page .panel-label {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.portal-list-page .approval-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(167, 67, 31, 0.1);
+  color: var(--secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.portal-list-page .activity-card,
+.portal-list-page .approvals-card,
+.portal-list-page .updates-card,
+.portal-list-page .payments-card {
+  padding: 1.5rem;
+  border-radius: 1.15rem;
+}
+
+/* Shared block rhythm inside a panel, replacing repeated inline margins. */
+.ov-panel-block {
+  margin-bottom: 1.15rem;
+}
+
+.ov-panel-block:last-child {
+  margin-bottom: 0;
+}
+
+/* Commission split: two equal cells rather than free-floating boxes, so the
+   admin and operator shares line up and stay comparable. */
+.ov-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.ov-split > div {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.85rem;
+  background: rgba(250, 246, 240, 0.7);
+}
+
+/* The gross figure is the panel's headline; give it the display face. */
+.payments-card .stat-row h3 {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 300;
+}

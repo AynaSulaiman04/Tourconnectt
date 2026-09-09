@@ -53,3 +53,85 @@
     0 12px 26px rgba(197, 22, 29, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
+
+/* Portal layout sizing ---------------------------------------------------
+   The portal breakpoints used to test the viewport, but the content column is
+   a full sidebar narrower than that. On a 1366px laptop the sidebar (16rem)
+   and the 5rem gutters leave roughly 950px, while a `max-width: 1100px` rule
+   measured 1366px and never fired -- so the desktop four-column layout stayed
+   on and its cards and buttons pushed outside their panels.
+
+   Making the content column a size container lets the panels respond to the
+   space they actually occupy. The sidebar is a sibling, not a descendant, so
+   the containment here cannot affect it. */
+.page-shell-portal-main {
+  container-type: inline-size;
+  container-name: portal;
+}
+
+/* Gutters were 5rem a side from 768px up, which is a lot of a 950px column. */
+@container portal (max-width: 1200px) {
+  .portal-list-page {
+    padding-inline: clamp(1.25rem, 3cqi, 2.5rem);
+  }
+}
+
+@container portal (max-width: 1080px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .activity-card,
+  .right-column {
+    grid-column: auto;
+    min-height: auto;
+  }
+}
+
+@container portal (max-width: 720px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Nothing inside a panel may push the panel wider than its column. Long
+   operator names, listing titles and email addresses were the usual culprits. */
+.portal-list-page .glass-panel,
+.portal-list-page .stat-card,
+.portal-list-page section {
+  min-width: 0;
+}
+
+.portal-list-page .stat-card h3,
+.portal-list-page .stat-card p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Button rows wrap instead of running off the edge. `whitespace-nowrap` on a
+   row of actions kept them on one line even when there was no room. */
+.portal-list-page .admin-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.portal-list-page .admin-action-group.whitespace-nowrap {
+  white-space: normal;
+}
+
+/* A table is the one thing allowed to scroll rather than wrap; it scrolls
+   inside its own box, never widening the page. */
+.portal-list-page .table-shell,
+.portal-list-page .tc-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}

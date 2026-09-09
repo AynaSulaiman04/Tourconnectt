@@ -58,9 +58,11 @@ export default function Loading() {
           transform-origin: center;
         }
 
-        .tt-loading-plane .material-symbols-outlined {
-          font-size: 1.7rem;
-          color: var(--secondary);
+        .tt-loading-plane svg {
+          display: block;
+          width: 1.7rem;
+          height: 1.7rem;
+          fill: var(--secondary);
         }
 
         .tt-loading-orbit:hover .tt-loading-plane {
@@ -126,7 +128,12 @@ export default function Loading() {
         <div className="tt-loading-orbit" aria-hidden="true">
           <div className="tt-loading-globe">
             <span className="tt-loading-plane">
-              <span className="material-symbols-outlined">flight</span>
+              {/* Inline SVG rather than the material-symbols ligature. This screen is
+                  the first paint of a navigation, so the icon font is frequently still
+                  downloading and the browser renders the literal word "flight". */}
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" />
+              </svg>
             </span>
           </div>
         </div>

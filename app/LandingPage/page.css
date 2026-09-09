@@ -81,6 +81,15 @@
   pointer-events: none;
 }
 
+/* Stands in for the background video on phones and metered connections, so the
+   dark hero card still has a dark backdrop without downloading any video. */
+.lp-hero-video-fallback {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(167, 67, 31, 0.55), transparent 55%),
+    radial-gradient(circle at 75% 80%, rgba(111, 98, 73, 0.5), transparent 60%),
+    linear-gradient(160deg, #2a1d15 0%, #3d2a1c 45%, #241a13 100%);
+}
+
 .lp-hero-video {
   width: 100%;
   height: 100%;
@@ -108,7 +117,7 @@
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 253, 251, 0.1), transparent 40%),
     linear-gradient(180deg, rgba(22, 16, 12, 0.62), rgba(22, 16, 12, 0.74));
-  backdrop-filter: blur(16px) saturate(115%);
+  backdrop-filter: blur(8px) saturate(112%);
   box-shadow: 0 30px 90px rgba(14, 10, 7, 0.5);
 }
 
@@ -173,10 +182,6 @@
   color: rgba(255, 253, 251, 0.55);
 }
 
-.lp-hero[data-has-video="true"] .lp-trip-prompt-link {
-  color: rgba(255, 213, 186, 0.95);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .lp-hero-video {
     /* The component also pauses playback; this covers the no-JS case. */
@@ -187,7 +192,7 @@
 @media (max-width: 720px) {
   .lp-hero[data-has-video="true"] .lp-hero-inner {
     margin-inline: var(--space-margin-mobile);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(7px);
   }
 }
 
@@ -369,13 +374,6 @@
   min-width: 10rem;
 }
 
-.lp-trip-prompt-link {
-  color: var(--on-surface-variant);
-  font-size: 0.88rem;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
-
 .lp-trip-prompt-helper,
 .lp-trip-prompt-error {
   margin: 0;
@@ -474,123 +472,54 @@
   color: var(--secondary);
 }
 
+/* The two primary ways into the product, given equal weight and set side by
+   side. They stack on narrow screens rather than shrinking below a tappable
+   width. */
+.lp-hero-doors {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+}
+
+.lp-door {
+  min-width: 15rem;
+  flex: 0 1 auto;
+  justify-content: center;
+}
+
 .lp-hero-actions {
   display: flex;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: 0.9rem;
 }
 
 .lp-register-btn {
   min-width: 12rem;
 }
 
-.lp-marquee-wrap {
-  margin: clamp(2rem, 5vw, 3.25rem) 0 clamp(1.5rem, 4vw, 2.5rem);
-  padding: 0;
+@media (max-width: 560px) {
+  .lp-hero-doors {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lp-door {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .lp-showcase-wrap {
+  /* Top margin was previously supplied by the services ribbon that sat between
+     the hero and the slideshow. */
+  margin-top: clamp(2rem, 5vw, 3.25rem);
   margin-bottom: clamp(2rem, 5vw, 3.5rem);
   padding: 0;
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-}
-
-.lp-marquee {
-  position: relative;
-  overflow: hidden;
-  border-block: 1px solid rgba(197, 22, 29, 0.12);
-  background:
-    linear-gradient(90deg, rgba(197, 22, 29, 0.07), rgba(180, 122, 22, 0.05) 42%, rgba(197, 22, 29, 0.07)),
-    rgba(255, 253, 251, 0.92);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-}
-
-.lp-marquee-viewport {
-  overflow: hidden;
-  padding: 1.05rem 0;
-}
-
-.lp-marquee-track {
-  display: flex;
-  width: max-content;
-  align-items: center;
-  gap: 1rem;
-  padding-inline: 1rem;
-  animation: lp-marquee-scroll 42s linear infinite;
-  will-change: transform;
-}
-
-.lp-marquee-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.62rem 1.1rem;
-  border: 1px solid rgba(197, 22, 29, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 253, 251, 0.88);
-  box-shadow: 0 8px 22px rgba(52, 43, 36, 0.06);
-  white-space: nowrap;
-}
-
-.lp-marquee-icon {
-  font-size: 1.15rem;
-  color: var(--secondary);
-}
-
-.lp-marquee-label {
-  color: var(--on-surface);
-  font-size: 0.72rem;
-  line-height: 1;
-  letter-spacing: 0.16em;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.lp-marquee-edge {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: clamp(2rem, 8vw, 5rem);
-  z-index: 1;
-  pointer-events: none;
-}
-
-.lp-marquee-edge-start {
-  left: 0;
-  background: linear-gradient(90deg, rgba(255, 253, 251, 0.98), transparent);
-}
-
-.lp-marquee-edge-end {
-  right: 0;
-  background: linear-gradient(270deg, rgba(255, 253, 251, 0.98), transparent);
-}
-
-@keyframes lp-marquee-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-marquee-track {
-    animation: none;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
-    max-width: 72rem;
-    margin: 0 auto;
-    padding: 0.5rem var(--space-margin-mobile) 0.75rem;
-  }
-
-  .lp-marquee-viewport {
-    overflow: visible;
-  }
 }
 
 .lp-showcase {
@@ -1037,12 +966,8 @@
     padding-bottom: 0.5rem;
   }
 
-  .lp-marquee-wrap {
-    margin-top: 1.75rem;
-    margin-bottom: 1.25rem;
-  }
-
   .lp-showcase-wrap {
+    margin-top: 1.75rem;
     margin-bottom: 2rem;
     padding-inline: 0;
   }
@@ -1054,4 +979,172 @@
     border-radius: 0;
   }
 
+}
+
+/* Browse shortcuts, directly under the hero. The only route into the
+   catalogue used to be the chat box, so these give the two obvious
+   alternatives: pick an island, or pick a kind of trip. */
+.lp-browse {
+  margin: clamp(2rem, 5vw, 3rem) 0 0;
+  padding: 0 var(--space-margin-mobile);
+}
+
+@media (min-width: 768px) {
+  .lp-browse {
+    padding: 0 var(--space-margin-desktop);
+  }
+}
+
+.lp-browse-inner {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.6rem 1.4rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.5rem;
+  background: rgba(255, 253, 251, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.lp-browse-head {
+  text-align: center;
+}
+
+.lp-browse-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 300;
+  color: var(--on-surface);
+}
+
+.lp-browse-head p {
+  margin: 0.4rem 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.94rem;
+}
+
+.lp-browse-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.lp-browse-island {
+  display: grid;
+  gap: 0.25rem;
+  flex: 1 1 15rem;
+  max-width: 20rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1rem;
+  background: rgba(255, 253, 251, 0.96);
+  text-decoration: none;
+  transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.lp-browse-island:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167, 67, 31, 0.28);
+  background: rgba(243, 222, 214, 0.5);
+}
+
+.lp-browse-island-name {
+  color: var(--on-surface);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.lp-browse-island-blurb {
+  color: var(--on-surface-variant);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.lp-browse-categories {
+  gap: 0.5rem;
+}
+
+.lp-browse-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 999px;
+  background: rgba(255, 253, 251, 0.95);
+  color: var(--on-surface);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.lp-browse-chip:hover {
+  border-color: rgba(167, 67, 31, 0.32);
+  background: rgba(243, 222, 214, 0.55);
+  color: var(--secondary);
+}
+
+.lp-browse-chip .material-symbols-outlined {
+  font-size: 1.05rem;
+  opacity: 0.8;
+}
+
+.lp-browse-all {
+  color: var(--secondary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* The hero card sits on the video; on that background the panel needs its own
+   opaque surface rather than borrowing the page tint. */
+.lp-hero[data-has-video="true"] + div .lp-browse-inner {
+  background: rgba(255, 253, 251, 0.96);
+}
+
+/* Reviews block ---------------------------------------------------------
+   The testimonial cards previously shared their border, radius, shadow and
+   hover-lift with the listing cards, and sat directly under the listing grid
+   with only section padding between them. The result read as more cards in the
+   same collection -- as though the reviews belonged to a tour. This gives the
+   block its own surface, a hard top edge, and quieter cards that do not
+   pretend to be clickable products. */
+.lp-testimonials {
+  margin-top: clamp(3rem, 7vw, 5rem);
+  padding-top: clamp(2.25rem, 5vw, 3.25rem);
+  padding-bottom: clamp(2.25rem, 5vw, 3rem);
+  border-top: 1px solid rgba(55, 45, 38, 0.12);
+}
+
+.lp-testimonials .lp-section-head {
+  margin-bottom: 0.5rem;
+}
+
+.lp-testimonial-card {
+  border-color: rgba(55, 45, 38, 0.07);
+  /* Flat, not raised: nothing here is a link. */
+  background: rgba(250, 246, 240, 0.72);
+  box-shadow: none;
+}
+
+.lp-testimonial-card:hover {
+  transform: none;
+  border-color: rgba(55, 45, 38, 0.07);
+  box-shadow: none;
+}
+
+.lp-quote {
+  color: var(--on-surface-variant);
+  font-style: italic;
 }

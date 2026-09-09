@@ -2,6 +2,7 @@ import "server-only";
 
 import { OAuth2Client } from "google-auth-library";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { getAppUrl } from "@/lib/app-url";
 
 type InquiryRow = {
   id: string;
@@ -159,16 +160,6 @@ function isMissingRelationOrSchemaCacheError(error: { code?: string | null; mess
 
 function isMissingColumnError(error: { code?: string | null; message?: string | null } | null) {
   return Boolean(error && (error.code === "42703" || error.message?.includes("column") || error.message?.includes("does not exist")));
-}
-
-function getAppUrl() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  if (!appUrl) {
-    return "http://localhost:3000";
-  }
-
-  return appUrl.replace(/\/+$/, "");
 }
 
 function getGoogleRedirectUri() {

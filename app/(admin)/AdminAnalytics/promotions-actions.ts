@@ -7,7 +7,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 function getReturnTo(formData: FormData) {
   const value = String(formData.get("return_to") ?? "").trim();
-  return value || "/AdminPromotions";
+  return value || "/AdminAnalytics";
 }
 
 function slugify(value: string) {
@@ -64,7 +64,6 @@ export async function createReferralCampaignAction(formData: FormData) {
     redirect(buildRedirectUrl(returnTo, { error: "We could not create that promotion. Please try again." }));
   }
 
-  revalidatePath("/AdminPromotions");
   revalidatePath("/AdminAnalytics");
   redirect(buildRedirectUrl(returnTo, { created: "1" }));
 }
@@ -91,7 +90,6 @@ export async function toggleReferralCampaignAction(formData: FormData) {
     redirect(buildRedirectUrl(returnTo, { error: "We could not update that promotion. Please try again." }));
   }
 
-  revalidatePath("/AdminPromotions");
   revalidatePath("/AdminAnalytics");
   redirect(buildRedirectUrl(returnTo, { updated: "1" }));
 }

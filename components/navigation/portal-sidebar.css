@@ -1,5 +1,6 @@
 :root {
   --portal-sidebar-width: 16rem;
+  --portal-sidebar-width-collapsed: 4.25rem;
   --portal-sidebar-bg: #fdfaf6;
   --portal-sidebar-border: rgba(30, 20, 15, 0.08);
   --portal-sidebar-hover: rgba(30, 20, 15, 0.04);
@@ -8,6 +9,8 @@
   --portal-sidebar-fg: #2a221c;
   --portal-sidebar-fg-muted: rgba(42, 34, 28, 0.62);
   --portal-sidebar-section: rgba(42, 34, 28, 0.48);
+  /* 2.5rem toggle + 0.6rem padding top and bottom + 1px border. */
+  --portal-mobile-bar-height: 3.75rem;
 }
 
 .page-shell-portal {
@@ -74,14 +77,17 @@
   min-width: 0;
 }
 
-.portal-sidebar-brand-name {
-  margin: 0;
-  font-family: var(--font-display, inherit);
-  font-size: 1rem;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  font-weight: 600;
-  color: var(--portal-sidebar-fg);
+.portal-sidebar-logo {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.portal-sidebar-logo-image {
+  width: auto;
+  height: 1.6rem;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .portal-sidebar-role {
@@ -277,12 +283,37 @@
   font-size: 1rem;
 }
 
-.portal-sidebar-mobile-toggle {
+.portal-sidebar-mobile-bar {
   display: none;
   position: fixed;
-  top: 0.85rem;
-  left: 0.85rem;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 60;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--portal-sidebar-bg);
+  border-bottom: 1px solid var(--portal-sidebar-border);
+  box-shadow: 0 8px 20px rgba(20, 15, 10, 0.06);
+}
+
+.portal-sidebar-mobile-brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.portal-sidebar-mobile-logo {
+  width: auto;
+  height: 1.9rem;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.portal-sidebar-mobile-toggle {
+  display: none;
+  flex: 0 0 auto;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.65rem;
@@ -292,11 +323,12 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(20, 15, 10, 0.08);
 }
 
-.portal-sidebar-mobile-toggle .material-symbols-outlined {
-  font-size: 1.35rem;
+.portal-sidebar-toggle-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: currentColor;
 }
 
 .portal-sidebar-scrim {
@@ -311,8 +343,9 @@
 }
 
 @media (max-width: 900px) {
+  /* Clear the fixed mobile bar. */
   .page-shell-portal-main > .page-shell-inner {
-    padding-top: 4rem;
+    padding-top: var(--portal-mobile-bar-height);
   }
 
   .portal-sidebar {
@@ -320,6 +353,9 @@
     top: 0;
     left: 0;
     width: min(85vw, 18rem);
+    /* The mobile bar sits above the drawer so its close button stays tappable;
+       offset the drawer's own content so the bar does not cover the brand. */
+    padding-top: calc(var(--portal-mobile-bar-height) + 0.5rem);
     transform: translateX(-100%);
     transition: transform 220ms ease;
     box-shadow: 0 20px 60px rgba(20, 15, 10, 0.18);
@@ -329,11 +365,154 @@
     transform: translateX(0);
   }
 
+  .portal-sidebar-mobile-bar {
+    display: flex;
+  }
+
   .portal-sidebar-mobile-toggle {
     display: inline-flex;
   }
 
   .portal-sidebar-scrim {
     display: block;
+  }
+}
+
+/* Collapsible rail ------------------------------------------------------
+   Collapsing narrows the sidebar to icons rather than hiding it, so the
+   current section stays visible and every destination is still one click
+   away. The width is a variable so the content column follows automatically. */
+.portal-sidebar-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--portal-sidebar-fg-muted);
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.portal-sidebar-collapse:hover {
+  background: var(--portal-sidebar-hover);
+  border-color: var(--portal-sidebar-border);
+  color: var(--portal-sidebar-fg);
+}
+
+.portal-sidebar-collapse svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: currentColor;
+  transition: transform 180ms ease;
+}
+
+.portal-sidebar.is-collapsed .portal-sidebar-collapse svg {
+  transform: rotate(180deg);
+}
+
+@media (min-width: 901px) {
+  .portal-sidebar.is-collapsed {
+    width: var(--portal-sidebar-width-collapsed);
+    flex-basis: var(--portal-sidebar-width-collapsed);
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Text disappears; icons, the toggle and the avatar remain. */
+  .portal-sidebar.is-collapsed .portal-sidebar-label,
+  .portal-sidebar.is-collapsed .portal-sidebar-section-title,
+  .portal-sidebar.is-collapsed .portal-sidebar-role,
+  .portal-sidebar.is-collapsed .portal-sidebar-logo,
+  .portal-sidebar.is-collapsed .portal-sidebar-user-meta,
+  .portal-sidebar.is-collapsed .portal-sidebar-signout span:not(.material-symbols-outlined) {
+    display: none;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-brand-meta {
+    display: none;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-brand-actions {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-link,
+  .portal-sidebar.is-collapsed .portal-sidebar-signout {
+    justify-content: center;
+    padding-inline: 0.5rem;
+  }
+
+  /* The active marker hangs off the link's left edge; there is no room for it
+     in the narrow rail, so mark the link itself instead. */
+  .portal-sidebar.is-collapsed .portal-sidebar-link.is-active::before {
+    display: none;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-user {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .portal-sidebar.is-collapsed .portal-sidebar-section-list {
+    gap: 0.25rem;
+  }
+
+  /* Keeps a hairline of separation between groups now the titles are gone. */
+  .portal-sidebar.is-collapsed .portal-sidebar-nav > div + div {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--portal-sidebar-border);
+  }
+}
+
+@media (max-width: 900px) {
+  /* The drawer is already a full-width overlay; collapsing it is meaningless. */
+  .portal-sidebar-collapse {
+    display: none;
+  }
+}
+
+/* Notification panel inside the portal sidebar --------------------------
+   The panel is 24rem wide but the sidebar is 16rem, and it was right-aligned
+   to its toggle, so it hung off the left edge of the screen. In the sidebar it
+   opens to the RIGHT instead, over the content column, anchored to the bell. */
+.portal-sidebar .notification-center {
+  position: static;
+}
+
+.portal-sidebar .notification-menu {
+  top: auto;
+  right: auto;
+  left: calc(100% + 0.5rem);
+  width: min(24rem, calc(100vw - var(--portal-sidebar-width) - 2rem));
+  max-height: min(32rem, calc(100vh - 4rem));
+  overflow-y: auto;
+}
+
+/* The brand row is the nearest positioned ancestor once .notification-center
+   goes static, so anchor from there. */
+.portal-sidebar-brand {
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  /* The sidebar is a full-height overlay on mobile, so the panel can sit
+     under the bell and use the width of the drawer. */
+  .portal-sidebar .notification-menu {
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    width: auto;
+    max-height: min(24rem, calc(100vh - 12rem));
   }
 }

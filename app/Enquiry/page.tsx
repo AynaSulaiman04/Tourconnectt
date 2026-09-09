@@ -293,9 +293,18 @@ export default async function InquiryPage({ searchParams }: InquiryPageProps) {
         .listing-actions {
           display: flex;
           flex-wrap: wrap;
+          align-items: center;
           gap: 0.65rem;
           margin-top: auto;
           padding-top: 0.35rem;
+        }
+
+        .listing-guest-note {
+          flex-basis: 100%;
+          margin: 0;
+          color: var(--on-surface-variant);
+          font-size: 0.78rem;
+          line-height: 1.4;
         }
 
         .listing-body {

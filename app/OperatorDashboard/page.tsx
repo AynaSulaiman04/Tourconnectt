@@ -1,6 +1,5 @@
 ﻿import Image from "next/image";
 import { Button } from "@/components/ui/Button";
-import { PortalQuickLinks } from "@/components/admin/PortalQuickLinks";
 import { PageShell } from "@/components/layout/PageShell";
 import { OperatorDashboardLiveRefresh } from "@/components/navigation/OperatorDashboardLiveRefresh";
 import { getOperatorDashboardData } from "@/lib/supabase/operator-dashboard";
@@ -201,9 +200,6 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
 
       <main className="operator-page">
         <div className="wrap">
-          <div style={{ marginBottom: 24 }}>
-            <PortalQuickLinks variant="operator" />
-          </div>
           {withdrawalErrorMessage ? (
             <section className="glass-panel panel" style={{ marginBottom: 24 }}>
               <p className="eyebrow">Withdrawal update</p>
@@ -248,12 +244,6 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
               <div className="hero-actions">
                 <Button href="/CreateListing" variant="primary">
                   New Listing
-                </Button>
-                <Button href="/OperatorBookings" variant="outline">
-                  View Bookings
-                </Button>
-                <Button href="/OperatorMessages" variant="outline">
-                  Open Inbox
                 </Button>
               </div>
             </div>
@@ -443,9 +433,6 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
                     Request withdrawal
                   </Button>
                 </form>
-                <Button href="/OperatorSettings" variant="outline">
-                  Operator settings
-                </Button>
               </div>
             </div>
 

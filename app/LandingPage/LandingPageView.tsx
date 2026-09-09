@@ -1,27 +1,22 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { ExperienceCard, type ExperienceCardData } from "@/app/Experiences/ExperienceCard";
+import { LandingBrowseFilters } from "./LandingBrowseFilters";
+import { ISLANDS, type IslandSlug } from "@/lib/listing-taxonomy";
+import "@/app/Experiences/page.css";
 import { AnimatedHeroHeadline } from "@/components/ui/animated-hero";
 import { getHeroContentFromSiteContent, getPortalSettingsFromContent } from "@/lib/portal-settings";
 import { LandingTripPrompt } from "@/components/landing/LandingTripPrompt";
 import { LandingHeroVideo } from "./LandingHeroVideo";
 import { LandingImageSlideshow } from "./LandingImageSlideshow";
-import { LandingServicesMarquee } from "./LandingServicesMarquee";
 import { LandingScrollReveal } from "./LandingScrollReveal";
 import type { SiteContent } from "@/lib/site-content";
 import "./page.css";
 
-export type LandingListingCard = {
-  id: string;
-  title: string;
-  location: string | null;
+export type LandingListingCard = ExperienceCardData & {
   country: string | null;
-  duration: string | null;
-  summary: string | null;
-  imageUrl: string | null;
-  operatorName: string | null;
-  price: string | null;
-  listingHref: string;
+  /** Resolved server-side so the view does not re-derive it per render. */
+  island: IslandSlug;
 };
 
 export type LandingTestimonial = {
@@ -39,7 +34,6 @@ type LandingPageViewProps = {
   showcaseImages: string[];
   heroVideo: { url: string; contentType: string | null } | null;
   siteContent: SiteContent;
-  displayCurrency?: string;
   reviewSummary: {
     averageRating: number;
     reviewCount: number;
@@ -126,7 +120,7 @@ function formatRating(value: number) {
 }
 
 function resolveListings(listings: LandingListingCard[]) {
-  return listings.slice(0, 3);
+  return listings;
 }
 
 function resolveTestimonials(testimonials: LandingTestimonial[]) {
@@ -147,9 +141,16 @@ export function LandingPageView({
   showcaseImages,
   heroVideo,
   siteContent,
-  displayCurrency,
 }: LandingPageViewProps) {
   const featuredListings = resolveListings(listings);
+  const islandSections = ISLANDS.map((option) => ({
+    slug: option.slug,
+    label: option.label,
+    blurb: option.blurb,
+    items: featuredListings.filter(
+      (listing) => listing.island === option.slug || (option.slug !== "both" && listing.island === "both"),
+    ),
+  })).filter((section) => section.items.length > 0);
   const testimonialsToRender = resolveTestimonials(testimonials);
   const hasListings = featuredListings.length > 0;
   const slideshowImages = showcaseImages;
@@ -173,16 +174,25 @@ export function LandingPageView({
 
           <LandingTripPrompt />
 
+          <div className="lp-hero-doors">
+            <Button href="/ConciergeChat" variant="primary" className="lp-door">
+              Talk to the concierge
+            </Button>
+            <Button href="/Enquiry" variant="outline" className="lp-door">
+              Browse the experiences
+            </Button>
+          </div>
+
           <div className="lp-hero-actions">
-            <Button href="/SignUp" variant="outline" className="btn-sm lp-register-btn">
+            <Button href="/SignUp" variant="ghost" className="btn-sm lp-register-btn">
               Register as Traveller
             </Button>
           </div>
         </div>
       </section>
 
-      <div className="lp-marquee-wrap" data-lp-reveal>
-        <LandingServicesMarquee />
+      <div data-lp-reveal>
+        <LandingBrowseFilters />
       </div>
 
       <div className="lp-showcase-wrap" data-lp-reveal>
@@ -193,90 +203,43 @@ export function LandingPageView({
         <div className="lp-section-head" data-lp-reveal>
           <div>
             <p className="lp-section-eyebrow">Handpicked experiences</p>
-            <h2 id="featured-listings">Featured listings</h2>
-            {displayCurrency && displayCurrency !== "TTD" ? (
-              <p className="lp-currency-note">
-                Prices shown in {displayCurrency} for reference. Bookings are billed in TTD (Trinidad &amp; Tobago Dollar).
-              </p>
-            ) : null}
+            <h2 id="featured-listings">Experiences on the islands</h2>
           </div>
 
-          <Button href="/Enquiry" variant="outline" className="btn-sm">
-            View All Listings
+          <Button href="/Experiences" variant="outline" className="btn-sm">
+            See every experience
           </Button>
         </div>
 
-        <div className="lp-listings-grid">
-          {hasListings ? (
-            featuredListings.map((listing) => {
-              const listingLocation = listing.location || listing.country || "Location on request";
-              const listingDuration = listing.duration || "Enquiry based";
-              const listingSummary =
-                listing.summary ||
-                "A live operator listing that travellers can open to view details and enquire.";
-
-              return (
-                <article key={listing.id} className="lp-listing-card" data-lp-reveal>
-                  <Link
-                    href={listing.listingHref}
-                    className="lp-listing-image"
-                    aria-label={`View details for ${listing.title}`}
-                  >
-                    {listing.imageUrl ? (
-                      <Image
-                        fill
-                        alt={listing.title}
-                        unoptimized={listing.imageUrl.startsWith("data:") || listing.imageUrl.startsWith("blob:")}
-                        sizes="(max-width: 1024px) 100vw, 33vw"
-                        src={listing.imageUrl}
-                      />
-                    ) : (
-                      <div className="lp-listing-fallback">
-                        <p className="lp-listing-label">Listing</p>
-                        <p className="lp-listing-fallback-title">{listing.title}</p>
-                        <p className="lp-listing-fallback-copy">
-                          This listing is ready for enquiry and currently has no cover image.
-                        </p>
-                      </div>
-                    )}
-                  </Link>
-
-                  <div className="lp-listing-body">
-                    <p className="lp-listing-meta">
-                      {listingLocation}
-                      <span>·</span>
-                      {listing.operatorName || "Tour ConnecTT"}
-                    </p>
-                    <h3>{listing.title}</h3>
-                    <p className="lp-listing-copy">{listingSummary}</p>
-
-                    <div className="lp-listing-pills">
-                      <span>{listingDuration}</span>
-                      <span>{listing.price || "Enquiry based"}</span>
-                    </div>
-
-                    <div className="lp-listing-actions">
-                      <Button href={listing.listingHref} variant="primary" className="btn-sm">
-                        Enquire now
-                      </Button>
-                      <Button href={listing.listingHref} variant="outline" className="btn-sm">
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            <div className="lp-empty-card">
-              <p className="lp-section-eyebrow">Featured listings</p>
-              <h3>No live listings are available yet.</h3>
-              <p>
-                The landing page will automatically surface operator listings here as soon as they are available.
-              </p>
-            </div>
-          )}
-        </div>
+        {hasListings ? (
+          islandSections.map((section) => (
+            <section
+              className="xp-section"
+              key={section.slug}
+              aria-labelledby={`lp-island-${section.slug}`}
+              data-lp-reveal
+            >
+              <div className="xp-section-head">
+                <h2 id={`lp-island-${section.slug}`}>{section.label}</h2>
+                <p>{section.blurb}</p>
+              </div>
+              <div className="xp-grid">
+                {section.items.map((listing) => (
+                  <ExperienceCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <div className="lp-empty-card">
+            <p className="lp-section-eyebrow">Experiences</p>
+            <h3>No live listings are available yet.</h3>
+            <p>
+              Operators publish their own experiences here. As soon as the first listings go live they
+              will appear on this page and in the browse pages.
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="lp-section lp-testimonials" aria-labelledby="testimonials" data-lp-reveal>

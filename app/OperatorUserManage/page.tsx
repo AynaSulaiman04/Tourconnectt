@@ -811,7 +811,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         <main className="main">
           <header className="page-header">
             <div>
-              <h1>Customers</h1>
+              <h1>CRM</h1>
               <p>Travellers who have already interacted with this operator through enquiries, messages, or bookings.</p>
             </div>
             <form className="search-wrap tc-filter-panel" method="get">

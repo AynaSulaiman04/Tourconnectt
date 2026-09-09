@@ -3,6 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 import type { WiPayPaymentSummary } from "@/lib/supabase/inquiry-types";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { getAppUrl } from "@/lib/app-url";
 
 export type WiPayPaymentStatus =
   | "pending"
@@ -77,16 +78,6 @@ type WiPayCallbackPayload = {
   card: string | null;
   data: Record<string, unknown> | null;
 };
-
-function getAppUrl() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  if (!appUrl) {
-    return "http://localhost:3000";
-  }
-
-  return appUrl.replace(/\/+$/, "");
-}
 
 function getFirstConfiguredEnv(...names: string[]) {
   for (const name of names) {

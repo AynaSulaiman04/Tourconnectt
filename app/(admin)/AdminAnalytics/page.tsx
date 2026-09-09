@@ -4,16 +4,15 @@ import { Button } from "@/components/ui/Button";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { TableWrapper } from "@/components/ui/TableWrapper";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { formatDate } from "@/lib/format/date";
 import { formatListingPrice } from "@/lib/format/listing-price";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
-import { createReferralCampaignAction, toggleReferralCampaignAction } from "../AdminPromotions/actions";
+import { createReferralCampaignAction, toggleReferralCampaignAction } from "./promotions-actions";
+import "./analytics-chart.css";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
 import {
   PLATFORM_ADMIN_COMMISSION_RATE,
@@ -236,7 +235,7 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
   const totalCommission = operatorCommissionRows.reduce((sum, row) => sum + row.commission, 0);
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
@@ -317,22 +316,26 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               />
               {hasActivity ? (
                 <div
-                  className="mt-6 grid gap-1 sm:gap-3 items-end h-64"
+                  className="ac-chart"
                   style={{ gridTemplateColumns: `repeat(${series.labels.length}, minmax(0, 1fr))` }}
                 >
                   {series.counts.map((count, index) => (
-                    <div key={series.labels[index]} className="flex flex-col items-center gap-3">
-                      <div className="w-full rounded-t-2xl bg-secondary/15 border border-secondary/15 flex items-end overflow-hidden" style={{ height: 240 }}>
+                    <div className="ac-col" key={series.labels[index]}>
+                      <div className="ac-track">
+                        {/*
+                          Height is the true proportion. This previously used
+                          Math.max(12, ...), which floored every non-zero bar at
+                          12% -- a count of 1 in 100 drew more than ten times its
+                          real value. A 2px minimum in the CSS keeps a small bar
+                          visible without misstating it.
+                        */}
                         <div
-                          className="w-full bg-secondary transition-all"
-                          style={{
-                            height: count > 0 ? `${Math.max(12, (count / maxActivity) * 100)}%` : 0,
-                          }}
+                          className="ac-bar"
+                          style={{ height: count > 0 ? `${(count / maxActivity) * 100}%` : 0 }}
+                          title={`${chartLabels[index]}: ${count}`}
                         />
                       </div>
-                      <span className="min-h-[2rem] text-center text-[10px] uppercase tracking-[0.12em] leading-tight text-on-surface-variant whitespace-normal">
-                        {chartLabels[index]}
-                      </span>
+                      <span className="ac-label">{chartLabels[index]}</span>
                     </div>
                   ))}
                 </div>
@@ -497,9 +500,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
                 <Button href="/AdminBookings?tab=payments&paymentStatus=paid" variant="outline">
                   Open paid payments
                 </Button>
-                <Button href="/AdminDashboard" variant="ghost">
-                  Open dashboard
-                </Button>
               </div>
             </GlassPanel>
           </div>
@@ -595,18 +595,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               </div>
             </GlassPanel>
 
-            <GlassPanel className="p-gutter">
-              <div className="label-caps text-secondary mb-2">Quick actions</div>
-              <p className="section-copy">Move between analytics, bookings, and listing moderation without leaving the admin surface.</p>
-              <div className="mt-4 tc-filter-tabs">
-                <Button href="/AdminBookings" variant="outline" className="tc-filter-pill">
-                  Open bookings
-                </Button>
-                <Button href="/AdminListings" variant="ghost" className="tc-filter-pill">
-                  Open listings
-                </Button>
-              </div>
-            </GlassPanel>
           </div>
         </section>
 
@@ -760,6 +748,6 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

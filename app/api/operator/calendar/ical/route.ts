@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { formatIcalDateTime, serializeIcalFeed, verifyIcalFeedToken } from "@/lib/calendar/ical";
+import { getAppUrl } from "@/lib/app-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,16 +31,6 @@ type InquiryRow = {
   ical_uid?: string | null;
   created_at: string;
 };
-
-function getAppUrl() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  if (!appUrl) {
-    return "http://localhost:3000";
-  }
-
-  return appUrl.replace(/\/+$/, "");
-}
 
 function buildStableUid(inquiry: InquiryRow) {
   const hostname = new URL(getAppUrl()).hostname;

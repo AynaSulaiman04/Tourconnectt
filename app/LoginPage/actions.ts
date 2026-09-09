@@ -9,6 +9,7 @@ import { clearPortalAuthCookie } from "@/lib/supabase/portal-auth";
 import { initialLoginFormState, type LoginFormState } from "./types";
 import { initialRecoveryFormState, type RecoveryFormState } from "./recovery-types";
 import { initialForgotPasswordFormState, type ForgotPasswordFormState } from "./forgot-password-types";
+import { getAppUrl } from "@/lib/app-url";
 
 const loginSchema = z.object({
   email: z.string({ error: "Enter a valid email address." }).trim().email({ error: "Enter a valid email address." }).toLowerCase(),
@@ -85,7 +86,7 @@ async function getRequestOrigin() {
     return `${forwardedProto}://${forwardedHost}`;
   }
 
-  return "http://localhost:3000";
+  return getAppUrl();
 }
 
 function buildCallbackUrl(origin: string, nextPath: string) {

@@ -1,13 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { formatListingPrice } from "@/lib/format/listing-price";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { updateListingModerationAction } from "./actions";
@@ -139,18 +136,13 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
   const featuredListings = workspace.listings.filter((listing) => listing.featured).length;
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
           eyebrow="Admin listings"
           title="Moderate every listing before it reaches travellers."
           description="Review operator submissions, approve high-quality tours, and keep the platform's featured inventory aligned with the Tour ConnecTT standard."
-          action={
-            <Button href="/AdminAnalytics" variant="outline">
-              Analytics Hub
-            </Button>
-          }
         />
         {actionMessage ? (
           <div className="mt-6">
@@ -409,9 +401,6 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                     Toggle Featured
                   </FormSubmitButton>
                 </form>
-                  <Link className="btn-outline btn-sm w-full" href="/AdminAnalytics">
-                    Open Analytics
-                  </Link>
                 </div>
               ) : null}
             </GlassPanel>
@@ -421,18 +410,10 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
               <p className="section-copy">
                 Keep image quality, copy tone, and pricing clarity aligned with the luxury editorial standard before approving a listing.
               </p>
-              <div className="mt-6 admin-action-group">
-                <Button href="/AdminDashboard" variant="outline">
-                  Dashboard
-                </Button>
-                <Button href="/AdminAnalytics" variant="ghost">
-                  Analytics
-                </Button>
-              </div>
             </GlassPanel>
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

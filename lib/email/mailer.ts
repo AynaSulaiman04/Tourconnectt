@@ -1,6 +1,7 @@
 import "server-only";
 
 import nodemailer from "nodemailer";
+import { getAppUrl } from "@/lib/app-url";
 import {
   adminPaidBookingNotificationEmail,
   buildBookingConfirmedEmail,
@@ -121,16 +122,6 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     });
     return { ok: false, error: message };
   }
-}
-
-function getAppUrl() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  if (!appUrl) {
-    return "http://localhost:3000";
-  }
-
-  return appUrl.replace(/\/+$/, "");
 }
 
 function cleanUrl(pathname: string) {

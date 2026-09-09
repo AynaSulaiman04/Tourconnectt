@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { getAppUrl } from "@/lib/app-url";
 
 type IcalFeedEvent = {
   uid: string;
@@ -11,16 +12,6 @@ type IcalFeedEvent = {
   description: string;
   location?: string | null;
 };
-
-function getAppUrl() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  if (!appUrl) {
-    return "http://localhost:3000";
-  }
-
-  return appUrl.replace(/\/+$/, "");
-}
 
 function getIcalFeedSecret() {
   return process.env.ICAL_FEED_SECRET?.trim() || null;

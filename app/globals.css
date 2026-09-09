@@ -1,6 +1,24 @@
-@import "@fontsource-variable/material-symbols-outlined/wght.css";
 @import "tailwindcss";
 @import "./portal.css";
+
+/* Icon font, subset to the 62 icons this app actually uses: 16KB instead of
+   the full 728KB face. Regenerate after adding or removing an icon:
+
+     npm run icons:build
+
+   `font-display: block` matters here. The default `swap` paints the ligature
+   TEXT while the font loads, which is why icons briefly read as the words
+   "flight", "menuclose" and "person" on slow connections. `block` paints
+   nothing instead, so an icon is either an icon or empty space, never its own
+   name. */
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 700;
+  src: url("/fonts/material-symbols-subset.woff2") format("woff2");
+}
+
 
 :root {
   --tc-bg: #f7f3ea;
@@ -83,14 +101,12 @@
 
   --space-gutter: 2rem;
   --space-section: 5rem;
+  --layout-max-width: 1440px;
   --space-margin-mobile: 1.5rem;
   --space-margin-desktop: 5rem;
 
   --font-body: var(--font-be-vietnam-pro), "Be Vietnam Pro", Arial, Helvetica, sans-serif;
   --font-display: var(--font-raleway), "Raleway", Georgia, serif;
-  --tc-cursor-default:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='12' r='5' fill='%23c5161d'/%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23b47a16' stroke-width='1.5' opacity='.72'/%3E%3C/svg%3E")
-      12 12;
 }
 
 @theme inline {
@@ -146,7 +162,11 @@
   html {
     height: 100%;
     background: var(--background);
-    cursor: var(--tc-cursor-default), auto;
+    /* Reserve the scrollbar gutter at every zoom level. Without it, zooming out
+       far enough for the page to fit on screen removes the scrollbar, the
+       viewport grows by its width, and every centred band plus the 100vw
+       full-bleed sections shift - the page's borders visibly jump. */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -158,11 +178,10 @@
       linear-gradient(180deg, #f8f5f1 0%, var(--background) 42%, #f1ede8 100%);
     color: var(--foreground);
     font-family: var(--font-body);
-    overflow-x: hidden;
+    overflow-x: clip;
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    cursor: var(--tc-cursor-default), auto;
   }
 
   * {
@@ -285,7 +304,7 @@
   }
 
   .page-shell-inner {
-    width: min(100%, 1440px);
+    width: min(100%, var(--layout-max-width));
     margin: 0 auto;
   }
 
@@ -332,6 +351,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem 1.5rem;
+    width: min(100%, var(--layout-max-width));
+    margin: 0 auto;
     min-height: 4.25rem;
     padding: 0.75rem var(--space-margin-mobile);
   }
@@ -467,6 +488,13 @@
 
   .mobile-nav-toggle::-webkit-details-marker {
     display: none;
+  }
+
+  .mobile-nav-open-icon,
+  .mobile-nav-close-icon {
+    width: 1.4rem;
+    height: 1.4rem;
+    fill: currentColor;
   }
 
   .mobile-nav-close-icon {
@@ -1577,6 +1605,16 @@
     font-size: 1rem;
     line-height: 1.65;
     color: color-mix(in srgb, var(--on-surface-variant) 88%, transparent);
+  }
+
+  /* Section headings inside the long-form marketing documents. */
+  .info-block-heading {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    font-weight: 500;
+    color: var(--on-surface);
   }
 
   .editorial-image {

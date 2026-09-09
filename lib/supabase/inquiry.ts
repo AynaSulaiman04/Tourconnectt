@@ -10,6 +10,36 @@ function isMissingRelationError(error: { code?: string | null; message?: string 
   return error?.code === "42P01" || error?.message?.includes("Could not find the table");
 }
 
+const LISTING_BASE_COLUMNS =
+  "id,title,location,country,duration,summary,image_url,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at";
+
+const LISTING_BROWSE_COLUMNS = `${LISTING_BASE_COLUMNS},island,category,price_currency,price_basis`;
+
+/**
+ * PostgREST reports an unknown column as 42703 (and Supabase sometimes as a
+ * schema-cache miss). The browse columns arrive in a migration the deployment
+ * may not have run yet, so every read retries without them rather than taking
+ * the whole listing feed down.
+ */
+function isMissingColumnError(error: { code?: string | null; message?: string | null } | null) {
+  return Boolean(
+    error &&
+      (error.code === "42703" ||
+        error.message?.includes("column") ||
+        error.message?.includes("schema cache")),
+  );
+}
+
+function withBrowseDefaults(listing: TourListing): TourListing {
+  return {
+    ...listing,
+    island: listing.island ?? null,
+    category: listing.category ?? null,
+    price_currency: listing.price_currency ?? null,
+    price_basis: listing.price_basis ?? null,
+  };
+}
+
 function isFetchFailedError(error: unknown) {
   return error instanceof Error && (error.message === "TypeError: fetch failed" || error.message.includes("fetch failed"));
 }
@@ -100,19 +130,35 @@ async function loadListingDraftContactsByListingIds(
   return contacts;
 }
 
-export async function getFeaturedInquiryListings(limit = 3) {
-  try {
-    const admin = createSupabaseServiceRoleClient();
-    const { data, error } = await admin
+async function selectLiveListings(
+  admin: ReturnType<typeof createSupabaseServiceRoleClient>,
+  limit?: number,
+) {
+  function query(columns: string) {
+    const builder = admin
       .from("tour_listings")
-      .select(
-        "id,title,location,country,duration,summary,image_url,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at",
-      )
+      .select(columns)
       .eq("is_active", true)
       .eq("status", "live")
       .order("featured", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(limit);
+      .order("created_at", { ascending: false });
+
+    return limit ? builder.limit(limit) : builder;
+  }
+
+  const first = await query(LISTING_BROWSE_COLUMNS);
+
+  if (first.error && isMissingColumnError(first.error) && !isMissingRelationError(first.error)) {
+    return query(LISTING_BASE_COLUMNS);
+  }
+
+  return first;
+}
+
+export async function getFeaturedInquiryListings(limit = 3) {
+  try {
+    const admin = createSupabaseServiceRoleClient();
+    const { data, error } = await selectLiveListings(admin, limit);
 
     if (error) {
       if (isMissingRelationError(error) || error.message?.includes("terminated")) {
@@ -122,8 +168,8 @@ export async function getFeaturedInquiryListings(limit = 3) {
       throw new Error(error.message);
     }
 
-    return ((data ?? []) as TourListing[]).map((listing) => ({
-      ...listing,
+    return ((data ?? []) as unknown as TourListing[]).map((listing) => ({
+      ...withBrowseDefaults(listing),
       image_url: normalizePublicListingImage(listing.image_url),
     }));
   } catch (error) {
@@ -139,15 +185,7 @@ export async function getFeaturedInquiryListings(limit = 3) {
 export async function getInquiryListings() {
   try {
     const admin = createSupabaseServiceRoleClient();
-    const { data, error } = await admin
-      .from("tour_listings")
-      .select(
-        "id,title,location,country,duration,summary,image_url,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at",
-      )
-      .eq("is_active", true)
-      .eq("status", "live")
-      .order("featured", { ascending: false })
-      .order("created_at", { ascending: false });
+    const { data, error } = await selectLiveListings(admin);
 
     if (error) {
       if (isMissingRelationError(error) || error.message?.includes("terminated")) {
@@ -157,8 +195,8 @@ export async function getInquiryListings() {
       throw new Error(error.message);
     }
 
-    return ((data ?? []) as TourListing[]).map((listing) => ({
-      ...listing,
+    return ((data ?? []) as unknown as TourListing[]).map((listing) => ({
+      ...withBrowseDefaults(listing),
       image_url: normalizePublicListingImage(listing.image_url),
     }));
   } catch (error) {

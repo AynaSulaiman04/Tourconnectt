@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/Button";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { updateListingModerationAction } from "@/app/AdminListings/actions";
-import { updateHomePageSettingsAction } from "@/app/AdminContent/actions";
+import { updateListingModerationAction } from "@/app/(admin)/AdminListings/actions";
+import { updateHomePageSettingsAction } from "@/app/(admin)/AdminContent/actions";
 import type { SiteContent } from "@/lib/site-content";
 
 type FeaturedListing = {

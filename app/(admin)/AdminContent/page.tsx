@@ -1,10 +1,8 @@
 import { Button } from "@/components/ui/Button";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { HomePageControls } from "@/components/admin/HomePageControls";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { requireAdminProfile } from "@/lib/supabase/admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { getSiteContent } from "@/lib/site-content";
@@ -20,7 +18,7 @@ function getParam(value: string | string[] | undefined) {
 }
 
 export default async function AdminContentPage({ searchParams }: AdminContentPageProps) {
-  const profile = await requireAdminProfile();
+  await requireAdminProfile();
   const [content, params] = await Promise.all([getSiteContent(), searchParams]);
   const admin = createSupabaseServiceRoleClient();
   const [{ data: reviewsData }, { data: listingsData }] = await Promise.all([
@@ -57,21 +55,13 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
   );
 
   return (
-    <PageShell {...getAdminPageShellProps(profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
           eyebrow="Admin content"
           title="Home page and public content."
           description="Manage the landing hero, featured listings, slideshow timing, and approved public copy from one workspace."
-          action={
-            <Button href="/AdminSettings" variant="outline" className="gap-2">
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                settings
-              </span>
-              Admin settings
-            </Button>
-          }
         />
         {savedMessage ? (
           <div className="mt-6">
@@ -130,6 +120,6 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

@@ -1,15 +1,19 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { PortalQuickLinks } from "@/components/admin/PortalQuickLinks";
-import { PageShell } from "@/components/layout/PageShell";
 import { StatusMessage } from "@/components/ui/StatusMessage";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import { getRecentPlatformNotifications } from "@/lib/supabase/notifications";
 import { isPendingWiPayPayment, isSuccessfulWiPayPayment } from "@/lib/payments/wipay";
+import {
+  buildAttentionItems,
+  buildFunnel,
+  buildHealthMetrics,
+  summarise,
+} from "@/lib/admin/overview-health";
+import "./overview.css";
 
 type DashboardRange = "7d" | "30d" | "1y";
 type PaymentStatusFilter = "all" | "paid" | "pending" | "failed";
@@ -45,81 +49,30 @@ function getRangeStart(range: DashboardRange) {
   return now;
 }
 
-function buildActivitySeries(events: Awaited<ReturnType<typeof getPlatformEvents>>, range: DashboardRange) {
-  const start = getRangeStart(range);
-  const filtered = events.filter((event) => new Date(event.created_at) >= start);
-
-  if (range === "1y") {
-    const months = Array.from({ length: 12 }, (_, index) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - (11 - index));
-      date.setDate(1);
-      date.setHours(0, 0, 0, 0);
-      return date;
-    });
-    const buckets = new Map<string, number>(months.map((date) => [date.toISOString().slice(0, 7), 0]));
-
-    filtered.forEach((event) => {
-      const key = new Date(event.created_at).toISOString().slice(0, 7);
-      if (buckets.has(key)) {
-        buckets.set(key, (buckets.get(key) ?? 0) + 1);
-      }
-    });
-
-    return {
-      labels: months.map((date) => formatDate(date)),
-      counts: months.map((date) => buckets.get(date.toISOString().slice(0, 7)) ?? 0),
-      total: filtered.length,
-    };
-  }
-
-  const days = Array.from({ length: range === "7d" ? 7 : 30 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - ((range === "7d" ? 7 : 30) - 1 - index));
-    date.setHours(0, 0, 0, 0);
-    return date;
-  });
-
-  const buckets = new Map<string, number>(days.map((date) => [date.toISOString().slice(0, 10), 0]));
-
-  filtered.forEach((event) => {
-    const key = new Date(event.created_at).toISOString().slice(0, 10);
-    if (buckets.has(key)) {
-      buckets.set(key, (buckets.get(key) ?? 0) + 1);
-    }
-  });
-
-  return {
-    labels: days.map((date) => formatDate(date)),
-    counts: days.map((date) => buckets.get(date.toISOString().slice(0, 10)) ?? 0),
-    total: filtered.length,
-  };
-}
-
 function buildActivityBreakdown(events: Awaited<ReturnType<typeof getPlatformEvents>>, range: DashboardRange) {
   const start = getRangeStart(range);
   const filtered = events.filter((event) => new Date(event.created_at) >= start);
   const categories = [
     {
       label: "Enquiries",
-      color: "rgba(197, 22, 29, 0.92)",
+      color: "#a7431f",
       match: (eventType: string) =>
         eventType === "inquiry_submitted" || eventType === "inquiry_reviewed" || eventType === "inquiry_confirmed" || eventType === "inquiry_closed",
     },
     {
       label: "Listings",
-      color: "rgba(180, 122, 22, 0.9)",
+      color: "#eda100",
       match: (eventType: string) =>
         eventType === "listing_approved" || eventType === "listing_rejected" || eventType === "listing_featured",
     },
     {
       label: "Growth",
-      color: "rgba(111, 98, 73, 0.88)",
+      color: "#1baf7a",
       match: (eventType: string) => eventType === "referral_click" || eventType === "referral_conversion",
     },
     {
       label: "Admin",
-      color: "rgba(17, 19, 24, 0.72)",
+      color: "#4a3aa7",
       match: (eventType: string) =>
         eventType === "admin_profile_updated" || eventType === "admin_settings_updated" || eventType === "user_status_changed",
     },
@@ -168,17 +121,12 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
   const workspace = await getAdminWorkspaceData();
   const platformEvents = await getPlatformEvents(2000);
   const recentAdminUpdates = await getRecentPlatformNotifications(workspace.profile.id, 3);
-  const activitySeries = buildActivitySeries(platformEvents, selectedRange);
   const activityBreakdown = buildActivityBreakdown(platformEvents, selectedRange);
   const lastUpdated =
     workspace.recentListings[0]?.updated_at ??
     workspace.recentBookings[0]?.updated_at ??
     workspace.profile.updated_at;
   const selectedStart = getRangeStart(selectedRange);
-  const visibleListings = workspace.listings.filter((listing) => new Date(listing.created_at) >= selectedStart);
-  const visibleInquiries = workspace.inquiries.filter((inquiry) => new Date(inquiry.created_at) >= selectedStart);
-  const visibleUsers = workspace.users.filter((user) => new Date(user.created_at) >= selectedStart);
-  const visibleOperators = visibleUsers.filter((user) => user.role === "operator");
   const selectedRangeLabel = selectedRange === "7d" ? "7 days" : selectedRange === "30d" ? "30 days" : "12 months";
   const visiblePayments = workspace.recentPayments.filter((payment) => {
     if (selectedPaymentStatus === "paid") {
@@ -203,17 +151,26 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
   };
   const activityPieItems = [
     ...activityBreakdown.breakdown,
-    activityBreakdown.otherCount > 0 ? { label: "Other", color: "rgba(17, 19, 24, 0.12)", count: activityBreakdown.otherCount } : null,
+    activityBreakdown.otherCount > 0 ? { label: "Other", color: "#9a938a", count: activityBreakdown.otherCount } : null,
   ].filter(Boolean) as Array<{ label: string; color: string; count: number }>;
-  const activityPieSegments = activityPieItems.reduce<
-    Array<{ label: string; color: string; count: number; start: number; end: number }>
-  >((segments, item) => {
-    const start = segments.length ? segments[segments.length - 1].end : 0;
-    const end = start + (item.count / Math.max(1, activityBreakdown.total)) * 100;
-    segments.push({ ...item, start, end });
-    return segments;
-  }, []);
   const dashboardHref = buildDashboardHref(selectedRange, selectedPaymentStatus);
+  const moneyExact = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "TTD",
+      maximumFractionDigits: 2,
+    }).format(value);
+  const money = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "TTD",
+      maximumFractionDigits: 0,
+    }).format(value);
+  const attentionItems = buildAttentionItems(workspace);
+  const healthMetrics = buildHealthMetrics(workspace, selectedStart, selectedRangeLabel, money);
+  const funnel = buildFunnel(workspace);
+  const health = summarise(attentionItems);
+  const peakActivity = Math.max(1, ...workspace.activityTimeline.map((day) => day.count));
   const withdrawalMessage = resolvedSearchParams.withdrawal === "requested" ? "Withdrawal request sent." : null;
   const withdrawalErrorMessage =
     resolvedSearchParams.withdrawal_error === "no_balance"
@@ -223,16 +180,33 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
         : null;
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
 
       <main className="portal-list-page">
-        <header className="page-header">
+        <header className="page-header ov-header">
           <div>
             <span className="admin-label">Administrator</span>
-            <h1>Executive Overview</h1>
+            <h1>Overview</h1>
+            <p className={`ov-health ov-health-${health.severity}`}>
+              <span className="ov-health-dot" aria-hidden="true" />
+              {health.headline}
+            </p>
           </div>
 
           <div className="header-right flex-wrap">
+            <div className="ov-range" role="group" aria-label="Reporting period">
+              {(["7d", "30d", "1y"] as const).map((range) => (
+                <Link
+                  key={range}
+                  className={`ov-range-pill ${range === selectedRange ? "is-active" : ""}`}
+                  href={buildDashboardHref(range, selectedPaymentStatus)}
+                  aria-current={range === selectedRange ? "true" : undefined}
+                >
+                  {range === "7d" ? "7 days" : range === "30d" ? "30 days" : "12 months"}
+                </Link>
+              ))}
+            </div>
+
             <div className="updated-text">
               <p>Last Updated</p>
               <p>{formatDate(lastUpdated)}</p>
@@ -261,10 +235,6 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           </div>
         </header>
 
-        <div style={{ marginBottom: 24 }}>
-          <PortalQuickLinks variant="admin" />
-        </div>
-
         {withdrawalMessage ? (
           <div className="mb-6">
             <StatusMessage tone="success">{withdrawalMessage}</StatusMessage>
@@ -276,21 +246,84 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           </div>
         ) : null}
 
-        <section className="stats-grid">
-          {[
-            ["Activity Events", activitySeries.total.toLocaleString(), selectedRangeLabel, false],
-            ["Enquiries", visibleInquiries.length.toLocaleString(), "in selected range", false],
-            ["Listings", visibleListings.length.toLocaleString(), "published or updated", false],
-            ["Operators", visibleOperators.length.toLocaleString(), "new or active in range", false],
-          ].map(([label, value, change, isError]) => (
-            <div key={label as string} className="stat-card glass-panel">
-              <p>{label}</p>
-              <div className="stat-row">
-                <h3>{value}</h3>
-                <span className={`stat-change ${isError ? "error" : ""}`}>{change}</span>
-              </div>
-            </div>
-          ))}
+        <section className="ov-attention" aria-labelledby="needs-attention">
+          <h2 className="ov-section-title" id="needs-attention">
+            Needs attention
+          </h2>
+          <div className="ov-attention-grid">
+            {attentionItems.map((item) => (
+              <Link
+                className={`ov-attention-card is-${item.severity}`}
+                href={item.href}
+                key={item.id}
+              >
+                <span className="ov-attention-count">{item.count}</span>
+                <span className="ov-attention-label">{item.label}</span>
+                <span className="ov-attention-detail">{item.detail}</span>
+                <span className="ov-attention-go" aria-hidden="true">
+                  {item.count > 0 ? "Review →" : "All clear"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="ov-metrics" aria-labelledby="platform-health">
+          <h2 className="ov-section-title" id="platform-health">
+            Platform
+          </h2>
+          <div className="ov-metric-grid">
+            {healthMetrics.map((metric) => (
+              <Link className="ov-metric" href={metric.href} key={metric.id}>
+                <span className="ov-metric-label">{metric.label}</span>
+                <strong className="ov-metric-value">{metric.value}</strong>
+                <span
+                  className={`ov-metric-delta ${
+                    metric.delta === null ? "" : metric.delta >= 0 ? "is-up" : "is-down"
+                  }`}
+                >
+                  {metric.delta === null
+                    ? metric.deltaLabel
+                    : `${metric.delta >= 0 ? "▲" : "▼"} ${Math.abs(metric.delta).toFixed(0)}% ${metric.deltaLabel}`}
+                </span>
+                <span className="ov-metric-hint">{metric.hint}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="ov-funnel" aria-labelledby="conversion">
+          <h2 className="ov-section-title" id="conversion">
+            Enquiry to payment
+          </h2>
+          <div className="ov-funnel-track">
+            {[
+              { label: "Enquiries", value: funnel.enquiries, pct: 100, href: "/AdminBookings" },
+              {
+                label: "Confirmed",
+                value: funnel.confirmed,
+                pct: funnel.confirmRate,
+                href: "/AdminBookings",
+              },
+              {
+                label: "Paid",
+                value: funnel.paid,
+                pct: funnel.enquiries > 0 ? (funnel.paid / funnel.enquiries) * 100 : 0,
+                href: "/AdminBookings?tab=payments&paymentStatus=paid",
+              },
+            ].map((stage) => (
+              <Link className="ov-funnel-stage" href={stage.href} key={stage.label}>
+                <span className="ov-funnel-head">
+                  <span className="ov-funnel-label">{stage.label}</span>
+                  <strong className="ov-funnel-value">{stage.value.toLocaleString()}</strong>
+                </span>
+                <span className="ov-funnel-bar" aria-hidden="true">
+                  <span className="ov-funnel-fill" style={{ width: `${Math.max(2, stage.pct)}%` }} />
+                </span>
+                <span className="ov-funnel-pct">{stage.pct.toFixed(0)}% of enquiries</span>
+              </Link>
+            ))}
+          </div>
         </section>
 
         <div className="content-grid">
@@ -311,39 +344,59 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
             </div>
 
             {activityBreakdown.total > 0 ? (
-              <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
-                <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-low/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]">
-                  <div
-                    className="flex h-44 w-44 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest"
-                    style={{
-                      background: `conic-gradient(${activityPieSegments
-                        .map((item) => `${item.color} ${item.start}% ${item.end}%`)
-                        .join(", ")})`,
-                    }}
-                  >
-                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-center">
-                      <span className="label-caps text-secondary">Activity</span>
-                      <strong className="mt-2 font-display text-4xl leading-none tracking-[-0.04em] text-on-background">
-                        {activityBreakdown.total}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
+              <div className="ov-chart">
+                {/* Part-to-whole across <=5 classes: a stacked bar, not a donut.
+                    Segments are separated by a 2px surface gap rather than a
+                    stroke, and every class is directly labelled with its count,
+                    which is also what relieves the sub-3:1 contrast of the
+                    lighter hues. */}
+                <div className="ov-stack" role="img" aria-label={`Activity by type: ${activityPieItems.map((item) => `${item.label} ${item.count}`).join(", ")}`}>
                   {activityPieItems.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
-                        <div className="flex items-center gap-3">
-                        <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="font-body-md text-on-background">{item.label}</span>
-                        </div>
-                      <span className="label-caps text-secondary">{item.count}</span>
-                    </div>
+                    <span
+                      className="ov-stack-seg"
+                      key={item.label}
+                      style={{
+                        width: `${(item.count / Math.max(1, activityBreakdown.total)) * 100}%`,
+                        backgroundColor: item.color,
+                      }}
+                      title={`${item.label}: ${item.count}`}
+                    />
                   ))}
                 </div>
-              </div>
-            ) : null}
 
+                <ul className="ov-legend">
+                  {activityPieItems.map((item) => (
+                    <li className="ov-legend-item" key={item.label}>
+                      <span className="ov-legend-swatch" style={{ backgroundColor: item.color }} aria-hidden="true" />
+                      <span className="ov-legend-label">{item.label}</span>
+                      <span className="ov-legend-value">{item.count}</span>
+                      <span className="ov-legend-pct">
+                        {Math.round((item.count / Math.max(1, activityBreakdown.total)) * 100)}%
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="ov-activity-empty">
+                <p>No activity recorded in the last {selectedRangeLabel}.</p>
+                <p className="ov-activity-empty-hint">
+                  Events appear here as listings, enquiries, bookings and users change.
+                </p>
+              </div>
+            )}
+
+            <div className="ov-spark" aria-label="Activity over the last 7 days">
+              {workspace.activityTimeline.map((day) => (
+                <span className="ov-spark-col" key={day.day} title={`${day.day}: ${day.count}`}>
+                  <span
+                    className="ov-spark-bar"
+                    style={{ height: `${Math.round((day.count / peakActivity) * 100)}%` }}
+                  />
+                  <span className="ov-spark-day">{day.day.slice(5)}</span>
+                </span>
+              ))}
+            </div>
           </section>
 
           <section className="right-column">
@@ -420,7 +473,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                 <span className="approval-badge">{workspace.stats.paymentCount.toLocaleString()} Paid</span>
               </div>
 
-              <div className="flex flex-wrap gap-2" style={{ marginBottom: 20 }}>
+              <div className="ov-panel-block flex flex-wrap gap-2">
                 {[
                   ["all", `All (${paymentCounts.all})`],
                   ["paid", `Paid (${paymentCounts.paid})`],
@@ -438,27 +491,27 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                 ))}
               </div>
 
-              <div className="stat-row" style={{ marginBottom: 20 }}>
-                <h3>{new Intl.NumberFormat("en-US", { style: "currency", currency: "TTD", maximumFractionDigits: 2 }).format(workspace.stats.monthlyRevenue)}</h3>
+              <div className="ov-panel-block stat-row">
+                <h3>{moneyExact(workspace.stats.monthlyRevenue)}</h3>
                 <span className="stat-change">Gross</span>
               </div>
 
-              <div className="flex flex-wrap gap-4" style={{ marginBottom: 20 }}>
+              <div className="ov-panel-block ov-split">
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                   <div className="label-caps text-secondary mb-1">Admin 20%</div>
                   <strong style={{ color: "var(--on-background)" }}>
-                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "TTD", maximumFractionDigits: 2 }).format(workspace.stats.adminCommissionTotal)}
+                    {moneyExact(workspace.stats.adminCommissionTotal)}
                   </strong>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                   <div className="label-caps text-secondary mb-1">Operator 80%</div>
                   <strong style={{ color: "var(--on-background)" }}>
-                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "TTD", maximumFractionDigits: 2 }).format(workspace.stats.operatorPayoutTotal)}
+                    {moneyExact(workspace.stats.operatorPayoutTotal)}
                   </strong>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3" style={{ marginBottom: 20 }}>
+              <div className="ov-panel-block flex flex-wrap gap-3">
                 <form action="/api/admin/withdrawals/request" method="post">
                   <input name="return_to" type="hidden" value={dashboardHref} />
                   <button className="btn-primary px-4 py-2 min-h-0" disabled={workspace.stats.adminCommissionTotal <= 0} type="submit">
@@ -503,7 +556,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
           </section>
         </div>
       </main>
-    </PageShell>
+    </>
   );
 }
 

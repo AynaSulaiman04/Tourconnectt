@@ -1,0 +1,372 @@
+.xp-page {
+  padding: 2.5rem var(--space-margin-mobile) 5rem;
+}
+
+@media (min-width: 768px) {
+  .xp-page {
+    padding-left: var(--space-margin-desktop);
+    padding-right: var(--space-margin-desktop);
+  }
+}
+
+.xp-head {
+  max-width: 46rem;
+}
+
+.xp-title {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 300;
+  color: var(--on-surface);
+}
+
+.xp-lede {
+  margin: 1rem 0 0;
+  max-width: 42rem;
+  color: var(--on-surface-variant);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+/* Filters ------------------------------------------------------------- */
+
+.xp-filters {
+  display: grid;
+  gap: 1.25rem;
+  margin: 2.25rem 0 0;
+  padding: 1.4rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.35rem;
+  background: rgba(255, 253, 251, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.xp-filter-label {
+  margin: 0 0 0.65rem;
+  color: var(--secondary);
+  font-size: 0.68rem;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.xp-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.xp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 999px;
+  background: rgba(255, 253, 251, 0.95);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.xp-chip:hover {
+  border-color: rgba(167, 67, 31, 0.32);
+  background: rgba(243, 222, 214, 0.5);
+}
+
+.xp-chip.is-active {
+  border-color: rgba(167, 67, 31, 0.4);
+  background: rgba(243, 222, 214, 0.85);
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.xp-chip-icon {
+  font-size: 1.05rem;
+  opacity: 0.8;
+}
+
+.xp-chip-count {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(30, 20, 15, 0.06);
+  color: var(--on-surface-variant);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.xp-chip.is-active .xp-chip-count {
+  background: rgba(167, 67, 31, 0.16);
+  color: var(--secondary);
+}
+
+.xp-clear {
+  justify-self: start;
+  color: var(--on-surface-variant);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.xp-result-count {
+  margin: 1.5rem 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Sections and grid ---------------------------------------------------- */
+
+.xp-section {
+  margin-top: 2.75rem;
+}
+
+.xp-section-head {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.xp-section-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 300;
+  color: var(--on-surface);
+}
+
+.xp-section-head p {
+  margin: 0.4rem 0 0;
+  color: var(--on-surface-variant);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* auto-fill keeps a two-listing island looking deliberate rather than
+   stretching two cards across the full width. */
+.xp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .xp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card ----------------------------------------------------------------- */
+
+.xp-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--outline-variant);
+  border-radius: 1.25rem;
+  background: rgba(255, 253, 251, 0.94);
+  box-shadow: var(--shadow-soft);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.xp-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167, 67, 31, 0.22);
+  box-shadow: 0 18px 40px rgba(52, 43, 36, 0.1);
+}
+
+.xp-card-image {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 2;
+  background: rgba(30, 20, 15, 0.05);
+  overflow: hidden;
+}
+
+.xp-card-image img {
+  object-fit: cover;
+}
+
+.xp-card-fallback {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.4rem;
+  height: 100%;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.xp-card-fallback p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.xp-card-tag {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 253, 251, 0.94);
+  color: var(--secondary);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.xp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  flex: 1 1 auto;
+  padding: 1.1rem 1.15rem 1.25rem;
+}
+
+.xp-card-meta {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.xp-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.xp-card-title a {
+  color: var(--on-surface);
+  text-decoration: none;
+}
+
+.xp-card-title a:hover {
+  color: var(--secondary);
+}
+
+.xp-card-copy {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.xp-card-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.xp-card-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.xp-card-price strong {
+  color: var(--on-surface);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.xp-card-price-tbc {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: var(--on-surface-variant) !important;
+}
+
+.xp-card-basis {
+  color: var(--on-surface-variant);
+  font-size: 0.78rem;
+}
+
+.xp-card-approx {
+  flex-basis: 100%;
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.xp-card-approx::before {
+  content: "≈ ";
+}
+
+.xp-card-duration {
+  flex: 0 0 auto;
+  color: var(--on-surface-variant);
+  font-size: 0.78rem;
+}
+
+.xp-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Empty state ---------------------------------------------------------- */
+
+.xp-empty {
+  margin-top: 2rem;
+  padding: 2.5rem 1.5rem;
+  border: 1px dashed var(--outline-variant);
+  border-radius: 1.35rem;
+  background: rgba(255, 253, 251, 0.7);
+  text-align: center;
+}
+
+.xp-empty h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: var(--on-surface);
+}
+
+.xp-empty p {
+  margin: 0.65rem auto 0;
+  max-width: 34rem;
+  color: var(--on-surface-variant);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.xp-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.35rem;
+}

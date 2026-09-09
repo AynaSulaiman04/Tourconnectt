@@ -152,6 +152,5 @@ export async function updateListingModerationAction(formData: FormData) {
   revalidatePath("/OperatorBookings");
   revalidatePath("/OperatorListings");
   revalidatePath("/AdminAnalytics");
-  revalidatePath("/AdminPromotions");
   redirect(buildRedirectUrl(returnTo, { updated: "1" }));
 }

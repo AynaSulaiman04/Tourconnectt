@@ -69,7 +69,7 @@ export type OperatorCustomerRecord = TravelerProfile & {
 };
 
 const draftSelect =
-  "id,operator_id,title,location,country,duration,summary,category,price,availability,capacity,itinerary,inclusions,exclusions,contact_name,contact_email,contact_phone,image_url,image_base64,is_published,published_listing_id,created_at,updated_at";
+  "id,operator_id,title,location,country,duration,summary,category,island,price,price_currency,price_basis,availability,capacity,itinerary,inclusions,exclusions,contact_name,contact_email,contact_phone,image_url,image_base64,is_published,published_listing_id,created_at,updated_at";
 
 const listingSelect =
   "id,title,location,country,duration,summary,image_url,image_base64,price,operator_id,operator_name,featured,is_active,created_at,updated_at";

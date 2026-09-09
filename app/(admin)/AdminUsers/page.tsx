@@ -3,11 +3,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormSubmitButton } from "@/components/ui/FormSubmitButton";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { PageShell } from "@/components/layout/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TableWrapper } from "@/components/ui/TableWrapper";
 import { getAdminWorkspaceData } from "@/lib/supabase/admin";
-import { getAdminPageShellProps } from "@/lib/admin/page-shell-props";
 import { updateTravelerCareProfileAction, updateUserAccessAction } from "./actions";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
@@ -138,18 +136,13 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
   const underReviewUsers = workspace.users.filter((user) => getUserStatus(user) === "under_review").length;
 
   return (
-    <PageShell {...getAdminPageShellProps(workspace.profile)}>
+    <>
       <main className="portal-list-page">
         <SectionHeader
           level={1}
-          eyebrow="Admin users"
-          title="Control platform access across travellers and operators."
+          eyebrow="CRM"
+          title="Traveller and operator records."
           description="Review credentials, verify operators, manage access tiers, and keep the account surface aligned with Tour ConnecTT policy."
-          action={
-            <Button href="/AdminSettings" variant="outline">
-              Workspace Settings
-            </Button>
-          }
         />
         {actionMessage ? (
           <div className="mt-6">
@@ -520,18 +513,10 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
               <p className="section-copy">
                 Keep the admin surface separate from operator tools so the platform can maintain centralized control without confusing the role experience.
               </p>
-              <div className="mt-6 admin-action-group">
-                <Button href="/AdminDashboard" variant="outline">
-                  Dashboard
-                </Button>
-                <Button href="/AdminAnalytics" variant="primary">
-                  Analytics
-                </Button>
-              </div>
             </GlassPanel>
           </div>
         </section>
       </main>
-    </PageShell>
+    </>
   );
 }

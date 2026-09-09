@@ -410,6 +410,30 @@ export function ConciergeChatClient({
   const [showSuggestedListings, setShowSuggestedListings] = useState(false);
   const [tripIntentSummary, setTripIntentSummary] = useState<string | null>(null);
   const [itineraryDraft, setItineraryDraft] = useState<ItineraryDay[]>([]);
+
+  const enquiryHandoffHref = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (suggestedListings[0]?.id) {
+      params.set("listing", suggestedListings[0].id);
+    }
+
+    if (tripIntentSummary) {
+      params.set("destination", tripIntentSummary.slice(0, 180));
+    }
+
+    // The day-by-day plan becomes the enquiry notes, so the operator receives
+    // the itinerary the traveller actually agreed to in chat.
+    if (itineraryDraft.length > 0) {
+      const plan = itineraryDraft
+        .map((day) => `Day ${day.day}: ${day.title}${day.detail ? ` - ${day.detail}` : ""}`)
+        .join("\n");
+      params.set("activities", plan.slice(0, 1500));
+    }
+
+    const query = params.toString();
+    return query ? `/Enquiry?${query}#request-form` : "/Enquiry#request-form";
+  }, [itineraryDraft, suggestedListings, tripIntentSummary]);
   const [submittingLead, setSubmittingLead] = useState(false);
   const {
     isSupported: isVoiceSupported,
@@ -1349,6 +1373,13 @@ export function ConciergeChatClient({
           letter-spacing: -0.03em;
         }
 
+        .quote-request-note {
+          margin: 0.5rem 0 0;
+          color: var(--on-surface-variant);
+          font-size: 0.8rem;
+          line-height: 1.5;
+        }
+
         .itinerary-panel-copy {
           margin: 0.45rem 0 0.9rem;
           color: var(--on-surface-variant);
@@ -1493,7 +1524,7 @@ export function ConciergeChatClient({
           .concierge-layout {
             grid-template-columns: 1fr;
             gap: 0.9rem;
-            height: auto;
+            height: 100%;
             min-height: 0;
             padding: 0.8rem 0 1rem;
           }
@@ -1501,11 +1532,6 @@ export function ConciergeChatClient({
           .concierge-rail {
             height: auto;
             min-height: 24rem;
-            max-height: none;
-          }
-
-          .concierge-main {
-            height: min(80dvh, calc(100dvh - 6.5rem));
             max-height: none;
           }
 
@@ -1524,16 +1550,71 @@ export function ConciergeChatClient({
             padding-right: 1rem;
           }
 
+          /* Every rem spent on chrome is a rem the message list does not get,
+             and on a phone the list was being squeezed to almost nothing. */
           .concierge-layout {
+            gap: 0;
+            padding: 0.5rem 0 0.5rem;
+          }
+
+          .concierge-main {
+            border-radius: 1.1rem;
+          }
+
+          .chat-header {
+            padding-top: 0.9rem;
+            padding-bottom: 0.9rem;
+          }
+
+          .chat-header h1 {
+            font-size: 1.35rem;
+          }
+
+          /* Three lines of static blurb above a chat the user is already in. */
+          .chat-subtitle {
+            display: none;
+          }
+
+          .messages-shell {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+          }
+
+          .composer {
+            gap: 0.6rem;
             padding-top: 0.75rem;
+            padding-bottom: 0.85rem;
+          }
+
+          /* Was a single column, which stacked attach, mic, the textarea and
+             Send into four full-width rows and pushed the conversation off
+             screen. Text on top, controls in one row underneath. */
+          .composer-row {
+            grid-template-columns: auto auto minmax(0, 1fr);
+            gap: 0.55rem;
+            align-items: center;
+          }
+
+          .composer-row .composer-input {
+            grid-column: 1 / -1;
+            grid-row: 1;
+            min-height: 3rem;
+            max-height: 7rem;
+            padding: 0.7rem 0.85rem;
+          }
+
+          .composer-row .composer-button {
+            justify-self: end;
+            min-height: 2.6rem;
+            padding: 0.7rem 1.35rem;
+          }
+
+          .composer-helper {
+            font-size: 0.72rem;
           }
 
           .current-chat-card {
             margin: 0.9rem 1rem 0;
-          }
-
-          .composer-row {
-            grid-template-columns: 1fr;
           }
         }
       `}</style>
@@ -1619,7 +1700,7 @@ export function ConciergeChatClient({
                 ))
               ) : (
                 <div className="empty-state">
-                  <h3>Describe your ideal trip in plain English.</h3>
+                  <h3>Describe your ideal trip.</h3>
                   <p>
                     Chat about flights, hotels, attractions, transport, and daily schedules. Your itinerary
                     will keep updating as the conversation evolves — like speaking with a travel consultant.
@@ -1664,11 +1745,14 @@ export function ConciergeChatClient({
                   </button>
                 ) : (
                   <>
-                    <Link className="quote-request-button" href="/LoginPage?redirect=/ConciergeChat">
-                      Sign in to send this to an operator
+                    <Link className="quote-request-button" href={enquiryHandoffHref}>
+                      Send this to an operator
                     </Link>
-                    <Link className="recommendation-action" href="/Enquiry">
-                      Or send an enquiry without an account
+                    <p className="quote-request-note">
+                      No account needed — your plan is carried over, we just need an email address.
+                    </p>
+                    <Link className="recommendation-action" href="/LoginPage?redirect=/ConciergeChat">
+                      Or sign in to keep this chat on your account
                     </Link>
                   </>
                 )}
@@ -1690,11 +1774,14 @@ export function ConciergeChatClient({
                   </button>
                 ) : (
                   <>
-                    <Link className="quote-request-button" href="/LoginPage?redirect=/ConciergeChat">
-                      Sign in to send this to an operator
+                    <Link className="quote-request-button" href={enquiryHandoffHref}>
+                      Send this to an operator
                     </Link>
-                    <Link className="recommendation-action" href="/Enquiry">
-                      Or send an enquiry without an account
+                    <p className="quote-request-note">
+                      No account needed — your plan is carried over, we just need an email address.
+                    </p>
+                    <Link className="recommendation-action" href="/LoginPage?redirect=/ConciergeChat">
+                      Or sign in to keep this chat on your account
                     </Link>
                   </>
                 )}
@@ -1737,7 +1824,7 @@ export function ConciergeChatClient({
 
                       <div className="recommendation-actions">
                         <Link className="recommendation-action" href={listing.href}>
-                          Open enquiry
+                          View experience
                         </Link>
                         <Link className="recommendation-action secondary" href={`/Messages?listing=${listing.id}`}>
                           Chat with operator
