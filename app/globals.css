@@ -1,20 +1,22 @@
-@import "@fontsource-variable/material-symbols-outlined/wght.css";
 @import "tailwindcss";
 @import "./portal.css";
 
-/* Overrides `font-display: swap` from the packaged fontsource stylesheet above.
-   `swap` paints the ligature TEXT while the font loads, which is why icons
-   appeared as the words "flight", "menuclose" and "person" on slow connections
-   -- the icon font is 726KB. `block` paints nothing during that window instead,
-   so an icon is either an icon or empty space, never its own name.
-   Must sit after every @import: CSS requires imports to come first. */
+/* Icon font, subset to the 62 icons this app actually uses: 16KB instead of
+   the full 728KB face. Regenerate after adding or removing an icon:
+
+     npm run icons:build
+
+   `font-display: block` matters here. The default `swap` paints the ligature
+   TEXT while the font loads, which is why icons briefly read as the words
+   "flight", "menuclose" and "person" on slow connections. `block` paints
+   nothing instead, so an icon is either an icon or empty space, never its own
+   name. */
 @font-face {
-  font-family: "Material Symbols Outlined Variable";
+  font-family: "Material Symbols Outlined";
   font-style: normal;
   font-display: block;
   font-weight: 100 700;
-  src: url("../node_modules/@fontsource-variable/material-symbols-outlined/files/material-symbols-outlined-latin-wght-normal.woff2")
-    format("woff2-variations");
+  src: url("/fonts/material-symbols-subset.woff2") format("woff2");
 }
 
 

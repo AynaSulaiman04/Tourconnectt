@@ -17,10 +17,11 @@
     "db:migrate": "node scripts/db-migrate.mjs up",
     "db:migrate:status": "node scripts/db-migrate.mjs status",
     "db:baseline": "node scripts/db-migrate.mjs baseline",
-    "mail:test": "node scripts/mail-test.mjs"
+    "mail:test": "node scripts/mail-test.mjs",
+    "icons:build": "node scripts/build-icon-font.mjs",
+    "icons:check": "node scripts/build-icon-font.mjs --check"
   },
   "dependencies": {
-    "@fontsource-variable/material-symbols-outlined": "^5.2.44",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",
     "exceljs": "^4.4.0",
