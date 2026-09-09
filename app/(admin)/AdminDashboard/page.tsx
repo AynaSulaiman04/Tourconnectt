@@ -55,24 +55,24 @@ function buildActivityBreakdown(events: Awaited<ReturnType<typeof getPlatformEve
   const categories = [
     {
       label: "Enquiries",
-      color: "rgba(197, 22, 29, 0.92)",
+      color: "#a7431f",
       match: (eventType: string) =>
         eventType === "inquiry_submitted" || eventType === "inquiry_reviewed" || eventType === "inquiry_confirmed" || eventType === "inquiry_closed",
     },
     {
       label: "Listings",
-      color: "rgba(180, 122, 22, 0.9)",
+      color: "#eda100",
       match: (eventType: string) =>
         eventType === "listing_approved" || eventType === "listing_rejected" || eventType === "listing_featured",
     },
     {
       label: "Growth",
-      color: "rgba(111, 98, 73, 0.88)",
+      color: "#1baf7a",
       match: (eventType: string) => eventType === "referral_click" || eventType === "referral_conversion",
     },
     {
       label: "Admin",
-      color: "rgba(17, 19, 24, 0.72)",
+      color: "#4a3aa7",
       match: (eventType: string) =>
         eventType === "admin_profile_updated" || eventType === "admin_settings_updated" || eventType === "user_status_changed",
     },
@@ -151,17 +151,15 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
   };
   const activityPieItems = [
     ...activityBreakdown.breakdown,
-    activityBreakdown.otherCount > 0 ? { label: "Other", color: "rgba(17, 19, 24, 0.12)", count: activityBreakdown.otherCount } : null,
+    activityBreakdown.otherCount > 0 ? { label: "Other", color: "#9a938a", count: activityBreakdown.otherCount } : null,
   ].filter(Boolean) as Array<{ label: string; color: string; count: number }>;
-  const activityPieSegments = activityPieItems.reduce<
-    Array<{ label: string; color: string; count: number; start: number; end: number }>
-  >((segments, item) => {
-    const start = segments.length ? segments[segments.length - 1].end : 0;
-    const end = start + (item.count / Math.max(1, activityBreakdown.total)) * 100;
-    segments.push({ ...item, start, end });
-    return segments;
-  }, []);
   const dashboardHref = buildDashboardHref(selectedRange, selectedPaymentStatus);
+  const moneyExact = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "TTD",
+      maximumFractionDigits: 2,
+    }).format(value);
   const money = (value: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -346,36 +344,38 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
             </div>
 
             {activityBreakdown.total > 0 ? (
-              <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
-                <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-low/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]">
-                  <div
-                    className="flex h-44 w-44 items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest"
-                    style={{
-                      background: `conic-gradient(${activityPieSegments
-                        .map((item) => `${item.color} ${item.start}% ${item.end}%`)
-                        .join(", ")})`,
-                    }}
-                  >
-                    <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-outline-variant/20 bg-surface-container-lowest text-center">
-                      <span className="label-caps text-secondary">Activity</span>
-                      <strong className="mt-2 font-display text-4xl leading-none tracking-[-0.04em] text-on-background">
-                        {activityBreakdown.total}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
+              <div className="ov-chart">
+                {/* Part-to-whole across <=5 classes: a stacked bar, not a donut.
+                    Segments are separated by a 2px surface gap rather than a
+                    stroke, and every class is directly labelled with its count,
+                    which is also what relieves the sub-3:1 contrast of the
+                    lighter hues. */}
+                <div className="ov-stack" role="img" aria-label={`Activity by type: ${activityPieItems.map((item) => `${item.label} ${item.count}`).join(", ")}`}>
                   {activityPieItems.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between gap-4 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
-                        <div className="flex items-center gap-3">
-                        <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="font-body-md text-on-background">{item.label}</span>
-                        </div>
-                      <span className="label-caps text-secondary">{item.count}</span>
-                    </div>
+                    <span
+                      className="ov-stack-seg"
+                      key={item.label}
+                      style={{
+                        width: `${(item.count / Math.max(1, activityBreakdown.total)) * 100}%`,
+                        backgroundColor: item.color,
+                      }}
+                      title={`${item.label}: ${item.count}`}
+                    />
                   ))}
                 </div>
+
+                <ul className="ov-legend">
+                  {activityPieItems.map((item) => (
+                    <li className="ov-legend-item" key={item.label}>
+                      <span className="ov-legend-swatch" style={{ backgroundColor: item.color }} aria-hidden="true" />
+                      <span className="ov-legend-label">{item.label}</span>
+                      <span className="ov-legend-value">{item.count}</span>
+                      <span className="ov-legend-pct">
+                        {Math.round((item.count / Math.max(1, activityBreakdown.total)) * 100)}%
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : (
               <div className="ov-activity-empty">
@@ -473,7 +473,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                 <span className="approval-badge">{workspace.stats.paymentCount.toLocaleString()} Paid</span>
               </div>
 
-              <div className="flex flex-wrap gap-2" style={{ marginBottom: 20 }}>
+              <div className="ov-panel-block flex flex-wrap gap-2">
                 {[
                   ["all", `All (${paymentCounts.all})`],
                   ["paid", `Paid (${paymentCounts.paid})`],
@@ -491,27 +491,27 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
                 ))}
               </div>
 
-              <div className="stat-row" style={{ marginBottom: 20 }}>
-                <h3>{new Intl.NumberFormat("en-US", { style: "currency", currency: "TTD", maximumFractionDigits: 2 }).format(workspace.stats.monthlyRevenue)}</h3>
+              <div className="ov-panel-block stat-row">
+                <h3>{moneyExact(workspace.stats.monthlyRevenue)}</h3>
                 <span className="stat-change">Gross</span>
               </div>
 
-              <div className="flex flex-wrap gap-4" style={{ marginBottom: 20 }}>
+              <div className="ov-panel-block ov-split">
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                   <div className="label-caps text-secondary mb-1">Admin 20%</div>
                   <strong style={{ color: "var(--on-background)" }}>
-                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "TTD", maximumFractionDigits: 2 }).format(workspace.stats.adminCommissionTotal)}
+                    {moneyExact(workspace.stats.adminCommissionTotal)}
                   </strong>
                 </div>
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3">
                   <div className="label-caps text-secondary mb-1">Operator 80%</div>
                   <strong style={{ color: "var(--on-background)" }}>
-                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "TTD", maximumFractionDigits: 2 }).format(workspace.stats.operatorPayoutTotal)}
+                    {moneyExact(workspace.stats.operatorPayoutTotal)}
                   </strong>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3" style={{ marginBottom: 20 }}>
+              <div className="ov-panel-block flex flex-wrap gap-3">
                 <form action="/api/admin/withdrawals/request" method="post">
                   <input name="return_to" type="hidden" value={dashboardHref} />
                   <button className="btn-primary px-4 py-2 min-h-0" disabled={workspace.stats.adminCommissionTotal <= 0} type="submit">

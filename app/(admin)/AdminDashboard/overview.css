@@ -328,41 +328,6 @@
   opacity: 0.8;
 }
 
-/* 7-day bars. Rendered at any volume, so the panel is never empty. */
-.ov-spark {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.4rem;
-  height: 5.5rem;
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--outline-variant);
-}
-
-.ov-spark-col {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.35rem;
-  height: 100%;
-  min-width: 0;
-}
-
-.ov-spark-bar {
-  width: 100%;
-  min-height: 2px;
-  border-radius: 0.3rem 0.3rem 0 0;
-  background: linear-gradient(180deg, rgba(167, 67, 31, 0.75), rgba(180, 122, 22, 0.45));
-}
-
-.ov-spark-day {
-  color: var(--on-surface-variant);
-  font-size: 0.62rem;
-  white-space: nowrap;
-}
-
 /* Gap fixes -----------------------------------------------------------
    These panels were pinned to fixed heights and separated by 32-72px gaps,
    which left visible holes whenever a panel had little content. Heights are
@@ -400,4 +365,204 @@
   .ov-range {
     align-self: flex-start;
   }
+}
+
+/* Charts ---------------------------------------------------------------
+   Part-to-whole across at most five classes, so a stacked bar rather than a
+   donut: exact comparison of close values is what a reader needs here, and a
+   donut is the wrong form for that.
+
+   Hues are validated against the cream admin surface (lightness band, chroma
+   floor, CVD separation, normal-vision floor). The two lighter hues sit under
+   3:1 contrast, which is permitted only because every class is directly
+   labelled with its count and share below. */
+
+.ov-chart {
+  display: grid;
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ov-stack {
+  display: flex;
+  width: 100%;
+  height: 1.5rem;
+  /* The gap is drawn in the surface colour, never a stroke around segments. */
+  gap: 2px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(30, 20, 15, 0.05);
+}
+
+.ov-stack-seg {
+  display: block;
+  min-width: 3px;
+  height: 100%;
+}
+
+/* Square where segments meet, 4px rounded at the two outer data-ends. */
+.ov-stack-seg:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.ov-stack-seg:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.ov-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ov-legend-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0;
+}
+
+.ov-legend-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+/* Text keeps its own ink; the swatch beside it carries the identity. */
+.ov-legend-label {
+  color: var(--on-surface);
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-legend-value {
+  color: var(--on-surface);
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-legend-pct {
+  color: var(--on-surface-variant);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* 7-day columns. Capped thickness with the band's leftover left as air, a 4px
+   rounded data-end, square on the baseline, and a hairline baseline rule. */
+.ov-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 6rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.ov-spark-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  height: 100%;
+  min-width: 0;
+}
+
+.ov-spark-bar {
+  width: min(100%, 24px);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: #a7431f;
+}
+
+.ov-spark-day {
+  color: var(--on-surface-variant);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Panel structure -------------------------------------------------------
+   The lower panels each had their own paddings, heading sizes and rhythm.
+   These give them one shared structure so the page reads as a single sheet. */
+.portal-list-page .section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.portal-list-page .panel-label {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.portal-list-page .approval-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(167, 67, 31, 0.1);
+  color: var(--secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.portal-list-page .activity-card,
+.portal-list-page .approvals-card,
+.portal-list-page .updates-card,
+.portal-list-page .payments-card {
+  padding: 1.5rem;
+  border-radius: 1.15rem;
+}
+
+/* Shared block rhythm inside a panel, replacing repeated inline margins. */
+.ov-panel-block {
+  margin-bottom: 1.15rem;
+}
+
+.ov-panel-block:last-child {
+  margin-bottom: 0;
+}
+
+/* Commission split: two equal cells rather than free-floating boxes, so the
+   admin and operator shares line up and stay comparable. */
+.ov-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.ov-split > div {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.85rem;
+  background: rgba(250, 246, 240, 0.7);
+}
+
+/* The gross figure is the panel's headline; give it the display face. */
+.payments-card .stat-row h3 {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 300;
 }

@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format/date";
 import { formatListingPrice } from "@/lib/format/listing-price";
 import { getPlatformEvents } from "@/lib/supabase/analytics";
 import { createReferralCampaignAction, toggleReferralCampaignAction } from "./promotions-actions";
+import "./analytics-chart.css";
 import { getFriendlyFeedbackMessage } from "@/lib/ui/feedback";
 import {
   PLATFORM_ADMIN_COMMISSION_RATE,
@@ -315,22 +316,26 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               />
               {hasActivity ? (
                 <div
-                  className="mt-6 grid gap-1 sm:gap-3 items-end h-64"
+                  className="ac-chart"
                   style={{ gridTemplateColumns: `repeat(${series.labels.length}, minmax(0, 1fr))` }}
                 >
                   {series.counts.map((count, index) => (
-                    <div key={series.labels[index]} className="flex flex-col items-center gap-3">
-                      <div className="w-full rounded-t-2xl bg-secondary/15 border border-secondary/15 flex items-end overflow-hidden" style={{ height: 240 }}>
+                    <div className="ac-col" key={series.labels[index]}>
+                      <div className="ac-track">
+                        {/*
+                          Height is the true proportion. This previously used
+                          Math.max(12, ...), which floored every non-zero bar at
+                          12% -- a count of 1 in 100 drew more than ten times its
+                          real value. A 2px minimum in the CSS keeps a small bar
+                          visible without misstating it.
+                        */}
                         <div
-                          className="w-full bg-secondary transition-all"
-                          style={{
-                            height: count > 0 ? `${Math.max(12, (count / maxActivity) * 100)}%` : 0,
-                          }}
+                          className="ac-bar"
+                          style={{ height: count > 0 ? `${(count / maxActivity) * 100}%` : 0 }}
+                          title={`${chartLabels[index]}: ${count}`}
                         />
                       </div>
-                      <span className="min-h-[2rem] text-center text-[10px] uppercase tracking-[0.12em] leading-tight text-on-surface-variant whitespace-normal">
-                        {chartLabels[index]}
-                      </span>
+                      <span className="ac-label">{chartLabels[index]}</span>
                     </div>
                   ))}
                 </div>
