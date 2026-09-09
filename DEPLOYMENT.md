@@ -11,13 +11,16 @@
 
 | Thing | Status |
 | --- | --- |
-| `tourconnectt.com` | Serving a **GoDaddy Website Builder** page, not this app. DNS resolves to `76.223.105.230` / `13.248.243.5` (AWS Global Accelerator, GoDaddy's builder). |
-| `www.tourconnectt.com` | Not resolving. |
+| `tourconnectt.com` | **Pointed at Vercel** — A record `216.198.79.1`, `Server: Vercel`. The Website Builder page is gone; steps 3–4 below are done. |
+| `www.tourconnectt.com` | **Still not resolving** — no record of any kind exists. Anyone typing the www address gets a browser error. |
+| Mail | `MX` → `secureserver.net` (GoDaddy), working. Leave untouched when editing DNS. |
 | `tourconnectt.rabbanirihab.chatgpt.site` | Dead (the URL in the old handoff doc). |
-| Vercel | Not linked. `vercel.json` exists but there is no project. |
+| Vercel | Project `tourconnectt` exists and every recent build is READY, but the project is **paused** (`live: false`), so pushes produce no deployment. The domain serves a stale edge-cached copy from before the pause — `/Experiences` 404s on it. |
 | Cloudflare Workers | Not deployed. `wrangler.jsonc` and OpenNext are configured but unused. |
 
-**The app is not live anywhere.** Target platform: **Vercel**.
+**The app is frozen, not missing.** The domain answers, but with a cached copy
+of an older deployment; nothing new can ship until the project is un-paused, or
+the app is moved to Render (see `render.yaml`).
 
 GoDaddy Website Builder and GoDaddy shared hosting cannot run this app — it
 needs a Node server for server components, server actions, API routes and the
