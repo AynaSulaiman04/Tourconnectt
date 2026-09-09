@@ -481,3 +481,38 @@
     display: none;
   }
 }
+
+/* Notification panel inside the portal sidebar --------------------------
+   The panel is 24rem wide but the sidebar is 16rem, and it was right-aligned
+   to its toggle, so it hung off the left edge of the screen. In the sidebar it
+   opens to the RIGHT instead, over the content column, anchored to the bell. */
+.portal-sidebar .notification-center {
+  position: static;
+}
+
+.portal-sidebar .notification-menu {
+  top: auto;
+  right: auto;
+  left: calc(100% + 0.5rem);
+  width: min(24rem, calc(100vw - var(--portal-sidebar-width) - 2rem));
+  max-height: min(32rem, calc(100vh - 4rem));
+  overflow-y: auto;
+}
+
+/* The brand row is the nearest positioned ancestor once .notification-center
+   goes static, so anchor from there. */
+.portal-sidebar-brand {
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  /* The sidebar is a full-height overlay on mobile, so the panel can sit
+     under the bell and use the width of the drawer. */
+  .portal-sidebar .notification-menu {
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    width: auto;
+    max-height: min(24rem, calc(100vh - 12rem));
+  }
+}

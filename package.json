@@ -19,7 +19,8 @@
     "db:baseline": "node scripts/db-migrate.mjs baseline",
     "mail:test": "node scripts/mail-test.mjs",
     "icons:build": "node scripts/build-icon-font.mjs",
-    "icons:check": "node scripts/build-icon-font.mjs --check"
+    "icons:check": "node scripts/build-icon-font.mjs --check",
+    "env:vercel": "node scripts/env-for-vercel.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
