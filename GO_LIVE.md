@@ -24,10 +24,11 @@ to Vercel's `VERCEL_PROJECT_PRODUCTION_URL` before localhost — so a forgotten
 variable degrades to the right host rather than emailing customers localhost
 links. Set it explicitly anyway.
 
-> **Shortcut:** `.env.production.local` in the project root already contains
-> every variable below, filled in and ready to paste into Vercel's "Import .env"
-> box. Only `SMTP_PASS` is left blank for you. It is git-ignored — do not commit
-> or share it.
+> **There is one env file: `.env.local`.** It holds every variable the code
+> reads (48 of them), grouped and commented, and is git-ignored. Paste it whole
+> into Vercel via **Import .env**, then change the four values marked
+> `▶ PRODUCTION` inside it. `.env.example` is the committed copy with all
+> values stripped.
 
 ### Copy across from `.env.local` unchanged
 
