@@ -24,6 +24,11 @@ to Vercel's `VERCEL_PROJECT_PRODUCTION_URL` before localhost — so a forgotten
 variable degrades to the right host rather than emailing customers localhost
 links. Set it explicitly anyway.
 
+> **Shortcut:** `.env.production.local` in the project root already contains
+> every variable below, filled in and ready to paste into Vercel's "Import .env"
+> box. Only `SMTP_PASS` is left blank for you. It is git-ignored — do not commit
+> or share it.
+
 ### Copy across from `.env.local` unchanged
 
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
@@ -48,6 +53,30 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 `CRON_SECRET` is the one that matters most: without it the scheduled-email and
 calendar-sync endpoints return 401 and reminders never send.
+
+### Email is sent as tourconnectt@gmail.com
+
+Gmail will not accept your normal account password over SMTP, and will not let
+you send from an address you are not signed in as. So:
+
+1. Sign in as **tourconnectt@gmail.com**
+2. Turn on **2-Step Verification** (App Passwords do not exist without it):
+   myaccount.google.com → Security
+3. Create an App Password at myaccount.google.com/apppasswords, name it
+   "Tour ConnecTT", and copy the 16 characters
+4. Put it in `SMTP_PASS` (spaces are stripped automatically)
+
+`SMTP_USER` and `SMTP_FROM` must both be that same address.
+
+Test it before deploying — this sends one real email:
+
+```bash
+npm run mail:test                     # sends to SMTP_USER
+npm run mail:test -- you@example.com  # or to an address you choose
+```
+
+It checks the credentials first and explains the failure rather than just
+printing an SMTP error code.
 
 ---
 
