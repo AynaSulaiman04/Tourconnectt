@@ -1,0 +1,140 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Create the service from this file: Render dashboard → New → Blueprint →
+# connect AynaSulaiman04/Tourconnectt → Apply. Render then redeploys on every
+# push to main, the way Vercel did.
+#
+# Values marked `sync: false` are NOT stored here. Render prompts for them when
+# the blueprint is applied, and they live only in the dashboard — the same
+# arrangement as Vercel's environment variables. Never put a real key in this
+# file; it is committed.
+
+services:
+  - type: web
+    name: tourconnectt
+    runtime: node
+    plan: free # $0. Sleeps after 15 min idle (~50s cold start). `starter` removes that.
+    region: virginia # closest of Render's regions to Trinidad
+    branch: main
+    autoDeployTrigger: commit
+
+    # --include=dev is required. Render sets NODE_ENV=production, which makes
+    # `npm ci` skip devDependencies — and typescript, tailwind and eslint-config-next
+    # are all devDependencies, so the build fails without it.
+    #
+    # build:render runs `next build` and then links public/ and .next/static
+    # into .next/standalone, which the standalone server needs and which the
+    # build deliberately omits. Not `npm run build` — that one also runs the
+    # Cloudflare OpenNext step, which is not used here.
+    buildCommand: npm ci --include=dev && npm run build:render
+    startCommand: npm run start:render
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+
+      # ── Database, auth and storage (Supabase) ─────────────────────────────
+      # NEXT_PUBLIC_SUPABASE_URL is read at BUILD time by next.config.ts to
+      # allowlist Supabase image URLs, not only at runtime.
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+
+      # ── Site address ─────────────────────────────────────────────────────
+      # The temporary Render address first, then https://tourconnectt.com once
+      # DNS is cut over. Builds every link that leaves the app: email links,
+      # the WiPay return URL.
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+
+      # ── Email ────────────────────────────────────────────────────────────
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_SECURE
+        value: "true"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS # 16-character Gmail app password
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false
+
+      # ── Concierge AI (one of the two) ────────────────────────────────────
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+      # ── Google (sign-in and operator calendar) ───────────────────────────
+      # GOOGLE_REDIRECT_URI must match the Google Cloud console entry exactly.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+
+      # ── Payments (WiPay) ─────────────────────────────────────────────────
+      # sandbox until the merchant account exists; live to take real money.
+      - key: WIPAY_ENVIRONMENT
+        value: sandbox
+      - key: WIPAY_CURRENCY
+        value: TTD
+      - key: WIPAY_COUNTRY_CODE
+        value: TT
+      - key: WIPAY_API_BASE_URL
+        value: https://tt.wipayfinancial.com/plugins/payments/request
+      - key: WIPAY_ACCOUNT_NUMBER
+        sync: false
+      - key: WIPAY_API_KEY
+        sync: false
+      - key: WIPAY_WEBHOOK_SECRET # without it /api/wipay/webhook fails closed with 503
+        sync: false
+
+      # ── Internal secrets ─────────────────────────────────────────────────
+      # Render generates these on first apply. Copy CRON_SECRET out of the
+      # dashboard afterwards — the external scheduler below needs it.
+      - key: CRON_SECRET
+        generateValue: true
+      - key: ICAL_FEED_SECRET
+        generateValue: true
+      - key: GOOGLE_OAUTH_STATE_SECRET
+        generateValue: true
+      - key: INQUIRY_RATE_LIMIT_SECRET
+        generateValue: true
+      - key: CONCIERGE_IP_SALT
+        generateValue: true
+
+# ── Scheduled jobs ───────────────────────────────────────────────────────────
+# Render cron jobs are a paid service type, so on the free plan the two
+# schedules from vercel.json have to be driven from outside. Point a free
+# scheduler (cron-job.org, or a GitHub Actions schedule) at:
+#
+#   hourly            https://<host>/api/cron/send-scheduled-emails
+#   every 30 minutes  https://<host>/api/cron/google-calendar-sync
+#
+# both with the header:  Authorization: Bearer <CRON_SECRET>
+#
+# Without this, booking reminders and review requests never send and operator
+# calendars stop syncing. To move them onto Render instead, uncomment:
+#
+#  - type: cron
+#    name: tourconnectt-scheduled-emails
+#    runtime: node
+#    plan: starter
+#    schedule: "0 * * * *"
+#    buildCommand: npm ci --include=dev
+#    startCommand: curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/send-scheduled-emails"

@@ -1,5 +1,12 @@
 # Deploying Tour ConnecTT to tourconnectt.com
 
+> **Moving to Render?** `render.yaml` is the whole configuration — Render
+> dashboard → New → Blueprint → pick this repo → Apply, and it prompts for the
+> secrets. Steps 3–7 below (domain, DNS, Google, WiPay, Supabase) apply either
+> way; only the hosting-provider steps differ. Render's free plan has no
+> scheduler, so the two cron jobs need an external caller — see the note at the
+> bottom of `render.yaml`.
+
 ## Where things stand
 
 | Thing | Status |
