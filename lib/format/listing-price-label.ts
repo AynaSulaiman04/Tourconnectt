@@ -47,9 +47,17 @@ export function formatListingPriceLabel(options: Options): ListingPriceLabel | n
 
   const target = options.targetCurrency?.toUpperCase() ?? null;
   const rate = options.ttdRate ?? null;
+
+  // Only meaningful when the stored price is TTD and we have a rate to a
+  // different currency. A USD-priced listing needs no USD reference.
   const approx =
-    currency === "TTD" && target && target !== "TTD" && rate && rate > 0
-      ? formatListingPrice(options.price, { locale, targetCurrency: target, ttdRate: rate })
+    currency === "TTD" && target && target !== currency && rate && rate > 0
+      ? formatListingPrice(options.price, {
+          locale,
+          targetCurrency: target,
+          ttdRate: rate,
+          roundToWhole: true,
+        })
       : null;
 
   return {

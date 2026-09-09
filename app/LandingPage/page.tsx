@@ -11,7 +11,7 @@ import { getSiteContent } from "@/lib/site-content";
 import { getRequestGeo } from "@/lib/format/locale";
 import { formatListingPriceLabel } from "@/lib/format/listing-price-label";
 import { resolveIsland } from "@/lib/listing-taxonomy";
-import { currencyForCountry, getTtdRate } from "@/lib/format/currency-conversion";
+import { resolveDisplayCurrency } from "@/lib/format/display-currency";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
 import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
@@ -152,8 +152,11 @@ export default async function LandingPage() {
     hasSession ? getOptionalCurrentUserProfile() : Promise.resolve(null),
     getRequestGeo(),
   ]);
-  const targetCurrency = currencyForCountry(geo.country);
-  const ttdRate = targetCurrency === "TTD" ? 1 : await settleWithTimeout(getTtdRate(targetCurrency), null, 1500);
+  const { currency: targetCurrency, rate: ttdRate } = await settleWithTimeout(
+    resolveDisplayCurrency(geo.country),
+    { currency: "USD", rate: null },
+    1500,
+  );
   const { testimonials, reviewSummary } = landingReviews;
   if (authFlow === "recovery" || authFlow === "magic_link") {
     const supabase = await createSupabaseServerClient();

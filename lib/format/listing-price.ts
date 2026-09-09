@@ -43,6 +43,12 @@ type FormatOptions = {
   locale?: string;
   targetCurrency?: string;
   ttdRate?: number | null;
+  /**
+   * Drop the cents. Used for the approximate reference price shown beneath the
+   * operator's own figure, where "US$244.15" implies a precision a live
+   * exchange rate does not have.
+   */
+  roundToWhole?: boolean;
 };
 
 function makeFormatter(locale: string, currency: string, withCents: boolean) {
@@ -65,9 +71,10 @@ function formatConvertedAmount(
   locale: string,
   currency: string,
   rate: number,
+  roundToWhole = false,
 ) {
   const converted = value * rate;
-  const withCents = converted < 100 || converted % 1 >= 0.05;
+  const withCents = roundToWhole ? false : converted < 100 || converted % 1 >= 0.05;
   return makeFormatter(locale, currency, withCents).format(converted);
 }
 
@@ -75,7 +82,7 @@ function formatAmount(value: number, opts: FormatOptions) {
   const locale = opts.locale ?? "en-TT";
   const target = opts.targetCurrency?.toUpperCase();
   if (target && target !== "TTD" && opts.ttdRate && opts.ttdRate > 0) {
-    return formatConvertedAmount(value, locale, target, opts.ttdRate);
+    return formatConvertedAmount(value, locale, target, opts.ttdRate, opts.roundToWhole);
   }
   return formatTtdAmount(value, locale);
 }

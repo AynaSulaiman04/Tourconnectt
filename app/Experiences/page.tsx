@@ -6,7 +6,7 @@ import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getRequestGeo } from "@/lib/format/locale";
 import { formatListingPriceLabel } from "@/lib/format/listing-price-label";
-import { currencyForCountry, getTtdRate } from "@/lib/format/currency-conversion";
+import { resolveDisplayCurrency } from "@/lib/format/display-currency";
 import {
   ISLANDS,
   parseCategory,
@@ -51,8 +51,8 @@ export default async function ExperiencesPage({ searchParams }: ExperiencesPageP
     getRequestGeo(),
   ]);
 
-  const targetCurrency = currencyForCountry(geo.country);
-  const ttdRate = targetCurrency === "TTD" ? 1 : await getTtdRate(targetCurrency).catch(() => null);
+  // Overseas visitors see their own currency; everyone else sees USD.
+  const { currency: targetCurrency, rate: ttdRate } = await resolveDisplayCurrency(geo.country);
 
   // Counts describe the catalogue as a whole, so a chip always shows how many
   // results it would yield rather than counting only what is already on screen.

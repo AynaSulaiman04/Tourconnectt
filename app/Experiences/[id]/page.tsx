@@ -10,7 +10,7 @@ import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
 import { hasSupabaseSessionCookie } from "@/lib/supabase/session-cookie";
 import { getRequestGeo } from "@/lib/format/locale";
 import { formatListingPriceLabel } from "@/lib/format/listing-price-label";
-import { currencyForCountry, getTtdRate } from "@/lib/format/currency-conversion";
+import { resolveDisplayCurrency } from "@/lib/format/display-currency";
 import { categoryLabel, islandLabel, resolveIsland } from "@/lib/listing-taxonomy";
 import "../page.css";
 import "./detail.css";
@@ -69,8 +69,7 @@ export default async function ExperienceDetailPage({ params }: DetailPageProps) 
     getRequestGeo(),
   ]);
 
-  const targetCurrency = currencyForCountry(geo.country);
-  const ttdRate = targetCurrency === "TTD" ? 1 : await getTtdRate(targetCurrency).catch(() => null);
+  const { currency: targetCurrency, rate: ttdRate } = await resolveDisplayCurrency(geo.country);
 
   const price = formatListingPriceLabel({
     price: listing.price,
