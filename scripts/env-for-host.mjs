@@ -1,16 +1,19 @@
 /**
  * Prints the production environment, derived from .env.local.
  *
- *   npm run env:vercel              # print, ready to copy
- *   npm run env:vercel -- --write   # also save to .env.vercel.txt
+ *   npm run env:render                                   # print, ready to paste
+ *   npm run env:render -- --url=https://x.onrender.com   # before DNS is cut over
+ *   npm run env:render -- --write                        # also save to a file
+ *   npm run env:vercel                                   # same, Vercel wording
  *
  * There is deliberately no second env file kept on disk. .env.local is the one
  * source of truth; this applies the handful of values that differ in
  * production and prints the result, so the two can never drift apart.
  *
- * Paste into: Vercel → Settings → Environment Variables → Import .env,
- * with Environment set to Production. Redeploy afterwards — environment
- * changes do not reach an existing deployment.
+ * The URL matters: it builds every link that leaves the app — email links and
+ * the WiPay return URL — so while the site is still on a temporary
+ * *.onrender.com address, pass --url to match. Change it, and the Google
+ * redirect URI in the Google Cloud console, once the domain is cut over.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,7 +23,21 @@ const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = join(projectRoot, ".env.local");
 const write = process.argv.includes("--write");
 
-const DOMAIN = "https://tourconnectt.com";
+const host = process.argv.includes("--host=vercel") ? "vercel" : "render";
+const urlArgument = process.argv.find((argument) => argument.startsWith("--url="));
+const DOMAIN = (urlArgument?.slice("--url=".length) ?? "https://tourconnectt.com").replace(/\/$/, "");
+
+/**
+ * Render generates these itself when render.yaml is applied, so pasting the
+ * local values over them would replace a strong secret with a laptop one.
+ */
+const RENDER_GENERATES = new Set([
+  "CRON_SECRET",
+  "ICAL_FEED_SECRET",
+  "GOOGLE_OAUTH_STATE_SECRET",
+  "INQUIRY_RATE_LIMIT_SECRET",
+  "CONCIERGE_IP_SALT",
+]);
 
 /** The only values that differ between a laptop and the live site. */
 const PRODUCTION_OVERRIDES = {
@@ -83,6 +100,11 @@ for (const line of lines) {
     continue;
   }
 
+  if (host === "render" && RENDER_GENERATES.has(key)) {
+    seen.set(key, "generated-by-render");
+    continue;
+  }
+
   const value = key in PRODUCTION_OVERRIDES ? PRODUCTION_OVERRIDES[key] : rawValue.trim();
   seen.set(key, value.replace(/^["']|["']$/g, ""));
   output.push(`${key}=${value}`);
@@ -109,11 +131,18 @@ if (sandbox && sandbox !== "live") {
 
 console.log(`  ${output.length} variables. Overridden for production:`);
 for (const [key, value] of Object.entries(PRODUCTION_OVERRIDES)) console.log(`    ${key}=${value}`);
-console.log("\n  Vercel → Settings → Environment Variables → Import .env → Production.");
-console.log("  Redeploy afterwards; env changes do not reach an existing deployment.\n");
+
+if (host === "render") {
+  console.log(`\n  Render → the tourconnectt service → Environment → Add from .env → paste.`);
+  console.log("  Omits the five secrets render.yaml generates; leave those as Render made them.");
+  console.log("  Saving triggers a redeploy on its own.\n");
+} else {
+  console.log("\n  Vercel → Settings → Environment Variables → Import .env → Production.");
+  console.log("  Redeploy afterwards; env changes do not reach an existing deployment.\n");
+}
 
 if (write) {
-  const target = join(projectRoot, ".env.vercel.txt");
+  const target = join(projectRoot, `.env.${host}.txt`);
   writeFileSync(target, body);
-  console.log(`  Also written to .env.vercel.txt (git-ignored). Delete it once pasted.\n`);
+  console.log(`  Also written to .env.${host}.txt (git-ignored). Delete it once pasted.\n`);
 }

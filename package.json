@@ -22,7 +22,8 @@
     "mail:test": "node scripts/mail-test.mjs",
     "icons:build": "node scripts/build-icon-font.mjs",
     "icons:check": "node scripts/build-icon-font.mjs --check",
-    "env:vercel": "node scripts/env-for-vercel.mjs"
+    "env:render": "node scripts/env-for-host.mjs",
+    "env:vercel": "node scripts/env-for-host.mjs --host=vercel"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
