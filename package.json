@@ -5,9 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
-    "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build && opennextjs-cloudflare build --skipNextBuild",
+    "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "build:next": "next build",
-    "build:worker": "npm run build",
     "build:render": "npm run build:next && node scripts/prepare-standalone.mjs",
     "start": "next start",
     "start:render": "node .next/standalone/server.js",
@@ -41,7 +40,6 @@
   },
   "devDependencies": {
     "@next/swc-wasm-nodejs": "^16.2.11",
-    "@opennextjs/cloudflare": "^1.20.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
@@ -51,7 +49,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.114.0"
+    "typescript": "^5"
   }
 }

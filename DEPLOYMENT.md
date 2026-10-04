@@ -16,7 +16,6 @@
 | Mail | `MX` → `secureserver.net` (GoDaddy), working. Leave untouched when editing DNS. |
 | `tourconnectt.rabbanirihab.chatgpt.site` | Dead (the URL in the old handoff doc). |
 | Vercel | Project `tourconnectt` exists and every recent build is READY, but the project is **paused** (`live: false`), so pushes produce no deployment. The domain serves a stale edge-cached copy from before the pause — `/Experiences` 404s on it. |
-| Cloudflare Workers | Not deployed. `wrangler.jsonc` and OpenNext are configured but unused. |
 
 **The app is frozen, not missing.** The domain answers, but with a cached copy
 of an older deployment; nothing new can ship until the project is un-paused, or
@@ -37,8 +36,6 @@ Easiest path, and it gives you automatic deploys on every push:
 2. Import `AynaSulaiman04/Tourconnectt`.
 3. Framework preset: **Next.js** (detected automatically).
 4. Build command: leave as is — `vercel.json` already sets `npm run build:next`.
-   **Do not use `npm run build`**; that one also runs the Cloudflare OpenNext
-   build and is not needed on Vercel.
 5. Do **not** deploy yet — add the environment variables first (Step 2),
    because `NEXT_PUBLIC_SUPABASE_URL` is read at build time to allow Supabase
    image URLs.
@@ -218,10 +215,8 @@ minutes of clicking.
 
 ## Notes
 
-- `output: "standalone"` in `next.config.ts` is for the Cloudflare/OpenNext
-  path. Vercel ignores it, so it is harmless, but if you ever fully drop the
-  Cloudflare target you can remove it along with `wrangler.jsonc`,
-  `open-next.config.ts` and the `build` / `build:worker` scripts.
+- `output: "standalone"` in `next.config.ts` is what the Render deployment
+  runs (`build:render` / `start:render`). Vercel ignores it, so it is harmless.
 - `.openai/hosting.json` refers to the dead chatgpt.site deployment. Safe to
   delete once you are on Vercel.
 - Image optimisation now runs on Supabase-hosted images (they used to bypass

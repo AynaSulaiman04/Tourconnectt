@@ -24,8 +24,7 @@ services:
     #
     # build:render runs `next build` and then links public/ and .next/static
     # into .next/standalone, which the standalone server needs and which the
-    # build deliberately omits. Not `npm run build` — that one also runs the
-    # Cloudflare OpenNext step, which is not used here.
+    # build deliberately omits.
     buildCommand: npm ci --include=dev && npm run build:render
     startCommand: npm run start:render
 

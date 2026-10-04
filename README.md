@@ -225,7 +225,7 @@ Manual setup checklist:
 6. Set `WIPAY_API_BASE_URL=https://tt.wipayfinancial.com/plugins/payments/request` for the hosted checkout request endpoint.
 7. Register `/api/wipay/webhook` as a Payments API webhook and store its endpoint signing secret in `WIPAY_WEBHOOK_SECRET`.
 8. Run `npx supabase db push` after pulling the latest migration.
-9. Make sure the app is reachable from the internet when WiPay sends callback redirects and webhooks. For local testing, use a tunnel such as ngrok or Cloudflare Tunnel and set `NEXT_PUBLIC_APP_URL` to that public HTTPS URL.
+9. Make sure the app is reachable from the internet when WiPay sends callback redirects and webhooks. For local testing, use a tunnel such as ngrok and set `NEXT_PUBLIC_APP_URL` to that public HTTPS URL.
 10. Restart `npm run dev` after changing environment variables.
 11. Confirm a booking, start payment from the traveler profile, and verify the row in `public.wipay_payments`.
 
