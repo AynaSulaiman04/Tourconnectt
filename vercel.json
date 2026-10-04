@@ -3,12 +3,8 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/cron/send-scheduled-emails",
-      "schedule": "0 * * * *"
-    },
-    {
       "path": "/api/cron/google-calendar-sync",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
