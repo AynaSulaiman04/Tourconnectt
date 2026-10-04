@@ -26,11 +26,11 @@ export async function generateMetadata({ params }: DetailPageProps): Promise<Met
   const listing = await getListingDetail(id);
 
   if (!listing) {
-    return { title: "Experience not found | Tour ConnecTT" };
+    return { title: "Experience not found | TourConnecTT" };
   }
 
   return {
-    title: `${listing.title} | Tour ConnecTT`,
+    title: `${listing.title} | TourConnecTT`,
     description: listing.summary?.slice(0, 200) ?? undefined,
   };
 }
@@ -217,9 +217,9 @@ export default async function ExperienceDetailPage({ params }: DetailPageProps) 
                   {(listing.operator_name || "T").charAt(0).toUpperCase()}
                 </span>
                 <div>
-                  <p className="xd-operator-name">{listing.operator_name || "Tour ConnecTT operator"}</p>
+                  <p className="xd-operator-name">{listing.operator_name || "TourConnecTT operator"}</p>
                   <p className="xd-operator-copy">
-                    A local operator reviewed by Tour ConnecTT. They confirm dates, group size, and access
+                    A local operator reviewed by TourConnecTT. They confirm dates, group size, and access
                     needs themselves before anything is paid for.
                   </p>
                 </div>

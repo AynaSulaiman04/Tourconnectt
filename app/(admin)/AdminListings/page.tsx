@@ -142,7 +142,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
           level={1}
           eyebrow="Admin listings"
           title="Moderate every listing before it reaches travellers."
-          description="Review operator submissions, approve high-quality tours, and keep the platform's featured inventory aligned with the Tour ConnecTT standard."
+          description="Review operator submissions, approve high-quality tours, and keep the platform's featured inventory aligned with the TourConnecTT standard."
         />
         {actionMessage ? (
           <div className="mt-6">

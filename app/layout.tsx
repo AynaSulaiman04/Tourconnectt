@@ -17,7 +17,7 @@ const beVietnamPro = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "Tour ConnecTT",
+  title: "TourConnecTT",
   description: "Tourism operations and traveller experience platform",
 };
 

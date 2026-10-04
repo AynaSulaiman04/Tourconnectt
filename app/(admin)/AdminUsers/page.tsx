@@ -142,7 +142,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
           level={1}
           eyebrow="CRM"
           title="Traveller and operator records."
-          description="Review credentials, verify operators, manage access tiers, and keep the account surface aligned with Tour ConnecTT policy."
+          description="Review credentials, verify operators, manage access tiers, and keep the account surface aligned with TourConnecTT policy."
         />
         {actionMessage ? (
           <div className="mt-6">
@@ -472,9 +472,9 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
                     <input name="return_to" type="hidden" value={`/AdminUsers?user=${selectedUser.id}`} />
                     <label className="label-caps text-secondary">Role</label>
                     <select name="role" defaultValue={selectedUser.role} className="admin-filter-control">
-                      <option value="traveler">traveller</option>
-                      <option value="operator">operator</option>
-                      <option value="admin">admin</option>
+                      <option value="traveler">Traveller</option>
+                      <option value="operator">Operator</option>
+                      <option value="admin">Admin</option>
                     </select>
                     <FormSubmitButton variant="primary" pendingLabel="Saving role...">
                       Save Role

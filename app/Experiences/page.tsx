@@ -24,7 +24,7 @@ import "./page.css";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Experiences in Trinidad and Tobago | Tour ConnecTT",
+  title: "Experiences in Trinidad and Tobago | TourConnecTT",
   description:
     "Browse experiences run by local operators across Trinidad and Tobago. Filter by island and by the kind of trip you want.",
 };
@@ -39,7 +39,9 @@ function first(value: string | string[] | undefined) {
 
 export default async function ExperiencesPage({ searchParams }: ExperiencesPageProps) {
   const resolved = (await searchParams) ?? {};
-  const island = parseIsland(first(resolved.island));
+  // "Trinidad and Tobago" (slug "both") means everything, so it is the same as no filter.
+  const parsedIsland = parseIsland(first(resolved.island));
+  const island = parsedIsland === "both" ? null : parsedIsland;
   const category = parseCategory(first(resolved.category));
 
   const cookieStore = await cookies();
@@ -61,6 +63,7 @@ export default async function ExperiencesPage({ searchParams }: ExperiencesPageP
   for (const listing of listings) {
     const listingIsland = resolveIsland(listing);
     islandCounts[listingIsland] = (islandCounts[listingIsland] ?? 0) + 1;
+    islandCounts.all = (islandCounts.all ?? 0) + 1;
     if (listing.category) {
       categoryCounts[listing.category] = (categoryCounts[listing.category] ?? 0) + 1;
     }
@@ -71,7 +74,7 @@ export default async function ExperiencesPage({ searchParams }: ExperiencesPageP
     // should not vanish when a traveller picks one.
     const listingIsland = resolveIsland(listing);
     const islandMatches =
-      !island || listingIsland === island || listingIsland === "both" || island === "both";
+      !island || listingIsland === island || listingIsland === "both";
     const categoryMatches = !category || listing.category === category;
     return islandMatches && categoryMatches;
   });

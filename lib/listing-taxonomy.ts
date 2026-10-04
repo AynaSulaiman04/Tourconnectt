@@ -25,7 +25,7 @@ export type PriceCurrency = "TTD" | "USD";
 export const ISLANDS: ReadonlyArray<{ slug: IslandSlug; label: string; blurb: string }> = [
   { slug: "trinidad", label: "Trinidad", blurb: "Rainforest, Carnival, food, and the wilder coastlines." },
   { slug: "tobago", label: "Tobago", blurb: "Reefs, quiet beaches, sailing, and the oldest protected forest." },
-  { slug: "both", label: "Both islands", blurb: "Trips that cross between the two." },
+  { slug: "both", label: "Trinidad and Tobago", blurb: "Trips that cross between the two." },
 ];
 
 export const CATEGORIES: ReadonlyArray<{ slug: CategorySlug; label: string; icon: string }> = [

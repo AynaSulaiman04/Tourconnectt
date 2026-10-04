@@ -30,24 +30,24 @@ export function ExperienceFilters({ island, category, islandCounts, categoryCoun
           Island
         </p>
         <div className="xp-chip-row" role="group" aria-labelledby="filter-island">
-          <Link
-            className={`xp-chip${island === null ? " is-active" : ""}`}
-            href={buildHref(null, category)}
-            aria-current={island === null ? "true" : undefined}
-          >
-            Anywhere
-          </Link>
-          {ISLANDS.map((option) => (
-            <Link
-              key={option.slug}
-              className={`xp-chip${island === option.slug ? " is-active" : ""}`}
-              href={buildHref(option.slug, category)}
-              aria-current={island === option.slug ? "true" : undefined}
-            >
-              {option.label}
-              <span className="xp-chip-count">{islandCounts[option.slug] ?? 0}</span>
-            </Link>
-          ))}
+          {ISLANDS.map((option) => {
+            // "Trinidad and Tobago" covers both islands, so it is the unfiltered view.
+            const isAll = option.slug === "both";
+            const isActive = isAll ? island === null : island === option.slug;
+            return (
+              <Link
+                key={option.slug}
+                className={`xp-chip${isActive ? " is-active" : ""}`}
+                href={buildHref(isAll ? null : option.slug, category)}
+                aria-current={isActive ? "true" : undefined}
+              >
+                {option.label}
+                <span className="xp-chip-count">
+                  {(isAll ? islandCounts.all : islandCounts[option.slug]) ?? 0}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

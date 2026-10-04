@@ -113,11 +113,11 @@ async function loadLandingReviews() {
         text:
           review.comment?.trim() ||
           [
-            "Every detail was exceptional. From the private guides to the seamless transfers, Tour ConnecTT delivered a journey we\'ll never forget.",
+            "Every detail was exceptional. From the private guides to the seamless transfers, TourConnecTT delivered a journey we\'ll never forget.",
             "The heritage experiences were beyond incredible. Access we never could have arranged on our own.",
             "Impeccable planning and 24/7 support. Our family trip was effortless and absolutely magical.",
           ][index] ||
-          "A memorable Tour ConnecTT journey.",
+          "A memorable TourConnecTT journey.",
         name: nameByTravelerId.get(review.traveler_id) || `Traveller ${index + 1}`,
         location: "Verified traveller",
         avatarUrl: null,

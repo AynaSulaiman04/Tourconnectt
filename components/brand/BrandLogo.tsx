@@ -19,7 +19,7 @@ export function BrandLogo({
   const imageClassName = variant === "footer" ? "footer-brand-logo" : "brand-logo-image";
   const image = (
     <Image
-      alt="Tour ConnecTT"
+      alt="TourConnecTT"
       className={`${imageClassName} ${className}`.trim()}
       height={variant === "footer" ? 180 : 72}
       priority={priority}
@@ -34,7 +34,7 @@ export function BrandLogo({
 
   return (
     <Link
-      aria-label="Tour ConnecTT home"
+      aria-label="TourConnecTT home"
       className={`brand-logo-link ${linkClassName}`.trim()}
       href={href}
     >

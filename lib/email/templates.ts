@@ -127,10 +127,10 @@ export function signupConfirmationEmail(data: {
   confirmationUrl: string;
 }): EmailMessage {
   return renderEmailShell({
-    title: "Confirm your Tour ConnecTT account",
+    title: "Confirm your TourConnecTT account",
     preheader: "Confirm your email address to finish creating your account.",
     heading: "confirm your account",
-    intro: `Hi ${displayValue(data.fullName, "traveller")}, thanks for joining Tour ConnecTT. Confirm your email address and you can start planning straight away.`,
+    intro: `Hi ${displayValue(data.fullName, "traveller")}, thanks for joining TourConnecTT. Confirm your email address and you can start planning straight away.`,
     sections: [
       {
         label: "Why this step",
@@ -214,7 +214,7 @@ export function operatorPaymentReceivedEmail(data: OperatorPaymentReceivedData):
 
 export function adminPaidBookingNotificationEmail(data: AdminPaidBookingData): EmailMessage {
   return renderEmailShell({
-    title: `New paid booking: ${displayValue(data.listingTitle, displayValue(data.destination, "Tour ConnecTT booking"))}`,
+    title: `New paid booking: ${displayValue(data.listingTitle, displayValue(data.destination, "TourConnecTT booking"))}`,
     preheader: "A traveler payment was confirmed and the booking is now paid.",
     heading: "new paid booking",
     intro: "A WiPay payment has been confirmed and the booking is now fully paid.",
@@ -294,7 +294,7 @@ function renderEmailShell(params: {
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #eadfd3;border-radius:24px;overflow:hidden;">
                   <tr>
                     <td style="padding:32px 32px 24px;">
-                      <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a0401b;font-weight:700;margin-bottom:14px;">Tour ConnecTT</div>
+                      <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a0401b;font-weight:700;margin-bottom:14px;">TourConnecTT</div>
                       <h1 style="margin:0;font-size:28px;line-height:34px;font-weight:300;letter-spacing:-.03em;text-transform:lowercase;color:#1c1b1b;">
                         ${escapeHtml(heading)}
                       </h1>
@@ -375,11 +375,11 @@ export function inquirySubmittedTravelerEmail(params: {
         ${params.destination ? `<p>Destination: <strong>${escapeHtml(params.destination)}</strong></p>` : ""}
         <p>The operator will review your request and reply soon.</p>
         <br />
-        <p>Tour ConnecTT</p>
+        <p>TourConnecTT</p>
       </div>
     `);
   const text = toBritishUserCopy(
-    `Your enquiry has been received\n\nHi ${params.travelerName},\nWe received your enquiry for ${params.listingTitle}.${params.destination ? `\nDestination: ${params.destination}` : ""}\nThe operator will review your request and reply soon.\n\nTour ConnecTT`,
+    `Your enquiry has been received\n\nHi ${params.travelerName},\nWe received your enquiry for ${params.listingTitle}.${params.destination ? `\nDestination: ${params.destination}` : ""}\nThe operator will review your request and reply soon.\n\nTourConnecTT`,
   );
 
   return { subject, html, text } satisfies EmailMessage;
@@ -424,11 +424,11 @@ export function newInquiryOperatorEmail(params: {
         ${params.preferredEndDate ? `<p>Preferred end: ${escapeHtml(params.preferredEndDate)}</p>` : ""}
         <p>Please log in to your operator dashboard to review and respond.</p>
         <br />
-        <p>Tour ConnecTT</p>
+        <p>TourConnecTT</p>
       </div>
     `);
   const text = toBritishUserCopy(
-    `New traveller enquiry\n\nHi ${params.operatorName || "Operator"},\n${params.travelerName} submitted an enquiry for ${params.listingTitle}.${params.preferredStartDate ? `\nPreferred start: ${params.preferredStartDate}` : ""}${params.preferredEndDate ? `\nPreferred end: ${params.preferredEndDate}` : ""}\nPlease log in to your operator dashboard to review and respond.\n\nTour ConnecTT`,
+    `New traveller enquiry\n\nHi ${params.operatorName || "Operator"},\n${params.travelerName} submitted an enquiry for ${params.listingTitle}.${params.preferredStartDate ? `\nPreferred start: ${params.preferredStartDate}` : ""}${params.preferredEndDate ? `\nPreferred end: ${params.preferredEndDate}` : ""}\nPlease log in to your operator dashboard to review and respond.\n\nTourConnecTT`,
   );
 
   return { subject, html, text } satisfies EmailMessage;

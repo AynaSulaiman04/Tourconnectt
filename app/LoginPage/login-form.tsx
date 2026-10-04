@@ -326,7 +326,7 @@ export function LoginForm({
 
         {signupHref ? (
           <p className="invite-text invite-text-prominent">
-            New to Tour ConnecTT? <Link href={signupHref}>Sign up here</Link>
+            New to TourConnecTT? <Link href={signupHref}>Sign up here</Link>
           </p>
         ) : (
           <p className="invite-text invite-text-prominent">

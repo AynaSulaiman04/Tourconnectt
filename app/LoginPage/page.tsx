@@ -121,7 +121,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   const heroTitle =
     isRecoveryMode || isForgotMode
-      ? "Secure access to your Tour ConnecTT account."
+      ? "Secure access to your TourConnecTT account."
       : "Return to the warmth, culture, and coastlines of the Caribbean.";
 
   const heroImages = await getAuthHeroImages();
@@ -135,7 +135,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         title={pageTitle}
         footer={
           <p>
-            &copy; 2026 Tour ConnecTT. All rights reserved.{" "}
+            &copy; 2026 TourConnecTT. All rights reserved.{" "}
             <Link href="/PrivacyPolicy">Privacy Policy</Link> ·{" "}
             <Link href="/TermsOfService">Terms of Service</Link>
           </p>

@@ -7,7 +7,7 @@ export default function TermsOfServicePage() {
       <main className="content-shell">
         <section className="card-surface px-gutter py-section-gap">
           <p className="section-eyebrow">Terms of Service</p>
-          <h1 className="section-title">The working rules for Tour ConnecTT.</h1>
+          <h1 className="section-title">The working rules for TourConnecTT.</h1>
           <p className="section-copy mt-4">
             Accounts are intended for personal traveler use, profile editing, and inquiry management within the platform.
           </p>

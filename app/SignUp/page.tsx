@@ -26,7 +26,7 @@ export default async function SignUpPage() {
         description="Create your private traveller profile."
         heroImages={heroImages}
         title="Sign Up"
-        footer={<p>&copy; 2026 Tour ConnecTT. All rights reserved.</p>}
+        footer={<p>&copy; 2026 TourConnecTT. All rights reserved.</p>}
       >
         <SignupForm action={signUpTravelerAction} variant="traveler" />
       </AuthPageLayout>

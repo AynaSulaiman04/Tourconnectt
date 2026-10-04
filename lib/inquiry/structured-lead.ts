@@ -136,7 +136,7 @@ export function buildQuoteEmailDraft(lead: StoredTripLead, travelerName: string)
   return [
     greeting,
     "",
-    "Thank you for your enquiry with Tour ConnecTT. Based on your request, here is a draft quote we can refine together:",
+    "Thank you for your enquiry with TourConnecTT. Based on your request, here is a draft quote we can refine together:",
     "",
     ...summary.map((line) => {
       const separatorIndex = line.indexOf(":");
@@ -153,12 +153,12 @@ export function buildQuoteEmailDraft(lead: StoredTripLead, travelerName: string)
     "Please let us know if you would like us to adjust hotels, transport, or activities before we finalise your booking.",
     "",
     "Warm regards,",
-    "Tour ConnecTT Travel Consultant",
+    "TourConnecTT Travel Consultant",
   ].join("\n");
 }
 
 export function buildQuoteMailtoHref(email: string, travelerName: string, lead: StoredTripLead) {
-  const subject = encodeURIComponent("Your Tour ConnecTT travel quote");
+  const subject = encodeURIComponent("Your TourConnecTT travel quote");
   const body = encodeURIComponent(buildQuoteEmailDraft(lead, travelerName));
   return `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
 }

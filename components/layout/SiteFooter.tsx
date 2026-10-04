@@ -96,7 +96,7 @@ export async function SiteFooter({ variant = "public" }: SiteFooterProps) {
       </div>
 
       <div className="site-footer-bottom">
-        <p>&copy; 2026 TOURCONNECTT. ALL RIGHTS RESERVED.</p>
+        <p>&copy; 2026 TourConnecTT. All rights reserved.</p>
 
         <div className="site-footer-bottom-links">
           <Link href="/PrivacyPolicy">Privacy</Link>

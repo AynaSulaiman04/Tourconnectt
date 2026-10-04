@@ -374,7 +374,7 @@ export function TravellerDashboardView({
               {dashboard.inquiries.length ? (
                 dashboard.inquiries.slice(0, 4).map((inquiry) => {
                   const listingTitle = inquiry.listing?.title ?? inquiry.destination;
-                  const operatorName = inquiry.operator_name || "Tour ConnecTT";
+                  const operatorName = inquiry.operator_name || "TourConnecTT";
                   const inquiryChannel = inquiry.operator_email && inquiry.operator_phone
                     ? "WhatsApp + Email"
                     : inquiry.operator_phone
@@ -464,7 +464,7 @@ export function TravellerDashboardView({
 
                       <p className="dashboard-meta">
                         {formatDate(inquiry.preferred_start_date)} to {formatDate(inquiry.preferred_end_date)} ·{" "}
-                        {inquiry.operator_name || "Tour ConnecTT"}
+                        {inquiry.operator_name || "TourConnecTT"}
                       </p>
 
                       <div className="dashboard-payment-row">

@@ -43,7 +43,7 @@ type LandingPageViewProps = {
 const fallbackTestimonials: LandingTestimonial[] = [
   {
     id: "testimonial-1",
-    text: "Every detail was exceptional. From the private guides to the seamless transfers, Tour ConnecTT delivered a journey we\'ll never forget.",
+    text: "Every detail was exceptional. From the private guides to the seamless transfers, TourConnecTT delivered a journey we\'ll never forget.",
     name: "James L.",
     location: "New York, USA",
     avatarUrl: null,

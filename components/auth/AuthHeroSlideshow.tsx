@@ -76,7 +76,7 @@ export function AuthHeroSlideshow({ heroTitle, images }: AuthHeroSlideshowProps)
 
       <div className="auth-hero-gradient" />
       <div className="auth-hero-brand">
-        <span className="auth-hero-brand-text">Tour ConnecTT</span>
+        <span className="auth-hero-brand-text">TourConnecTT</span>
       </div>
       <div className="auth-hero-copy">
         <h2>{heroTitle}</h2>

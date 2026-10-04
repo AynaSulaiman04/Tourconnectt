@@ -217,7 +217,7 @@ export function InboxShell({
                   {activeConversation?.avatarUrl ? (
                     <Image alt="" fill className="tc-chat-avatar-image" sizes="64px" src={activeConversation.avatarUrl} />
                   ) : (
-                    <span>{getConversationAvatarLabel(activeConversation?.name ?? "Tour ConnecTT")}</span>
+                    <span>{getConversationAvatarLabel(activeConversation?.name ?? "TourConnecTT")}</span>
                   )}
                 </span>
                 <div className="tc-chat-header-copy-block">

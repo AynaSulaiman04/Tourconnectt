@@ -17,7 +17,7 @@ export function LandingBrowseFilters() {
 
         <div className="lp-browse-row" aria-label="Browse by island">
           {ISLANDS.map((island) => (
-            <Link className="lp-browse-island" href={`/Experiences?island=${island.slug}`} key={island.slug}>
+            <Link className="lp-browse-island" href={island.slug === "both" ? "/Experiences" : `/Experiences?island=${island.slug}`} key={island.slug}>
               <span className="lp-browse-island-name">{island.label}</span>
               <span className="lp-browse-island-blurb">{island.blurb}</span>
             </Link>

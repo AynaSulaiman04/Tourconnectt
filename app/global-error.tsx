@@ -25,7 +25,7 @@ export default function GlobalError({
               <div className="space-y-3">
                 <div>
                   <div className="label-caps text-secondary mb-2">Platform error</div>
-                  <h1 className="section-title text-on-background">Tour ConnecTT stopped unexpectedly.</h1>
+                  <h1 className="section-title text-on-background">TourConnecTT stopped unexpectedly.</h1>
                 </div>
                 <p className="section-copy">
                   Please try again. If the issue keeps happening, we may be missing a required setup step or an integration may be unavailable.
