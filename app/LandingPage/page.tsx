@@ -13,8 +13,13 @@ import { formatListingPriceLabel } from "@/lib/format/listing-price-label";
 import { resolveIsland } from "@/lib/listing-taxonomy";
 import { resolveDisplayCurrency } from "@/lib/format/display-currency";
 import { getDefaultProfileImageUrl } from "@/lib/auth-hero-images";
-import { getLandingHeroVideo } from "@/lib/supabase/landing-hero-video";
 import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
+
+/**
+ * Served from public/ so it comes from our own origin at the original quality,
+ * rather than a Supabase Storage round trip on every cold render.
+ */
+const LANDING_HERO_VIDEO = { url: "/landing/hero.mp4", contentType: "video/mp4" };
 
 export const revalidate = 60;
 
@@ -137,7 +142,7 @@ export default async function LandingPage() {
   const authFlow = cookieStore.get("tt-auth-flow")?.value;
   const hasSession = hasSupabaseSessionCookie(cookieStore.getAll());
 
-  const [listings, landingReviews, showcaseImages, heroVideo, siteContent, profileContext, geo] = await Promise.all([
+  const [listings, landingReviews, showcaseImages, siteContent, profileContext, geo] = await Promise.all([
     // Featured listings are the point of the page, and the fallback for this
     // one is the "No live listings are available yet" empty state — which is a
     // lie when the query simply ran slowly. The measured round trip is
@@ -147,7 +152,6 @@ export default async function LandingPage() {
     settleWithTimeout(getFeaturedInquiryListings(LANDING_LISTING_LIMIT), [], 10_000),
     settleWithTimeout(loadLandingReviews(), { testimonials: [] as LandingTestimonial[], reviewSummary: null }, 2000),
     settleWithTimeout(getLandingSlideshowImageUrls(), [], 2000),
-    settleWithTimeout(getLandingHeroVideo(), null, 2000),
     getSiteContent(),
     hasSession ? getOptionalCurrentUserProfile() : Promise.resolve(null),
     getRequestGeo(),
@@ -222,7 +226,7 @@ export default async function LandingPage() {
         reviewSummary={reviewSummary}
         testimonials={testimonials}
         showcaseImages={resolvedShowcaseImages}
-        heroVideo={heroVideo ? { url: heroVideo.publicUrl, contentType: heroVideo.contentType } : null}
+        heroVideo={LANDING_HERO_VIDEO}
         siteContent={siteContent}
       />
     </PageShell>
