@@ -32,7 +32,7 @@ type LandingPageViewProps = {
   listings: LandingListingCard[];
   testimonials: LandingTestimonial[];
   showcaseImages: string[];
-  heroVideo: { url: string; contentType: string | null; posterUrl?: string | null } | null;
+  heroVideo: { url: string; contentType: string | null; fallbackUrl?: string | null; posterUrl?: string | null } | null;
   siteContent: SiteContent;
   reviewSummary: {
     averageRating: number;
@@ -78,6 +78,7 @@ export function LandingPageView({
       <section className="lp-hero" data-has-video={heroVideo ? "true" : undefined}>
         {heroVideo ? <LandingHeroVideo
             contentType={heroVideo.contentType}
+            fallbackSrc={heroVideo.fallbackUrl}
             poster={heroVideo.posterUrl}
             src={heroVideo.url}
           /> : null}

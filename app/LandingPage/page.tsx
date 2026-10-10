@@ -22,6 +22,7 @@ import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
 const LANDING_HERO_VIDEO = {
   url: "/landing/hero.mp4",
   contentType: "video/mp4",
+  fallbackUrl: "/landing/hero-h264.mp4",
   posterUrl: "/landing/hero-poster.jpg",
 };
 

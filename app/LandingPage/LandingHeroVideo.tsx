@@ -5,8 +5,16 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 type LandingHeroVideoProps = {
   src: string;
   contentType?: string | null;
+  /** H.264 copy for devices that cannot decode the AV1 file in `src`. */
+  fallbackSrc?: string | null;
   poster?: string | null;
 };
+
+// The browser plays the first <source> whose codec it supports. iPhones older
+// than the 15 Pro (and some older Android phones) have no AV1 decoder, so they
+// skip to the H.264 copy instead of showing a frozen first frame.
+const AV1_TYPE = 'video/mp4; codecs="av01.0.08M.08"';
+const H264_TYPE = 'video/mp4; codecs="avc1.640029"';
 
 const SMALL_SCREEN_QUERY = "(max-width: 900px)";
 
@@ -69,7 +77,7 @@ function getIsSmallScreenOnServer() {
  * or a 2G-class connection gets a painted backdrop instead and never requests
  * the video, and small screens only preload metadata rather than the whole file.
  */
-export function LandingHeroVideo({ src, contentType, poster }: LandingHeroVideoProps) {
+export function LandingHeroVideo({ src, contentType, fallbackSrc, poster }: LandingHeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const allowed = useSyncExternalStore(
     subscribeToViewport,
@@ -140,7 +148,14 @@ export function LandingHeroVideo({ src, contentType, poster }: LandingHeroVideoP
         poster={poster ?? undefined}
         tabIndex={-1}
       >
-        <source src={src} type={contentType ?? undefined} />
+        {fallbackSrc ? (
+          <>
+            <source src={src} type={AV1_TYPE} />
+            <source src={fallbackSrc} type={H264_TYPE} />
+          </>
+        ) : (
+          <source src={src} type={contentType ?? undefined} />
+        )}
       </video>
       <div className="lp-hero-video-scrim" />
     </div>
