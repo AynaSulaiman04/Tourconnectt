@@ -157,7 +157,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
 
         <section className="section-shell grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-gutter">
           {[
-            ["All", totalListings.toLocaleString(), "Every operator listing in Supabase."],
+            ["All", totalListings.toLocaleString(), "Every operator listing on the platform."],
             ["Under Review", underReviewListings.toLocaleString(), "Awaiting editorial review."],
             ["Live", liveListings.toLocaleString(), "Approved and visible on the platform."],
             ["Rejected", rejectedListings.toLocaleString(), "Removed from the approval queue."],
@@ -242,8 +242,8 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
           </GlassPanel>
         </section>
 
-        <section className="section-shell grid grid-cols-1 lg:grid-cols-12 gap-gutter items-stretch">
-          <div className="lg:col-span-8 flex flex-col">
+        <section className="section-shell grid grid-cols-1 min-[1950px]:grid-cols-12 gap-gutter items-stretch">
+          <div className="min-[1950px]:col-span-8 flex flex-col">
             <SectionHeader
               eyebrow="Approval queue"
               title="Listings waiting for moderation."
@@ -265,6 +265,11 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                   {filteredListings.length ? (
                     filteredListings.map((item) => {
                       const status = getListingStatus(item);
+                      const canApprove = status === "under_review" || status === "rejected";
+                      const canReject = status === "under_review" || status === "live";
+                      const place = [item.location, item.country && item.country !== "Trinidad and Tobago" ? item.country : null]
+                        .filter(Boolean)
+                        .join(" · ");
 
                       return (
                         <tr key={item.id}>
@@ -300,7 +305,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
 
                           <td className="align-middle">
                             <div className="text-sm text-on-surface-variant">
-                              {item.location} · {item.country}
+                              {place}
                             </div>
                             <div className="text-xs uppercase tracking-[0.15em] text-on-surface-variant/70">
                               {item.duration} · {formatListingPrice(item.price) ?? "No price"}
@@ -312,22 +317,26 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
                               <Button href={`/AdminListings?listing=${item.id}`} variant="outline" className="btn-sm">
                                 Review
                               </Button>
-                              <form action={updateListingModerationAction}>
-                                <input name="listing_id" type="hidden" value={item.id} />
-                                <input name="return_to" type="hidden" value={`/AdminListings?listing=${item.id}`} />
-                                <input name="action" type="hidden" value="reject" />
-                                <FormSubmitButton variant="danger" className="btn-sm" pendingLabel="Rejecting...">
-                                  Reject
-                                </FormSubmitButton>
-                              </form>
-                              <form action={updateListingModerationAction}>
-                                <input name="listing_id" type="hidden" value={item.id} />
-                                <input name="return_to" type="hidden" value={`/AdminListings?listing=${item.id}`} />
-                                <input name="action" type="hidden" value="approve" />
-                                <FormSubmitButton variant="primary" className="btn-sm" pendingLabel="Approving...">
-                                  Approve
-                                </FormSubmitButton>
-                              </form>
+                              {canReject ? (
+                                <form action={updateListingModerationAction}>
+                                  <input name="listing_id" type="hidden" value={item.id} />
+                                  <input name="return_to" type="hidden" value={`/AdminListings?listing=${item.id}`} />
+                                  <input name="action" type="hidden" value="reject" />
+                                  <FormSubmitButton variant="danger" className="btn-sm" pendingLabel="Rejecting...">
+                                    Reject
+                                  </FormSubmitButton>
+                                </form>
+                              ) : null}
+                              {canApprove ? (
+                                <form action={updateListingModerationAction}>
+                                  <input name="listing_id" type="hidden" value={item.id} />
+                                  <input name="return_to" type="hidden" value={`/AdminListings?listing=${item.id}`} />
+                                  <input name="action" type="hidden" value="approve" />
+                                  <FormSubmitButton variant="primary" className="btn-sm" pendingLabel="Approving...">
+                                    Approve
+                                  </FormSubmitButton>
+                                </form>
+                              ) : null}
                               {status === "live" && item.is_active ? (
                                 <form action={updateListingModerationAction}>
                                   <input name="listing_id" type="hidden" value={item.id} />
@@ -360,7 +369,7 @@ export default async function AdminListingsPage({ searchParams }: AdminListingsP
             </GlassPanel>
           </div>
 
-          <div className="lg:col-span-4 flex flex-col gap-gutter">
+          <div className="min-[1950px]:col-span-4 flex flex-col gap-gutter">
             <GlassPanel className="p-gutter flex-1">
               <SectionHeader
                 eyebrow="Selected listing"

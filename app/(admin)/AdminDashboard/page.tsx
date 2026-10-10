@@ -122,10 +122,7 @@ export default async function AdminOverviewPage({ searchParams }: AdminOverviewP
   const platformEvents = await getPlatformEvents(2000);
   const recentAdminUpdates = await getRecentPlatformNotifications(workspace.profile.id, 3);
   const activityBreakdown = buildActivityBreakdown(platformEvents, selectedRange);
-  const lastUpdated =
-    workspace.recentListings[0]?.updated_at ??
-    workspace.recentBookings[0]?.updated_at ??
-    workspace.profile.updated_at;
+  const lastUpdated = new Date().toISOString();
   const selectedStart = getRangeStart(selectedRange);
   const selectedRangeLabel = selectedRange === "7d" ? "7 days" : selectedRange === "30d" ? "30 days" : "12 months";
   const visiblePayments = workspace.recentPayments.filter((payment) => {

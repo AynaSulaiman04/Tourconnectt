@@ -74,7 +74,7 @@ export default async function AdminContentPage({ searchParams }: AdminContentPag
           </div>
         ) : null}
 
-        <section className="section-shell grid gap-8 xl:grid-cols-12 items-start">
+        <section className="section-shell grid grid-cols-1 gap-8 xl:grid-cols-12 items-start">
           <HomePageControls
             content={content}
             featuredListings={featuredListings.map((listing) => ({

@@ -355,7 +355,7 @@ export function buildInquiryConfirmationEmail(data: InquirySubmissionData): Emai
       { label: "Traveler phone", value: displayValue(data.travelerPhone, "Not provided") },
     ],
     cta: {
-      label: "Open TT Connect",
+      label: "Open TourConnecTT",
       href: data.appUrl,
     },
   });
@@ -390,7 +390,7 @@ export function buildOperatorInquiryNotificationEmail(data: OperatorInquiryNotif
     title: "New inquiry received",
     preheader: `A new inquiry was submitted for ${displayValue(data.listingTitle, "your listing")}.`,
     heading: "new inquiry received",
-    intro: `A traveler has submitted an inquiry for your listing. Review the details and continue the follow-up from TT Connect.`,
+    intro: `A traveler has submitted an inquiry for your listing. Review the details and continue the follow-up from TourConnecTT.`,
     sections: [
       { label: "Traveler", value: data.travelerName },
       { label: "Traveler email", value: data.travelerEmail },
@@ -468,7 +468,7 @@ export function buildBookingReminderEmail(data: ReminderData): EmailMessage {
       { label: "Preferred dates", value: `${formatDate(data.preferredStartDate)} to ${formatDate(data.preferredEndDate)}` },
     ],
     cta: {
-      label: "Open TT Connect",
+      label: "Open TourConnecTT",
       href: data.appUrl,
     },
   });
@@ -488,7 +488,7 @@ export function buildPreTourInstructionsEmail(data: InstructionsData): EmailMess
       { label: "Instructions", value: displayValue(data.instructions, "No additional instructions were provided.") },
     ],
     cta: {
-      label: "Open TT Connect",
+      label: "Open TourConnecTT",
       href: data.appUrl,
     },
   });

@@ -103,7 +103,7 @@ export function SignupForm({ action, variant = "traveler" }: SignupFormProps) {
         <input
           id="email"
           name="email"
-          placeholder="elias@ttconnect.com"
+          placeholder="you@example.com"
           type="email"
           autoComplete="email"
           required

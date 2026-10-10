@@ -252,18 +252,18 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                     Review authenticated devices and session visibility.
                   </p>
 
-                  <div className="mt-4 grid gap-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3">
                     {adminSessions.map((session) => (
                       <div
                         key={`${session.device}-${session.location}`}
                         className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <div className="font-body-md text-on-background">{session.device}</div>
-                            <div className="text-sm text-on-surface-variant">{session.location}</div>
+                          <div className="min-w-0">
+                            <div className="font-body-md text-on-background break-words">{session.device}</div>
+                            <div className="text-sm text-on-surface-variant break-all">{session.location}</div>
                           </div>
-                          <Badge tone="soft">{session.status}</Badge>
+                          <Badge tone="soft" className="shrink-0">{session.status}</Badge>
                         </div>
                       </div>
                     ))}
@@ -280,7 +280,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
                     Route platform alerts without touching traveller settings.
                   </p>
 
-                  <div className="mt-4 grid gap-3">
+                  <div className="mt-4 grid grid-cols-1 gap-3">
                     {[
                       ["Critical approvals", settings.criticalApprovalsEnabled],
                       ["Listing rejects", settings.listingRejectsEnabled],

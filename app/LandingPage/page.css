@@ -1,6 +1,8 @@
 .lp-page {
   min-height: 100vh;
   padding: 2rem 0 0;
+  /* 100vw full-bleed bands include the scrollbar gutter; clip the overshoot. */
+  overflow-x: clip;
 }
 
 [data-lp-reveal] {
@@ -528,11 +530,13 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
 .lp-showcase-frame {
   position: relative;
+  min-width: 0;
   height: clamp(24rem, 56.28vw, 52rem);
   overflow: hidden;
   border: 0;
@@ -837,8 +841,15 @@
 
 .lp-rating {
   display: grid;
-  justify-items: end;
+  grid-template-columns: auto auto;
+  column-gap: 0.35rem;
+  align-items: baseline;
+  justify-content: end;
   text-align: right;
+}
+
+.lp-rating small {
+  grid-column: 1 / -1;
 }
 
 .lp-rating strong {
@@ -866,7 +877,7 @@
 
 .lp-testimonial-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
   gap: 1.1rem;
   margin-top: 1.5rem;
 }
@@ -954,7 +965,7 @@
   }
 
   .lp-rating {
-    justify-items: start;
+    justify-content: start;
     text-align: left;
   }
 

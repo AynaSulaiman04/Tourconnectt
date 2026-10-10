@@ -264,7 +264,7 @@ export function SidebarNav({ variant, authResolved = false, travelerProfile = nu
                   className="portal-sidebar-avatar-image"
                 />
               ) : (
-                <span className="material-symbols-outlined">person</span>
+                <span className="material-symbols-outlined" aria-hidden="true">person</span>
               )}
             </span>
             <div className="portal-sidebar-user-meta">

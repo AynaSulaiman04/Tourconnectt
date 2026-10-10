@@ -113,7 +113,7 @@ export function serializeIcalFeed(events: IcalFeedEvent[]) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//TT Connect//Calendar//EN",
+    "PRODID:-//TourConnecTT//Calendar//EN",
     "CALSCALE:GREGORIAN",
   ];
 

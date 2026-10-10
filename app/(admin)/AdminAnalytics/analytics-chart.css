@@ -61,10 +61,23 @@
   letter-spacing: 0.12em;
   text-align: center;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ac-bar {
     transition: none;
   }
+}
+
+/* Edge labels hang inward so the card does not clip them. */
+.ac-col:first-child .ac-label {
+  align-self: flex-start;
+  text-align: left;
+}
+
+.ac-col:last-child .ac-label {
+  align-self: flex-end;
+  text-align: right;
 }

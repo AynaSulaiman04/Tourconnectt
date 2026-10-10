@@ -192,7 +192,7 @@ function buildListingReason(listing: TourListing, query: string, score: number) 
   if (score > 0) {
     return "Matched to your current travel request.";
   }
-  return listing.featured ? "Featured by TT Connect." : "A current TT Connect listing.";
+  return listing.featured ? "Featured by TourConnecTT." : "A current TourConnecTT listing.";
 }
 
 function isFetchFailedError(error: unknown) {
@@ -282,7 +282,7 @@ export async function getRelevantListings(query: string, limit = 5, tripIntent?:
         price: listing.price ?? null,
         operator_name: listing.operator_name,
         image_url: listing.image_url,
-        reason: "A helpful current option from TT Connect.",
+        reason: "A helpful current option from TourConnecTT.",
         score: listing.score,
         href: `/Experiences/${listing.id}`,
       }));
@@ -507,7 +507,7 @@ export async function buildConciergeContext(params: {
       : ["No active knowledge sources matched this query exactly."];
 
     const promptContext = [
-      "TT Connect platform context:",
+      "TourConnecTT platform context:",
       ...(tripIntentPrompt ? [tripIntentPrompt, ""] : []),
       ...travelerLines.map((line) => `- ${line}`),
       "Relevant listings:",
@@ -517,7 +517,7 @@ export async function buildConciergeContext(params: {
       "Rules:",
       "- Use only the provided platform context for listings, pricing, and availability.",
       "- If a price or availability is missing, say the operator will confirm it.",
-      "- Recommend real TT Connect listings when helpful.",
+      "- Recommend real TourConnecTT listings when helpful.",
       "- If there are no precise matches, be transparent and suggest the best available alternatives from the active catalog.",
       "- Keep the reply friendly, concise, and helpful.",
     ].join("\n");
@@ -546,7 +546,7 @@ export async function buildConciergeContext(params: {
       knowledgeSources: [],
       sourceSummaries: [],
       promptContext: [
-        "TT Connect platform context:",
+        "TourConnecTT platform context:",
         "- No live platform data is available right now.",
         "Rules:",
         "- Use only the provided platform context for listings, pricing, and availability.",

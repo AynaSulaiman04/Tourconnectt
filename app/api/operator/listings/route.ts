@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getOptionalCurrentUserProfile } from "@/lib/supabase/profile";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { calculateListingCompletion } from "@/lib/operator-listing-completion";
+import { calculateListingCompletion, getMissingRequiredFieldLabels } from "@/lib/operator-listing-completion";
 import {
   OperatorListingInputError,
   readValidatedOperatorListingInput,
@@ -193,6 +193,7 @@ export async function POST(request: Request) {
     duration: draftRecord.duration,
     summary: draftRecord.summary,
     category: draftRecord.category,
+    island: draftRecord.island,
     price: draftRecord.price,
     availability: draftRecord.availability,
     capacity: draftRecord.capacity,
@@ -208,7 +209,27 @@ export async function POST(request: Request) {
   if (mode === "publish") {
     if (completion.percentage < 100) {
       return NextResponse.json(
-        { ok: false, error: "Complete every required field before publishing." },
+        {
+          ok: false,
+          error: `Complete the required fields before submitting: ${getMissingRequiredFieldLabels({
+            title: draftRecord.title,
+            location: draftRecord.location,
+            country: draftRecord.country,
+            duration: draftRecord.duration,
+            summary: draftRecord.summary,
+            island: draftRecord.island,
+            category: draftRecord.category,
+            price: draftRecord.price,
+            availability: draftRecord.availability,
+            capacity: draftRecord.capacity,
+            itinerary: draftRecord.itinerary,
+            inclusions: draftRecord.inclusions,
+            exclusions: draftRecord.exclusions,
+            contact_name: draftRecord.contact_name,
+            contact_email: draftRecord.contact_email,
+            image_url: draftRecord.image_base64 ?? draftRecord.image_url,
+          }).join(", ")}.`,
+        },
         { status: 400 },
       );
     }

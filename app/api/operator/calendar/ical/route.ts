@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
         `Experience: ${listing?.title ?? inquiry.destination}`,
         `Operator: ${inquiry.operator_name}`,
         inquiry.notes ? `Notes: ${inquiry.notes}` : null,
-        `TT Connect: ${appUrl}`,
+        `TourConnecTT: ${appUrl}`,
       ]
         .filter(Boolean)
         .join("\n");

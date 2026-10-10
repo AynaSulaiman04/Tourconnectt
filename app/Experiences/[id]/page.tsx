@@ -36,6 +36,11 @@ export async function generateMetadata({ params }: DetailPageProps): Promise<Met
 }
 
 /** Operators write these as free text, one item per line or separated by commas. */
+function tidyListItem(item: string) {
+  const trimmed = item.trim().replace(/[.;]+$/, "").trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : "";
+}
+
 function toList(value: string | null) {
   if (!value) return [];
   const byLine = value
@@ -43,14 +48,9 @@ function toList(value: string | null) {
     .map((line) => line.replace(/^[-*•]\s*/, "").trim())
     .filter(Boolean);
 
-  if (byLine.length > 1) {
-    return byLine;
-  }
+  const items = byLine.length > 1 ? byLine : value.split(",");
 
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return items.map(tidyListItem).filter(Boolean);
 }
 
 export default async function ExperienceDetailPage({ params }: DetailPageProps) {
@@ -257,7 +257,7 @@ export default async function ExperienceDetailPage({ params }: DetailPageProps) 
                 {listing.availability ? (
                   <div>
                     <dt>Availability</dt>
-                    <dd>{listing.availability}</dd>
+                    <dd className="first-letter:uppercase">{listing.availability}</dd>
                   </div>
                 ) : null}
               </dl>

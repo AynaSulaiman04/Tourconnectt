@@ -130,6 +130,34 @@ async function loadListingDraftContactsByListingIds(
   return contacts;
 }
 
+/**
+ * Operator-uploaded cover photos live in `image_base64`, which the public feed
+ * deliberately does not select (it is large). Ask only for the ids that have
+ * one, then point those listings at the cached image route.
+ */
+async function resolveUploadedImageRoutes<T extends { id: string; image_url: string | null }>(
+  admin: ReturnType<typeof createSupabaseServiceRoleClient>,
+  listings: T[],
+): Promise<T[]> {
+  const missing = listings.filter((listing) => !listing.image_url).map((listing) => listing.id);
+
+  if (!missing.length) {
+    return listings;
+  }
+
+  const { data, error } = await admin.from("tour_listings").select("id").in("id", missing).not("image_base64", "is", null);
+
+  if (error || !data?.length) {
+    return listings;
+  }
+
+  const withUpload = new Set((data as Array<{ id: string }>).map((row) => row.id));
+
+  return listings.map((listing) =>
+    withUpload.has(listing.id) ? { ...listing, image_url: `/api/listing-image/${listing.id}` } : listing,
+  );
+}
+
 async function selectLiveListings(
   admin: ReturnType<typeof createSupabaseServiceRoleClient>,
   limit?: number,
@@ -168,10 +196,13 @@ export async function getFeaturedInquiryListings(limit = 3) {
       throw new Error(error.message);
     }
 
-    return ((data ?? []) as unknown as TourListing[]).map((listing) => ({
-      ...withBrowseDefaults(listing),
-      image_url: normalizePublicListingImage(listing.image_url),
-    }));
+    return resolveUploadedImageRoutes(
+      admin,
+      ((data ?? []) as unknown as TourListing[]).map((listing) => ({
+        ...withBrowseDefaults(listing),
+        image_url: normalizePublicListingImage(listing.image_url),
+      })),
+    );
   } catch (error) {
     if (isFetchFailedError(error)) {
       return [];
@@ -195,10 +226,13 @@ export async function getInquiryListings() {
       throw new Error(error.message);
     }
 
-    return ((data ?? []) as unknown as TourListing[]).map((listing) => ({
-      ...withBrowseDefaults(listing),
-      image_url: normalizePublicListingImage(listing.image_url),
-    }));
+    return resolveUploadedImageRoutes(
+      admin,
+      ((data ?? []) as unknown as TourListing[]).map((listing) => ({
+        ...withBrowseDefaults(listing),
+        image_url: normalizePublicListingImage(listing.image_url),
+      })),
+    );
   } catch (error) {
     if (isFetchFailedError(error)) {
       return [];

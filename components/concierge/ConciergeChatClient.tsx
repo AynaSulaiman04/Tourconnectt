@@ -812,7 +812,7 @@ export function ConciergeChatClient({
           width: 100%;
           height: 100%;
           min-height: 0;
-          padding: 0.9rem 0 1rem;
+          padding: 0.9rem clamp(0.75rem, 2.5vw, 2rem) 1rem;
           align-items: stretch;
         }
 
@@ -1035,6 +1035,11 @@ export function ConciergeChatClient({
 
         .assistant-bubble .message-meta {
           color: var(--on-surface-variant);
+        }
+
+        .user-bubble .message-meta {
+          color: var(--on-secondary);
+          opacity: 0.85;
         }
 
         .assistant-content,
@@ -1639,7 +1644,7 @@ export function ConciergeChatClient({
                 title="More options"
                 onClick={() => setMenuOpen((current) => !current)}
               >
-                <span className="material-symbols-outlined text-[1.25rem]">more_vert</span>
+                <span className="material-symbols-outlined text-[1.25rem]" aria-hidden="true">more_vert</span>
               </button>
 
               {menuOpen ? (
@@ -1858,7 +1863,7 @@ export function ConciergeChatClient({
                 type="button"
                 onClick={handleAttachmentClick}
               >
-                <span className="material-symbols-outlined text-[1.25rem]">attach_file</span>
+                <span className="material-symbols-outlined text-[1.25rem]" aria-hidden="true">attach_file</span>
               </button>
 
               <button
@@ -1870,7 +1875,7 @@ export function ConciergeChatClient({
                 disabled={!aiConfigured || pending || !isVoiceSupported}
                 onClick={handleVoiceSearch}
               >
-                <span className="material-symbols-outlined text-[1.25rem]">{isListening ? "mic_off" : "mic"}</span>
+                <span className="material-symbols-outlined text-[1.25rem]" aria-hidden="true">{isListening ? "mic_off" : "mic"}</span>
               </button>
 
               <textarea

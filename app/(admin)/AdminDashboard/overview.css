@@ -183,8 +183,21 @@
 
 .ov-metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  /* Six metrics: 2 x 3 on narrow screens, 3 x 2 beyond, never a 5 + 1 orphan. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .ov-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .ov-metric-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .ov-metric {

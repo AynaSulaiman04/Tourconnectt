@@ -718,7 +718,7 @@ function buildEventDescription(context: CalendarContext) {
     `Experience: ${context.listing?.title ?? context.inquiry.destination}`,
     `Operator: ${context.operatorProfile?.full_name ?? context.inquiry.operator_name}`,
     context.inquiry.notes ? `Notes: ${context.inquiry.notes}` : null,
-    `TT Connect: ${appUrl}`,
+    `TourConnecTT: ${appUrl}`,
   ].filter(Boolean);
 
   return sections.join("\n");
@@ -978,7 +978,7 @@ async function createOrUpdateGoogleCalendarEvent(
         googleConflicts: conflictResult.googleConflicts,
         error:
           conflictResult.source === "supabase"
-            ? "An overlapping confirmed booking already exists in Supabase."
+            ? "An overlapping confirmed booking already exists."
             : "A Google Calendar conflict was detected for the selected time window.",
       };
     }

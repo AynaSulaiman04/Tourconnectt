@@ -332,11 +332,13 @@ export default async function InquiryPage({ searchParams }: InquiryPageProps) {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 1rem;
+          align-items: start;
         }
 
         .request-field {
           display: grid;
           gap: 0.6rem;
+          align-content: start;
         }
 
         .request-field > span {
@@ -352,6 +354,7 @@ export default async function InquiryPage({ searchParams }: InquiryPageProps) {
         .request-field input[type="tel"],
         .request-field input[type="email"],
         .request-field input[type="text"],
+        .request-field textarea,
         .request-field select {
           width: 100%;
           min-height: 3rem;
@@ -363,7 +366,13 @@ export default async function InquiryPage({ searchParams }: InquiryPageProps) {
           outline: none;
         }
 
-        .request-field input::placeholder {
+        .request-field textarea {
+          resize: vertical;
+          font: inherit;
+        }
+
+        .request-field input::placeholder,
+        .request-field textarea::placeholder {
           color: rgba(90, 82, 75, 0.45);
         }
 

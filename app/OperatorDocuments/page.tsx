@@ -53,7 +53,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
   const recentInquiries = workspace.inquiries.slice(0, 6);
   const totalDocs = documents.length;
   const pendingDocs = documents.filter((document) => document.status === "pending").length;
-  const expiringSoon = documents.filter((document) => document.status === "sensitive").length;
+  const sharedDocs = documents.filter((document) => document.status === "shared").length;
   const sharesByDocument = new Map<string, number>();
 
   documentShares.forEach((share) => {
@@ -441,10 +441,10 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
           <div>
             <p className="eyebrow">Document management</p>
             <h1>Customer Files</h1>
-            <p>Store and review guest documents in a luxury, file-vault layout that matches the rest of the operator portal.</p>
+            <p>Upload guest documents, link them to an enquiry, and share them securely with your team.</p>
           </div>
           <div className="document-chip">
-            <span className="material-symbols-outlined">folder_open</span>
+            <span className="material-symbols-outlined" aria-hidden="true">folder_open</span>
             Secure archive
           </div>
         </header>
@@ -467,13 +467,13 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
           </div>
           <div className="glass-panel stat-card">
             <p className="stat-label">Pending review</p>
-            <p className="stat-value" style={{ color: "var(--secondary)" }}>{String(pendingDocs).padStart(2, "0")}</p>
+            <p className="stat-value" style={{ color: "var(--secondary)" }}>{pendingDocs}</p>
             <p className="stat-copy">New waivers and ID scans waiting for manual confirmation.</p>
           </div>
           <div className="glass-panel stat-card">
-            <p className="stat-label">Expiring soon</p>
-            <p className="stat-value" style={{ color: "var(--tertiary)" }}>{String(expiringSoon).padStart(2, "0")}</p>
-            <p className="stat-copy">Documents marked sensitive or requiring follow-up.</p>
+            <p className="stat-label">Shared</p>
+            <p className="stat-value" style={{ color: "var(--tertiary)" }}>{sharedDocs}</p>
+            <p className="stat-copy">Documents already shared with your team or the traveller.</p>
           </div>
         </section>
 
@@ -481,11 +481,11 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
           <div className="glass-panel document-card">
             <div className="document-card-head">
               <div>
-                <p className="eyebrow" style={{ marginBottom: 6 }}>Vault lanes</p>
-                <h3>Upload Queue</h3>
+                <p className="eyebrow" style={{ marginBottom: 6 }}>New file</p>
+                <h3>Upload a document</h3>
                 <p>Guest documents, operator notes, and shared itinerary assets.</p>
               </div>
-              <span className="material-symbols-outlined" style={{ color: "var(--secondary)" }}>cloud_upload</span>
+              <span className="material-symbols-outlined" style={{ color: "var(--secondary)" }} aria-hidden="true">cloud_upload</span>
             </div>
 
             <form className="upload-form" action={uploadOperatorDocumentAction}>
@@ -528,7 +528,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
                   Upload Document
                 </FormSubmitButton>
                 <Link className="document-chip alt" href="/OperatorMessages">
-                  Request missing file
+                  Ask traveller for a file
                 </Link>
               </div>
             </form>
@@ -537,29 +537,29 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
           <div className="glass-panel document-card">
             <div className="document-card-head">
               <div>
-                <p className="eyebrow" style={{ marginBottom: 6 }}>Quick controls</p>
-                <h3>Vault Actions</h3>
-                <p>Review, share, archive, or request additional customer files.</p>
+                <p className="eyebrow" style={{ marginBottom: 6 }}>How it works</p>
+                <h3>What happens to a file</h3>
+                <p>Each uploaded file appears in the history below with these actions.</p>
               </div>
-              <span className="material-symbols-outlined" style={{ color: "var(--tertiary)" }}>draw</span>
+              <span className="material-symbols-outlined" style={{ color: "var(--tertiary)" }} aria-hidden="true">draw</span>
             </div>
 
             <div className="upload-list">
               <div className="upload-item">
-                <strong>Request missing file</strong>
-                <p>Send a follow-up prompt to the traveller or guest concierge.</p>
+                <strong>Mark shared</strong>
+                <p>Moves a pending file to shared once the traveller or your team has what they need.</p>
               </div>
               <div className="upload-item">
-                <strong>Archive complete</strong>
-                <p>Move closed trip files into the seasonal archive safely.</p>
+                <strong>Grant access</strong>
+                <p>Gives a team member view access to the file.</p>
               </div>
               <div className="upload-item">
-                <strong>Share with team</strong>
-                <p>Provide access to supporting operator staff and reservations.</p>
+                <strong>Share link</strong>
+                <p>Creates a secure link, valid for one hour, that you can send to someone outside the platform.</p>
               </div>
               <div className="upload-item">
-                <strong>Mark sensitive</strong>
-                <p>Flag private documents for restricted handling.</p>
+                <strong>Archive and restore</strong>
+                <p>Moves finished files out of the way, and brings them back if needed.</p>
               </div>
             </div>
           </div>
@@ -573,7 +573,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
               <p>Track the latest document updates and guest record changes.</p>
             </div>
             <span className="document-chip alt">
-              <span className="material-symbols-outlined">history</span>
+              <span className="material-symbols-outlined" aria-hidden="true">history</span>
               Live log
             </span>
           </div>
@@ -601,7 +601,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
                       ) : null}
                       <a className="document-link" href={doc.file_url} target="_blank" rel="noreferrer">
                         {doc.file_name}
-                        <span className="material-symbols-outlined">open_in_new</span>
+                        <span className="material-symbols-outlined" aria-hidden="true">open_in_new</span>
                       </a>
                     </td>
                     <td>
@@ -630,7 +630,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
                             }
                           />
                           <FormSubmitButton className="btn-outline btn-sm" pendingLabel="Updating...">
-                            <span className="material-symbols-outlined">sync</span>
+                            <span className="material-symbols-outlined" aria-hidden="true">sync</span>
                             {doc.status === "pending" ? "Mark shared" : doc.status === "archived" ? "Restore" : "Archive"}
                           </FormSubmitButton>
                         </form>
@@ -657,7 +657,7 @@ export default async function OperatorDocumentsPage({ searchParams }: OperatorDo
                           </select>
                           <input name="access_level" type="hidden" value="viewer" />
                           <FormSubmitButton className="btn-outline btn-sm" pendingLabel="Sharing...">
-                            <span className="material-symbols-outlined">share</span>
+                            <span className="material-symbols-outlined" aria-hidden="true">share</span>
                             Grant access
                           </FormSubmitButton>
                         </form>

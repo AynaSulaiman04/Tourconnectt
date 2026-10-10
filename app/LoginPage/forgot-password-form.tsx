@@ -18,7 +18,7 @@ export function ForgotPasswordForm() {
         <input
           id="email"
           name="email"
-          placeholder="traveler@ttconnect.com"
+          placeholder="you@example.com"
           type="email"
           autoComplete="email"
           required

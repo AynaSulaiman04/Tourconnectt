@@ -40,6 +40,29 @@ function getInquiryStatusLabel(status: string | null | undefined) {
   }
 }
 
+function getHeadline(status: string | null | undefined) {
+  switch (status) {
+    case "reviewed":
+      return "Enquiry under review";
+    case "confirmed":
+      return "Booking confirmed";
+    case "closed":
+      return "Enquiry closed";
+    case "rejected":
+    case "unavailable":
+      return "Not available";
+    case "submitted":
+    default:
+      return "Enquiry sent";
+  }
+}
+
+function formatDateRange(start: string | null, end: string | null) {
+  const from = formatDate(start);
+  const to = formatDate(end);
+  return !end || from === to ? from : `${from} to ${to}`;
+}
+
 function getNextStepText(status: string | null | undefined) {
   switch (status) {
     case "reviewed":
@@ -55,22 +78,6 @@ function getNextStepText(status: string | null | undefined) {
     default:
       return "The operator will review your dates and preferences, then respond with the next steps.";
   }
-}
-
-function getContactChannel(operatorPhone: string | null, operatorEmail: string | null) {
-  if (operatorPhone && operatorEmail) {
-    return "WhatsApp + Email";
-  }
-
-  if (operatorPhone) {
-    return "WhatsApp";
-  }
-
-  if (operatorEmail) {
-    return "Email";
-  }
-
-  return "Open operator thread";
 }
 
 function stripDialableCharacters(value: string) {
@@ -192,8 +199,6 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
   const activeConversation = threadState?.activeConversation ?? null;
   const threadMessages = threadState?.messages ?? [];
   const listingTitle = inquiry.listing?.title ?? inquiry.destination ?? null;
-  const nextStep = getNextStepText(inquiry.status);
-  const contactChannel = getContactChannel(inquiry.operator_phone ?? null, inquiry.operator_email ?? null);
   const paymentNotice = resolvedSearchParams.payment === "paid" || resolvedSearchParams.payment === "completed" || resolvedSearchParams.payment === "success"
     ? "WiPay sent you back after checkout. We are verifying the payment now."
     : resolvedSearchParams.payment === "cancelled"
@@ -202,6 +207,13 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
   const paymentErrorMessage = resolvedSearchParams.payment_error ?? null;
   const payment = inquiry.payment ?? null;
   const paymentAmount = resolveWiPayInquiryAmount(inquiry);
+  const paymentAmountLabel = paymentAmount
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: payment?.currency ?? "TTD",
+        currencyDisplay: "code",
+      }).format(Number.parseFloat(paymentAmount))
+    : null;
   const paymentStatusLabel =
     payment?.status === "paid" || payment?.status === "completed" || payment?.status === "success"
       ? "Paid"
@@ -727,7 +739,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
         <section className="grid">
           <div className="panel">
             <p className="eyebrow">Enquiry confirmed</p>
-            <h1 className="title">{getInquiryStatusLabel(inquiry.status).toLowerCase()}</h1>
+            <h1 className="title">{getHeadline(inquiry.status)}</h1>
             <p className="copy">{getNextStepText(inquiry.status)}</p>
             {paymentNotice ? <p className="copy" style={{ marginTop: 12 }}>{paymentNotice}</p> : null}
             {paymentErrorMessage ? <p className="copy" style={{ marginTop: 12, color: "var(--secondary)" }}>{paymentErrorMessage}</p> : null}
@@ -788,7 +800,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                   <strong>Operator:</strong> {inquiry.operator_name}
                 </p>
                 <p className="detail-row">
-                  <strong>Dates:</strong> {formatDate(inquiry.preferred_start_date)} to {formatDate(inquiry.preferred_end_date)}
+                  <strong>Dates:</strong> {formatDateRange(inquiry.preferred_start_date, inquiry.preferred_end_date)}
                 </p>
                 <p className="detail-row">
                   <strong>Submitted:</strong> {formatDate(inquiry.created_at)}
@@ -796,11 +808,6 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                 <p className="detail-row">
                   <strong>Message:</strong> {inquiry.notes || "No notes were provided."}
                 </p>
-              </div>
-
-              <div className="status-row">
-                <span className="status-chip">{getInquiryStatusLabel(inquiry.status)}</span>
-                <span className="status-chip">{contactChannel}</span>
               </div>
 
               {inquiry.status === "confirmed" || Boolean(payment) || Boolean(resolvedSearchParams.payment) ? (
@@ -816,7 +823,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
 
                   <div className="payment-meta">
                     <div>
-                      <strong>Amount:</strong> {paymentAmount ?? "Not set yet"}
+                      <strong>Amount:</strong> {paymentAmountLabel ?? "Not set yet"}
                     </div>
                     <div>
                       <strong>Status:</strong>{" "}
@@ -855,7 +862,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                     </p>
                   ) : (
                     <p style={{ margin: 0, color: "var(--on-surface-variant)", fontSize: "15px", lineHeight: "24px" }}>
-                      Payment checkout will unlock once this inquiry is confirmed.
+                      Payment checkout will unlock once this enquiry is confirmed.
                     </p>
                   )}
                 </div>
@@ -863,7 +870,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
 
               <div className="actions tight">
                 <Link className="button primary" href="/Enquiry">
-                  Return to inquiry
+                  Send another enquiry
                 </Link>
                 <Link className="button" href="/TravellerProfile">
                   View profile
@@ -877,7 +884,6 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
             <div className="panel">
               <p className="eyebrow">Next steps</p>
               <ul className="list">
-                <li>{nextStep}</li>
                 <li>The operator reviews your preferred dates and availability window.</li>
                 <li>You can return here anytime to review the enquiry details.</li>
               </ul>
@@ -929,7 +935,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                   </div>
                 ) : (
                   <p style={{ margin: 0, color: "var(--on-surface-variant)", fontSize: "15px", lineHeight: "24px" }}>
-                    No messages have been sent on this inquiry yet.
+                    No messages have been sent on this enquiry yet.
                   </p>
                 )}
 
@@ -943,11 +949,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
               {profile?.role === "traveler" ? (
                 <div className="review-panel" id="review">
                   <h3>{inquiry.has_review ? "Your review" : "Leave a review"}</h3>
-                  <p>
-                    {inquiry.has_review
-                      ? "This enquiry already has a traveller review on file."
-                      : "Share feedback once the enquiry is confirmed or closed."}
-                  </p>
+                  {inquiry.has_review ? <p>This enquiry already has a traveller review on file.</p> : null}
 
                   {inquiry.has_review ? null : canShowReview ? (
                     showReviewForm ? (
@@ -961,7 +963,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                     )
                   ) : (
                     <p style={{ marginBottom: 0 }}>
-                      Reviews will unlock once the inquiry is confirmed or closed.
+                      Reviews unlock once the enquiry is confirmed or closed.
                     </p>
                   )}
                 </div>

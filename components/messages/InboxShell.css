@@ -269,13 +269,20 @@
 .tc-conversation-body {
   display: grid;
   gap: 0.38rem;
+  min-width: 0;
 }
 
 .tc-conversation-top {
   display: flex;
+  flex-direction: column-reverse;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.6rem;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.tc-conversation-top > span:first-child {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tc-conversation-name,
@@ -289,10 +296,16 @@
 .tc-conversation-name {
   font-size: 0.98rem;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tc-conversation-trip {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin-top: 0.15rem;
   color: var(--tc-muted);
   font-size: 0.82rem;

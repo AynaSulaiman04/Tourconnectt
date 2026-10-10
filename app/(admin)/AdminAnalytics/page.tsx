@@ -113,18 +113,33 @@ function buildSeries(events: Awaited<ReturnType<typeof getPlatformEvents>>, rang
   };
 }
 
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Series labels arrive as DD-MM-YYYY; the axis reads better as "11 Sep" / "Sep 26".
+function shortAxisLabel(label: string, range: AnalyticsRange) {
+  const [day, month, year] = label.split("-");
+  const monthName = SHORT_MONTHS[Number(month) - 1];
+
+  if (!day || !monthName || !year) {
+    return label;
+  }
+
+  return range === "1y" ? `${monthName} ${year.slice(2)}` : `${Number(day)} ${monthName}`;
+}
+
 function buildChartLabels(labels: string[], range: AnalyticsRange) {
-  if (range === "1y") {
-    return labels;
+  const short = labels.map((label) => shortAxisLabel(label, range));
+
+  if (range === "1y" || range === "7d") {
+    return short;
   }
 
-  if (range === "7d") {
-    return labels;
-  }
+  const last = short.length - 1;
 
-  return labels.map((label, index) => {
-    const isEdge = index === 0 || index === labels.length - 1;
-    return isEdge || index % 4 === 0 ? label : "";
+  return short.map((label, index) => {
+    const isEdge = index === 0 || index === last;
+    // Skip the label just before the final edge so the two cannot collide.
+    return isEdge || (index % 5 === 0 && index < last - 2) ? label : "";
   });
 }
 
@@ -485,7 +500,9 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
           <div className="xl:col-span-4 flex flex-col gap-gutter">
             <GlassPanel className="p-gutter">
               <div className="label-caps text-secondary mb-2">Commission summary</div>
-              <div className="text-display-xl-mobile text-on-background">{formatCurrency(totalCommission)}</div>
+              <div className="text-display-xl-mobile text-on-background break-words" style={{ fontSize: "clamp(2rem, 3vw, 3.25rem)" }}>
+                {formatCurrency(totalCommission)}
+              </div>
               <p className="section-copy mt-2">
                 Estimated admin commission using a {commissionRate.toFixed(1)}% platform rate on successful WiPay payments.
               </p>
@@ -678,61 +695,79 @@ export default async function AdminAnalyticsPage({ searchParams }: AdminAnalytic
               <div className="label-caps text-secondary mb-2">Create campaign</div>
               <p className="section-copy">Generate affiliate links with commission-ready tracking.</p>
 
-              <form action={createReferralCampaignAction} className="mt-5 grid gap-3">
+              <form action={createReferralCampaignAction} className="mt-5 grid grid-cols-1 gap-4">
                 <input name="return_to" type="hidden" value={growthHref} />
-                <input
-                  className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                  name="partner_name"
-                  placeholder="Partner name"
-                  required
-                  type="text"
-                />
-                <input
-                  className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                  name="code"
-                  placeholder="Code (optional)"
-                  type="text"
-                />
-                <input
-                  className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                  name="landing_page"
-                  placeholder="/Enquiry"
-                  defaultValue="/Enquiry"
-                  type="text"
-                />
-                <div className="grid grid-cols-2 gap-3">
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Partner name</span>
                   <input
                     className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                    name="utm_source"
-                    placeholder="utm_source"
+                    name="partner_name"
+                    placeholder="e.g. Hotel Magdalena"
                     required
                     type="text"
                   />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Referral code (optional)</span>
                   <input
                     className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                    name="utm_medium"
-                    placeholder="utm_medium"
-                    defaultValue="referral"
+                    name="code"
+                    placeholder="Generated if left blank"
                     type="text"
                   />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Landing page</span>
+                  <input
+                    className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
+                    name="landing_page"
+                    defaultValue="/Enquiry"
+                    type="text"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Source</span>
+                    <input
+                      className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
+                      name="utm_source"
+                      placeholder="e.g. hotel"
+                      required
+                      type="text"
+                    />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Medium</span>
+                    <input
+                      className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
+                      name="utm_medium"
+                      defaultValue="referral"
+                      type="text"
+                    />
+                  </label>
                 </div>
-                <input
-                  className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                  name="utm_campaign"
-                  placeholder="utm_campaign"
-                  required
-                  type="text"
-                />
-                <input
-                  className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
-                  name="commission_rate"
-                  placeholder="Commission rate"
-                  defaultValue="12.5"
-                  min="0"
-                  max="100"
-                  step="0.5"
-                  type="number"
-                />
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Campaign name</span>
+                  <input
+                    className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
+                    name="utm_campaign"
+                    placeholder="e.g. spring-2027"
+                    required
+                    type="text"
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Commission rate (%)</span>
+                  <input
+                    className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3 text-on-background outline-none"
+                    name="commission_rate"
+                    defaultValue="12.5"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    type="number"
+                  />
+                </label>
                 <FormSubmitButton variant="primary" pendingLabel="Creating campaign...">
                   Create campaign
                 </FormSubmitButton>

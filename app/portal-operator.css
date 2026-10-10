@@ -135,7 +135,7 @@
   justify-content: space-between;
 }
 
-.stat-label {
+.stat-card .stat-label {
   margin: 0;
   color: var(--on-surface-variant);
   font-size: 12px;
@@ -145,7 +145,7 @@
   text-transform: uppercase;
 }
 
-.stat-value {
+.stat-card .stat-value {
   margin: 0;
   font-family: var(--font-display);
   font-size: 3.2rem;
@@ -155,11 +155,29 @@
   color: var(--on-surface);
 }
 
-.stat-copy {
+.stat-card .stat-copy {
   margin: 0;
   color: var(--on-surface-variant);
   font-size: 14px;
   line-height: 22px;
+  letter-spacing: normal;
+  font-weight: 400;
+  text-transform: none;
+}
+
+/* Five cards: a 3 + 2 arrangement rather than 4 + 1 orphan. */
+@container portal (min-width: 900px) {
+  .operator-stats-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .operator-stats-grid > .stat-card {
+    grid-column: span 2;
+  }
+
+  .operator-stats-grid > .stat-card:nth-child(n + 4) {
+    grid-column: span 3;
+  }
 }
 
 .stat-change {

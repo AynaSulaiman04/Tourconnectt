@@ -273,7 +273,7 @@ export function TravelSummaryManager({ countries }: TravelSummaryManagerProps) {
         </div>
 
         <div className="travel-summary-count" aria-hidden="true">
-          <span className="material-symbols-outlined">public</span>
+          <span className="material-symbols-outlined" aria-hidden="true">public</span>
           <strong>{visibleCountries.length}</strong>
         </div>
       </div>

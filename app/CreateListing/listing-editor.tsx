@@ -153,6 +153,13 @@ export function ListingEditor({
   });
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const noticeRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (notice) {
+      noticeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [notice]);
 
   useEffect(() => {
     if (initialDraft) {
@@ -364,7 +371,7 @@ export function ListingEditor({
             ? "Listing submitted for review."
             : result.local_only
               ? "Draft saved locally until the operator listing tables are applied."
-              : "Draft saved to Supabase.",
+              : "Draft saved.",
       });
 
       if (mode === "publish") {
@@ -430,6 +437,8 @@ export function ListingEditor({
 
         {notice ? (
           <div
+            ref={noticeRef}
+            role={notice.type === "error" ? "alert" : "status"}
             className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
               notice.type === "success"
                 ? "border-secondary/20 bg-secondary/5 text-on-surface-variant"
@@ -505,7 +514,7 @@ export function ListingEditor({
         </div>
 
         <aside className="xl:col-span-4">
-          <div className="grid gap-gutter h-full min-h-[650px]">
+          <div className="grid grid-rows-[auto_auto_1fr] gap-gutter h-full min-h-[650px]">
             <div className="glass-panel p-gutter">
               <h3 className="font-label-caps text-primary mb-3">Curation Tip</h3>
               <p className="text-body-md text-on-surface-variant font-light italic">
@@ -531,7 +540,7 @@ export function ListingEditor({
               <ul className="mt-5 space-y-3">
                 {completion.sections.map((section) => (
                   <li key={section.label} className="text-xs text-on-surface-variant">
-                    {section.isComplete ? "Done" : "Open"} {section.label}
+                    {section.label}: {section.isComplete ? "Done" : "To do"}
                   </li>
                 ))}
               </ul>
@@ -946,22 +955,40 @@ function DetailCard({
       <div className="mt-5 space-y-4">
         {rows.map(([fieldKey, value, placeholder]) => {
           const label = fieldKeyToLabel(fieldKey);
+          const inputId = `listing-${fieldKey}`;
+          const multiline = fieldKey === "itinerary" || fieldKey === "inclusions" || fieldKey === "exclusions";
+          const controlClass =
+            "w-full text-left bg-transparent border-0 focus:ring-0 p-0 placeholder:text-on-surface-variant";
+          const handleChange = (nextValue: string) =>
+            onChange(fieldKey, nextValue as ListingFormState[keyof ListingFormState]);
 
           return (
             <div
               key={label}
               className="flex flex-col gap-2 border-b border-outline-variant/30 py-3"
             >
-              <span className="text-body-md">{label}</span>
-              <input
-                className="w-full text-left bg-transparent border-0 focus:ring-0 p-0 placeholder:text-on-surface-variant"
-                placeholder={placeholder}
-                type="text"
-                value={value}
-                onChange={(event) =>
-                  onChange(fieldKey, event.target.value as ListingFormState[keyof ListingFormState])
-                }
-              />
+              <label className="text-body-md" htmlFor={inputId}>
+                {label}
+              </label>
+              {multiline ? (
+                <textarea
+                  className={`${controlClass} resize-y`}
+                  id={inputId}
+                  placeholder={placeholder}
+                  rows={3}
+                  value={value}
+                  onChange={(event) => handleChange(event.target.value)}
+                />
+              ) : (
+                <input
+                  className={controlClass}
+                  id={inputId}
+                  placeholder={placeholder}
+                  type={fieldKey === "contactEmail" ? "email" : fieldKey === "contactPhone" ? "tel" : "text"}
+                  value={value}
+                  onChange={(event) => handleChange(event.target.value)}
+                />
+              )}
             </div>
           );
         })}

@@ -117,7 +117,10 @@ export async function getListingDetail(listingId: string): Promise<ListingDetail
       category: row.category ?? null,
       price_currency: row.price_currency ?? null,
       price_basis: row.price_basis ?? null,
-      image_url: normalizeImage(row.image_url, row.image_base64 ?? null),
+      image_url:
+        !normalizeMediaSource(row.image_url) && row.image_base64 && row.status === "live" && row.is_active
+          ? `/api/listing-image/${row.id}`
+          : normalizeImage(row.image_url, row.image_base64 ?? null),
       itinerary: normalizeText(draftRow?.itinerary),
       inclusions: normalizeText(draftRow?.inclusions),
       exclusions: normalizeText(draftRow?.exclusions),

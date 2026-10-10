@@ -76,7 +76,7 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
       device: "Account created",
       location: formatDate(profile.created_at),
       status: "Profile record",
-      note: "Current operator profile linked to Supabase auth.",
+      note: "Your operator profile and sign-in account.",
     },
     {
       device: "Settings saved",
@@ -191,6 +191,25 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
                 preferences={operatorPreferences}
               />
             </form>
+
+            <form action={revokeOperatorSessionAction}>
+              <GlassPanel className="p-gutter">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1 basis-56">
+                    <p className="eyebrow" style={{ marginBottom: 6 }}>Session control</p>
+                    <h3 className="font-display text-[30px] leading-9 font-light text-on-background">
+                      Revoke current session
+                    </h3>
+                    <p className="mt-2 text-sm text-on-surface-variant">
+                      Sign out the current browser session without changing any stored operator settings.
+                    </p>
+                  </div>
+                  <Button variant="outline" type="submit" className="whitespace-nowrap">
+                    Revoke Session
+                  </Button>
+                </div>
+              </GlassPanel>
+            </form>
           </div>
 
           <div className="min-w-0 space-y-gutter lg:col-span-5">
@@ -205,13 +224,13 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
                     Review authenticated activity and account state for the operator workspace.
                   </p>
                 </div>
-                <span className="material-symbols-outlined text-secondary">security</span>
+                <span className="material-symbols-outlined text-secondary" aria-hidden="true">security</span>
               </div>
 
               <div className="mt-6 space-y-4">
                 {operatorSessions.map((session) => (
                   <div key={`${session.device}-${session.location}`} className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
-                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="flex flex-col items-start gap-3">
                       <div className="min-w-0">
                         <div className="font-body-md text-on-background">{session.device}</div>
                         <div className="break-all text-sm text-on-surface-variant">{session.location}</div>
@@ -241,10 +260,10 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
                     Connect Google Calendar for trip syncing and copy a secure iCal feed for external calendars.
                   </p>
                 </div>
-                <span className="material-symbols-outlined text-secondary">calendar_month</span>
+                <span className="material-symbols-outlined text-secondary" aria-hidden="true">calendar_month</span>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-6 grid grid-cols-1 gap-4">
                 <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
                   <div className="label-caps text-secondary mb-1">Google Calendar</div>
                   <div className="font-body-md text-on-background">
@@ -262,7 +281,7 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
                   ) : null}
                   <div className="mt-4 flex flex-wrap gap-3">
                     {googleCalendarConfig.configured ? (
-                      <a className="btn-outline" href="/api/google/calendar/connect">
+                      <a className="btn-outline whitespace-nowrap" href="/api/google/calendar/connect">
                         Connect Google Calendar
                       </a>
                     ) : (
@@ -285,25 +304,6 @@ export default async function OperatorSettingsPage({ searchParams }: OperatorSet
                 </div>
               </div>
             </GlassPanel>
-
-            <form action={revokeOperatorSessionAction}>
-              <GlassPanel className="p-gutter">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="eyebrow" style={{ marginBottom: 6 }}>Session control</p>
-                    <h3 className="font-display text-[30px] leading-9 font-light text-on-background">
-                      Revoke current session
-                    </h3>
-                    <p className="mt-2 text-sm text-on-surface-variant">
-                      Sign out the current browser session without changing any stored operator settings.
-                    </p>
-                  </div>
-                  <Button variant="outline" type="submit">
-                    Revoke Session
-                  </Button>
-                </div>
-              </GlassPanel>
-            </form>
           </div>
         </section>
       </main>

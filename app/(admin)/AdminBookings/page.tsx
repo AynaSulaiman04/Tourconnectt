@@ -383,8 +383,8 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
           </GlassPanel>
         </section>
 
-        <section className="section-shell grid grid-cols-1 lg:grid-cols-12 gap-gutter items-stretch">
-          <div className="lg:col-span-8 flex flex-col">
+        <section className="section-shell grid grid-cols-1 min-[1950px]:grid-cols-12 gap-gutter items-stretch">
+          <div className="min-[1950px]:col-span-8 flex flex-col">
             <SectionHeader
               eyebrow={tab === "bookings" ? "Booking list" : "Payment ledger"}
               title={tab === "bookings" ? "Requests and status updates." : "WiPay payments and manual actions."}
@@ -410,7 +410,13 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                 </thead>
                 <tbody>
                   {filteredBookings.length ? (
-                    filteredBookings.map((booking) => (
+                    filteredBookings.map((booking) => {
+                      const canReview = booking.status !== "reviewed" && booking.status !== "confirmed" && booking.status !== "closed";
+                      const canConfirm = booking.status !== "confirmed" && booking.status !== "closed";
+                      const startLabel = booking.preferred_start_date ? formatDate(booking.preferred_start_date) : null;
+                      const endLabel = booking.preferred_end_date ? formatDate(booking.preferred_end_date) : null;
+
+                      return (
                       <tr key={booking.id}>
                         <td className="align-middle">
                           <div className="min-w-[120px]">
@@ -421,8 +427,10 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                         <td className="align-middle text-sm text-on-surface-variant">
                           <div>{booking.listing?.title ?? booking.destination}</div>
                           <div className="text-xs uppercase tracking-[0.15em] text-on-surface-variant/70">
-                            {booking.preferred_start_date || booking.preferred_end_date
-                              ? `${booking.preferred_start_date ?? "Flexible"} · ${booking.preferred_end_date ?? "Open"}`
+                            {startLabel || endLabel
+                              ? startLabel && startLabel === endLabel
+                                ? startLabel
+                                : `${startLabel ?? "Flexible"} - ${endLabel ?? "Open"}`
                               : "Date on request"}
                           </div>
                         </td>
@@ -438,26 +446,31 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
                             <Button href={`/AdminBookings?inquiry=${booking.id}`} variant="outline" className="btn-sm">
                               Open
                             </Button>
-                            <form action={updateInquiryStatusAction}>
-                              <input name="inquiry_id" type="hidden" value={booking.id} />
-                              <input name="return_to" type="hidden" value={`/AdminBookings?inquiry=${booking.id}`} />
-                              <input name="status" type="hidden" value="reviewed" />
-                              <FormSubmitButton variant="ghost" className="btn-sm" pendingLabel="Updating...">
-                                Review
-                              </FormSubmitButton>
-                            </form>
-                            <form action={updateInquiryStatusAction}>
-                              <input name="inquiry_id" type="hidden" value={booking.id} />
-                              <input name="return_to" type="hidden" value={`/AdminBookings?inquiry=${booking.id}`} />
-                              <input name="status" type="hidden" value="confirmed" />
-                              <FormSubmitButton variant="primary" className="btn-sm" pendingLabel="Confirming...">
-                                Confirm
-                              </FormSubmitButton>
-                            </form>
+                            {canReview ? (
+                              <form action={updateInquiryStatusAction}>
+                                <input name="inquiry_id" type="hidden" value={booking.id} />
+                                <input name="return_to" type="hidden" value={`/AdminBookings?inquiry=${booking.id}`} />
+                                <input name="status" type="hidden" value="reviewed" />
+                                <FormSubmitButton variant="ghost" className="btn-sm" pendingLabel="Updating...">
+                                  Review
+                                </FormSubmitButton>
+                              </form>
+                            ) : null}
+                            {canConfirm ? (
+                              <form action={updateInquiryStatusAction}>
+                                <input name="inquiry_id" type="hidden" value={booking.id} />
+                                <input name="return_to" type="hidden" value={`/AdminBookings?inquiry=${booking.id}`} />
+                                <input name="status" type="hidden" value="confirmed" />
+                                <FormSubmitButton variant="primary" className="btn-sm" pendingLabel="Confirming...">
+                                  Confirm
+                                </FormSubmitButton>
+                              </form>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={6}>
@@ -553,7 +566,7 @@ export default async function AdminBookingsPage({ searchParams }: AdminBookingsP
             </GlassPanel>
           </div>
 
-          <div className="lg:col-span-4 flex flex-col gap-gutter">
+          <div className="min-[1950px]:col-span-4 flex flex-col gap-gutter">
             <GlassPanel className="p-gutter flex-1">
               <SectionHeader
                 eyebrow={tab === "bookings" ? "Selected enquiry" : "Selected payment"}

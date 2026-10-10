@@ -187,7 +187,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         }
 
         .page-header {
-          padding: 64px 80px 48px;
+          padding: 64px clamp(1rem, 3vw, 80px) 48px;
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
@@ -245,7 +245,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           letter-spacing: 0.15em;
           font-weight: 600;
         }
-        .search-wrap input::placeholder { color: var(--outline-variant); }
+        .search-wrap input::placeholder { color: var(--on-surface-variant); opacity: 0.75; }
         .search-wrap input:focus {
           border-color: rgba(197, 22, 29, 0.35);
           box-shadow: 0 0 0 3px rgba(197, 22, 29, 0.12);
@@ -256,7 +256,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         }
 
         .filters-section {
-          padding: 0 80px;
+          padding: 0 clamp(1rem, 3vw, 80px);
           margin-bottom: 48px;
         }
 
@@ -313,7 +313,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         .mini-stats { display: flex; gap: 32px; text-align: right; }
         .mini-stat p { margin: 0; }
         .mini-stat p:first-child {
-          color: var(--outline);
+          color: var(--on-surface-variant);
           font-size: 12px;
           line-height: 16px;
           letter-spacing: 0.15em;
@@ -335,7 +335,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
           align-self: center;
         }
 
-        .table-wrap { padding: 0 80px; }
+        .table-wrap { padding: 0 clamp(1rem, 3vw, 80px); }
         .table-card {
           overflow: hidden;
           border-radius: 8px;
@@ -427,7 +427,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
         }
         .role-traveler { border: 1px solid var(--secondary); color: var(--secondary); }
         .role-operator { border: 1px solid var(--tertiary); color: var(--tertiary); }
-        .role-muted { border: 1px solid var(--outline); color: var(--outline); }
+        .role-muted { border: 1px solid var(--outline); color: var(--on-surface-variant); }
 
         .presence-main {
           margin: 0;
@@ -448,9 +448,10 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
 
         .operations {
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
           justify-content: flex-end;
-          gap: 32px;
+          gap: 8px 12px;
         }
         .toggle-wrap {
           display: flex;
@@ -934,7 +935,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                               <p className="person-email">{profile.email}</p>
                               <p className="person-email">
                                 {profile.latest_listing_title
-                                  ? `Latest inquiry: ${profile.latest_listing_title}`
+                                  ? `Latest enquiry: ${profile.latest_listing_title}`
                                   : profile.latest_conversation_id
                                     ? `Latest conversation: ${profile.latest_listing_location ?? "Direct request"}`
                                     : `Direct request: ${profile.latest_listing_location ?? "Direct request"}`}
@@ -949,7 +950,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                                   <summary className="cursor-pointer font-semibold text-secondary">Guest care details</summary>
                                   <div className="mt-3 grid gap-2 text-on-surface-variant">
                                     <p><strong>Phone:</strong> {profile.care_profile.phone_number || profile.traveler_phone || "Not provided"}</p>
-                                    <p><strong>Pickup:</strong> {[profile.care_profile.default_pickup_location, profile.care_profile.preferred_pickup_time].filter(Boolean).join(" ? ") || "Not provided"}</p>
+                                    <p><strong>Pickup:</strong> {[profile.care_profile.default_pickup_location, profile.care_profile.preferred_pickup_time].filter(Boolean).join(" · ") || "Not provided"}</p>
                                     <p><strong>15-minute walk:</strong> {profile.care_profile.can_walk_15_minutes === true ? "Yes" : profile.care_profile.can_walk_15_minutes === false ? "No" : "Unsure"}</p>
                                     <p><strong>Allergies:</strong> {profile.care_profile.allergies || "None provided"}</p>
                                     <p><strong>Dietary restrictions:</strong> {profile.care_profile.dietary_restrictions || "None provided"}</p>
@@ -972,13 +973,13 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                             }`}
                           >
                             {profile.role === "traveler"
-                              ? "Elite Traveller"
+                              ? "Traveller"
                               : profile.role === "operator"
-                                ? "Certified Operator"
+                                ? "Operator"
                                 : "Administrator"}
                           </span>
                           <p className="presence-sub" style={{ marginTop: 8 }}>
-                            {profile.latest_inquiry_status ? profile.latest_inquiry_status.toUpperCase() : "DIRECT CHAT"} ?{" "}
+                            {profile.latest_inquiry_status ? profile.latest_inquiry_status.toUpperCase() : "DIRECT CHAT"} ·{" "}
                             {profile.inquiry_count} {profile.inquiry_count === 1 ? "enquiry" : "enquiries"}
                           </p>
                           <p className="presence-sub" style={{ marginTop: 6 }}>
@@ -990,7 +991,7 @@ export default async function ManagementDirectoryPage({ searchParams }: Operator
                           <p className="presence-main">{profile.is_active ? relativeStatus(profile) : "Suspended"}</p>
                           <p className={`presence-sub ${!profile.is_active ? "error" : ""}`}>
                             {formatPresenceDetail(profile)}
-                            {profile.preferred_start_date ? ` ? Preferred ${formatDate(profile.preferred_start_date)}` : ""}
+                            {profile.preferred_start_date ? ` · Preferred ${formatDate(profile.preferred_start_date)}` : ""}
                           </p>
                           <p className="presence-sub" style={{ marginTop: 6 }}>
                             Last activity {formatDateTime(profile.latest_activity_at)}

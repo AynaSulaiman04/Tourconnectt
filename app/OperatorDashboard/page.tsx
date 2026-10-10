@@ -233,7 +233,7 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
 
             <div className="hero-side">
               <div className="date-pill glass-panel">
-                <span className="material-symbols-outlined">calendar_month</span>
+                <span className="material-symbols-outlined" aria-hidden="true">calendar_month</span>
                 <span>
                   {dashboard.unreadNotificationsCount > 0
                     ? `Live operator workspace - ${dashboard.unreadNotificationsCount} unread notifications`
@@ -249,7 +249,7 @@ export default async function OperatorDashboardPage({ searchParams }: OperatorDa
             </div>
           </section>
 
-          <section className="stats-grid">
+          <section className="stats-grid operator-stats-grid">
             <div className="glass-panel stat-card">
               <p className="stat-label">Live Listings</p>
               <p className="stat-value">{dashboard.liveListingsCount}</p>

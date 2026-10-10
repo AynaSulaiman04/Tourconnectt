@@ -96,10 +96,6 @@ export function LoginForm({
       if (error || !data.user) {
         const errorMessage = mapAuthError(error?.message ?? "Unable to sign in.");
         setMessage(errorMessage);
-        setFieldErrors({
-          email: ["Wrong email or password."],
-          password: ["Wrong email or password."],
-        });
         return;
       }
 
@@ -114,10 +110,6 @@ export function LoginForm({
       if (profileError || !profile) {
         await supabase.auth.signOut();
         setMessage("We could not load your account profile. Please try again.");
-        setFieldErrors({
-          email: ["Account profile not found."],
-          password: ["Account profile not found."],
-        });
         return;
       }
 
@@ -236,7 +228,7 @@ export function LoginForm({
         <input
           id="email"
           name="email"
-          placeholder="traveler@ttconnect.com"
+          placeholder="you@example.com"
           type="email"
           autoComplete="email"
           required
@@ -293,6 +285,13 @@ export function LoginForm({
       </div>
 
       <div className="submit-wrap">
+        <p
+          className={`form-status ${success ? "form-status-success" : "form-status-error"}`}
+          aria-live="polite"
+        >
+          {message}
+        </p>
+
         <button className="btn-primary w-full" disabled={submitting || pending} type="submit">
           {submitting || pending ? "Signing In" : "Sign In"}
         </button>
@@ -308,13 +307,6 @@ export function LoginForm({
           </span>
           <span>{googlePending ? "Connecting with Google" : "Continue with Google"}</span>
         </button>
-
-        <p
-          className={`form-status ${success ? "form-status-success" : "form-status-error"}`}
-          aria-live="polite"
-        >
-          {message}
-        </p>
       </div>
 
       <div className="alternative-actions">

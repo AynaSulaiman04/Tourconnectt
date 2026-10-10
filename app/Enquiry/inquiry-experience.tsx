@@ -160,7 +160,7 @@ export function InquiryExperience({
               <input name="utm_content" type="hidden" value={tracking.utmContent} />
               <input name="utm_term" type="hidden" value={tracking.utmTerm} />
               <div className="request-form-grid">
-                <label className="request-field">
+                <label className="request-field" style={{ gridColumn: "1 / -1" }}>
                   <span>Selected listing</span>
                   <select
                     defaultValue={defaultListing?.id ?? ""}
@@ -184,7 +184,9 @@ export function InquiryExperience({
                     </p>
                   ) : null}
                 </label>
+              </div>
 
+              <div className="request-form-grid">
                 <label className="request-field">
                   <span>Preferred start</span>
                   <input
@@ -200,6 +202,25 @@ export function InquiryExperience({
                   {state.fieldErrors.preferredStartDate?.length ? (
                     <p className="field-error" id="preferred_start_date_error" role="alert">
                       {state.fieldErrors.preferredStartDate[0]}
+                    </p>
+                  ) : null}
+                </label>
+
+                <label className="request-field">
+                  <span>Preferred end</span>
+                  <input
+                    aria-invalid={Boolean(state.fieldErrors.preferredEndDate?.length)}
+                    aria-describedby={
+                      state.fieldErrors.preferredEndDate?.length ? "preferred_end_date_error" : undefined
+                    }
+                    defaultValue={initialTripRequest.preferredEndDate || ""}
+                    name="preferred_end_date"
+                    type="date"
+                    required
+                  />
+                  {state.fieldErrors.preferredEndDate?.length ? (
+                    <p className="field-error" id="preferred_end_date_error" role="alert">
+                      {state.fieldErrors.preferredEndDate[0]}
                     </p>
                   ) : null}
                 </label>
@@ -245,25 +266,6 @@ export function InquiryExperience({
 
               <div className="request-form-grid">
                 <label className="request-field">
-                  <span>Preferred end</span>
-                  <input
-                    aria-invalid={Boolean(state.fieldErrors.preferredEndDate?.length)}
-                    aria-describedby={
-                      state.fieldErrors.preferredEndDate?.length ? "preferred_end_date_error" : undefined
-                    }
-                    defaultValue={initialTripRequest.preferredEndDate || ""}
-                    name="preferred_end_date"
-                    type="date"
-                    required
-                  />
-                  {state.fieldErrors.preferredEndDate?.length ? (
-                    <p className="field-error" id="preferred_end_date_error" role="alert">
-                      {state.fieldErrors.preferredEndDate[0]}
-                    </p>
-                  ) : null}
-                </label>
-
-                <label className="request-field">
                   <span>Phone number</span>
                   <input
                     aria-invalid={Boolean(state.fieldErrors.travelerPhone?.length)}
@@ -304,13 +306,13 @@ export function InquiryExperience({
 
               <label className="request-field">
                 <span>Enquiry notes</span>
-                <input
+                <textarea
                   aria-invalid={Boolean(state.fieldErrors.notes?.length)}
                   aria-describedby={state.fieldErrors.notes?.length ? "notes_error" : undefined}
                   defaultValue={notesDefaultValue}
                   name="notes"
                   placeholder="Share dietary needs, room preferences, or special timing"
-                  type="text"
+                  rows={4}
                 />
                 {state.fieldErrors.notes?.length ? (
                   <p className="field-error" id="notes_error" role="alert">

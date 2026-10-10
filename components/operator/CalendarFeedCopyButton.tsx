@@ -23,7 +23,7 @@ export function CalendarFeedCopyButton({ feedUrl }: CalendarFeedCopyButtonProps)
   return (
     <div className="space-y-2">
       <button
-        className="btn-outline btn-sm"
+        className="btn-outline btn-sm whitespace-nowrap"
         type="button"
         onClick={handleCopy}
       >

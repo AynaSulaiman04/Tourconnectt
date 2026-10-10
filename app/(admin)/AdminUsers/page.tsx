@@ -266,8 +266,8 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
           </GlassPanel>
         </section>
 
-        <section className="section-shell grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-          <div className="lg:col-span-8">
+        <section className="section-shell grid grid-cols-1 min-[1950px]:grid-cols-12 gap-gutter">
+          <div className="min-[1950px]:col-span-8">
             <SectionHeader
               eyebrow="Access control"
               title="Users and operator credentials."
@@ -377,7 +377,7 @@ export default async function AdminUsersPage({ searchParams }: AdminUsersPagePro
             </GlassPanel>
           </div>
 
-          <div className="lg:col-span-4 space-y-gutter">
+          <div className="min-[1950px]:col-span-4 space-y-gutter">
             <GlassPanel className="p-gutter">
               <SectionHeader
                 eyebrow="Credential checks"

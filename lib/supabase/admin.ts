@@ -20,7 +20,6 @@ import {
   sumSuccessfulWiPayPayments,
   type WiPayPaymentSummary,
 } from "@/lib/payments/wipay";
-import { formatDate } from "@/lib/format/date";
 import type { TourListing, TravelerInquiry } from "./inquiry-types";
 import type { TravelerProfile } from "./profile-types";
 import { getTravelerCareProfiles, type TravelerCareProfile } from "./traveler-care";
@@ -403,7 +402,7 @@ export async function getAdminWorkspaceData() {
   const trendNotes = [
     `${pendingBookings.length} booking request${pendingBookings.length === 1 ? "" : "s"} still need admin follow-up.`,
     `${promotedListings.length} listing${promotedListings.length === 1 ? "" : "s"} are currently featured or promoted on the platform.`,
-    `${inquiryByListingCountry.size} countr${inquiryByListingCountry.size === 1 ? "y" : "ies"} are represented in current activity.`,
+    `${inquiryByListingCountry.size} countr${inquiryByListingCountry.size === 1 ? "y is" : "ies are"} represented in current activity.`,
     `${referralCampaigns.filter((campaign) => campaign.is_active).length} active referral campaign${referralCampaigns.filter((campaign) => campaign.is_active).length === 1 ? "" : "s"} are sending traffic.`,
     `${monthlyRevenue > 0 ? `WiPay has processed ${monthlyRevenue.toLocaleString()} in gross confirmed collections, with ${adminCommissionTotal.toLocaleString()} retained as platform commission.` : "WiPay revenue has not posted confirmed collections yet."}`,
   ];
@@ -450,6 +449,12 @@ export async function getAdminWorkspaceData() {
   } satisfies AdminWorkspaceData;
 }
 
+function localDayKey(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function buildActivityTimeline(
   events: Awaited<ReturnType<typeof getPlatformEvents>>,
 ): Array<{ day: string; count: number }> {
@@ -463,22 +468,19 @@ function buildActivityTimeline(
   const buckets = new Map<string, number>();
 
   days.forEach((date) => {
-    const key = date.toISOString().slice(0, 10);
-    buckets.set(key, 0);
+    buckets.set(localDayKey(date), 0);
   });
 
   events.forEach((event) => {
-    const dateKey = new Date(event.created_at).toISOString().slice(0, 10);
+    const dateKey = localDayKey(new Date(event.created_at));
     if (buckets.has(dateKey)) {
       buckets.set(dateKey, (buckets.get(dateKey) ?? 0) + 1);
     }
   });
 
+  // `day` is an ISO-style YYYY-MM-DD key; the dashboard slices it for the axis label.
   return days.map((date) => {
-    const key = date.toISOString().slice(0, 10);
-    return {
-      day: formatDate(date),
-      count: buckets.get(key) ?? 0,
-    };
+    const key = localDayKey(date);
+    return { day: key, count: buckets.get(key) ?? 0 };
   });
 }

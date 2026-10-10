@@ -20,7 +20,7 @@ type HomePageControlsProps = {
 export function HomePageControls({ content, featuredListings, liveListingCount }: HomePageControlsProps) {
   return (
     <GlassPanel className="p-gutter xl:col-span-12">
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
         <div>
           <div className="label-caps text-secondary mb-3">Home page</div>
           <h2 className="font-display text-[34px] leading-[1.05] tracking-[-0.04em] text-on-background">
@@ -31,7 +31,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
           </p>
 
           <form action={updateHomePageSettingsAction} className="mt-6 grid gap-5">
-            <label className="grid gap-2">
+            <label className="grid grid-cols-1 gap-2">
               <span className="label-caps text-secondary">Hero eyebrow</span>
               <input
                 className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -40,7 +40,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
                 required
               />
             </label>
-            <label className="grid gap-2">
+            <label className="grid grid-cols-1 gap-2">
               <span className="label-caps text-secondary">Hero prefix</span>
               <input
                 className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -49,7 +49,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
                 required
               />
             </label>
-            <label className="grid gap-2">
+            <label className="grid grid-cols-1 gap-2">
               <span className="label-caps text-secondary">Rotating hero phrases</span>
               <textarea
                 className="min-h-32 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -59,7 +59,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
                 required
               />
             </label>
-            <label className="grid gap-2">
+            <label className="grid grid-cols-1 gap-2">
               <span className="label-caps text-secondary">Hero description</span>
               <textarea
                 className="min-h-24 rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -70,7 +70,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
             </label>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              <label className="grid gap-2">
+              <label className="grid grid-cols-1 gap-2">
                 <span className="label-caps text-secondary">Slideshow interval (ms)</span>
                 <input
                   className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -83,7 +83,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
                   required
                 />
               </label>
-              <label className="grid gap-2">
+              <label className="grid grid-cols-1 gap-2">
                 <span className="label-caps text-secondary">Hero rotation (ms)</span>
                 <input
                   className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -96,7 +96,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
                   required
                 />
               </label>
-              <label className="grid gap-2">
+              <label className="grid grid-cols-1 gap-2">
                 <span className="label-caps text-secondary">Notification poll (sec)</span>
                 <input
                   className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-3"
@@ -125,7 +125,7 @@ export function HomePageControls({ content, featuredListings, liveListingCount }
           </form>
         </div>
 
-        <div className="grid gap-4 content-start">
+        <div className="grid grid-cols-1 gap-4 content-start">
           <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 p-4">
             <div className="label-caps text-secondary mb-2">Featured on home</div>
             <p className="text-sm text-on-surface-variant">

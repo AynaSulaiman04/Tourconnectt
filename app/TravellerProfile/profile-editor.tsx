@@ -24,7 +24,7 @@ function preferredAreaLabel(value: TravelerProfile["preferred_inquiry_area"]) {
     case "arctic":
       return "Rainforest & Nature";
     default:
-      return "Select an environment";
+      return "Choose an interest";
   }
 }
 
@@ -113,7 +113,7 @@ export function ProfileEditor({ profile, careProfile, defaultProfileImageUrl = n
               style={{ height: "100%", objectFit: "cover", width: "100%" }}
             />
           ) : (
-            <span className="material-symbols-outlined profile-photo-placeholder">photo_camera</span>
+            <span className="material-symbols-outlined profile-photo-placeholder" aria-hidden="true">photo_camera</span>
           )}
           <button
             className="profile-photo-camera"
@@ -122,7 +122,7 @@ export function ProfileEditor({ profile, careProfile, defaultProfileImageUrl = n
             disabled={pending}
             onClick={() => profileImageInputRef.current?.click()}
           >
-            <span className="material-symbols-outlined">photo_camera</span>
+            <span className="material-symbols-outlined" aria-hidden="true">photo_camera</span>
           </button>
         </div>
         <input
@@ -165,7 +165,7 @@ export function ProfileEditor({ profile, careProfile, defaultProfileImageUrl = n
       </div>
 
       <div className="field select-field">
-        <label htmlFor="profile_preferred_inquiry_area">Preferred enquiry areas</label>
+        <label htmlFor="profile_preferred_inquiry_area">Main interest</label>
         <select
           id="profile_preferred_inquiry_area"
           name="preferred_inquiry_area"
@@ -179,7 +179,7 @@ export function ProfileEditor({ profile, careProfile, defaultProfileImageUrl = n
           }
         >
           <option disabled value="">
-            Select an environment
+            Choose an interest
           </option>
           <option value="desert">Island Heritage &amp; Culture</option>
           <option value="coastal">Beaches &amp; Marine</option>

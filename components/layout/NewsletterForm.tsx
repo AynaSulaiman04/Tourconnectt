@@ -19,7 +19,7 @@ export function NewsletterForm() {
         <input
           id="newsletter-email"
           name="email"
-          placeholder="Enter your email"
+          placeholder="Your email"
           type="email"
           autoComplete="email"
           required

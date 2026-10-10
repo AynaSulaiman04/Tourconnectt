@@ -83,6 +83,29 @@ function isFilled(value: unknown) {
   return value.trim().length > 0;
 }
 
+const FIELD_LABELS: Partial<Record<keyof OperatorListingDraftLike, string>> = {
+  title: "title",
+  location: "location",
+  country: "country",
+  duration: "duration",
+  summary: "description",
+  category: "category",
+  island: "island",
+  price: "price",
+  availability: "availability",
+  capacity: "capacity",
+  image_url: "cover image",
+  itinerary: "itinerary",
+  inclusions: "inclusions",
+  exclusions: "exclusions",
+  contact_name: "contact name",
+  contact_email: "contact email",
+};
+
+export function getMissingRequiredFieldLabels(value: OperatorListingDraftLike) {
+  return REQUIRED_FIELDS.filter((field) => !isFilled(value[field])).map((field) => FIELD_LABELS[field] ?? String(field));
+}
+
 export function calculateListingCompletion(value: OperatorListingDraftLike) {
   const total = REQUIRED_FIELDS.length;
   const completed = REQUIRED_FIELDS.reduce((count, field) => count + (isFilled(value[field]) ? 1 : 0), 0);
@@ -92,12 +115,14 @@ export function calculateListingCompletion(value: OperatorListingDraftLike) {
     total,
     percentage: total ? Math.round((completed / total) * 100) : 0,
     sections: LISTING_COMPLETION_SECTIONS.map((section) => {
+      const requiredInSection = section.fields.filter((field) => REQUIRED_FIELDS.includes(field));
       const completedFields = section.fields.reduce((count, field) => count + (isFilled(value[field]) ? 1 : 0), 0);
+      const completedRequired = requiredInSection.reduce((count, field) => count + (isFilled(value[field]) ? 1 : 0), 0);
       return {
         label: section.label,
         completed: completedFields,
         total: section.fields.length,
-        isComplete: completedFields === section.fields.length && section.fields.length > 0,
+        isComplete: requiredInSection.length > 0 && completedRequired === requiredInSection.length,
       };
     }),
   };

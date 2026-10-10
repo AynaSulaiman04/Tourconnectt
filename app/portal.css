@@ -130,6 +130,11 @@
 
 /* A table is the one thing allowed to scroll rather than wrap; it scrolls
    inside its own box, never widening the page. */
+.portal-list-page .table-shell th,
+.portal-list-page .table-shell td {
+  padding-inline: 0.7rem;
+}
+
 .portal-list-page .table-shell,
 .portal-list-page .tc-table-wrapper {
   max-width: 100%;

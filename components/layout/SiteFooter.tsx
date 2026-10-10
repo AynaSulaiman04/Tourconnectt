@@ -95,7 +95,7 @@ export async function SiteFooter({ variant = "public" }: SiteFooterProps) {
 
         <div className="site-footer-column">
           <h3>Stay inspired</h3>
-          <p>{description}</p>
+          <p>New experiences and operators, shared occasionally.</p>
           <NewsletterForm />
         </div>
       </div>

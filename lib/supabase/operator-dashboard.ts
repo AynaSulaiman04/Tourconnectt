@@ -63,7 +63,7 @@ export type OperatorDashboardData = {
 };
 
 const listingSelect =
-  "id,title,location,country,duration,summary,image_url,image_base64,price,operator_id,operator_name,featured,is_active,created_at,updated_at";
+  "id,title,location,country,duration,summary,image_url,image_base64,price,operator_id,operator_name,featured,is_active,status,created_at,updated_at";
 
 const inquirySelect =
   "id,user_id,listing_id,traveler_name,traveler_email,traveler_phone,destination,destination_country,operator_name,operator_id,preferred_start_date,preferred_end_date,availability,notes,status,created_at,updated_at";
@@ -72,7 +72,6 @@ const profileSelect =
   "id,full_name,email,role,profile_image_url,avatar_base64,preferred_inquiry_area,created_at,updated_at";
 
 const draftSelect = "id,published_listing_id,updated_at";
-const draftCountSelect = "id,operator_id,published_listing_id,updated_at";
 
 const pendingInquiryStatuses = new Set([
   "submitted",
@@ -140,22 +139,6 @@ async function loadDraftLookup(profileId: string) {
   return new Map(drafts.filter((draft) => draft.published_listing_id).map((draft) => [draft.published_listing_id as string, draft.id]));
 }
 
-async function loadOperatorDrafts(profileId: string) {
-  const admin = createSupabaseServiceRoleClient();
-  const { data, error } = await admin
-    .from("operator_listing_drafts")
-    .select(draftCountSelect)
-    .eq("operator_id", profileId)
-    .eq("is_published", false)
-    .order("updated_at", { ascending: false });
-
-  if (error) {
-    return [] as OperatorListingDraftSummary[];
-  }
-
-  return (data ?? []) as OperatorListingDraftSummary[];
-}
-
 async function loadTravelerProfiles(userIds: string[]) {
   if (!userIds.length) {
     return new Map<string, { id: string; full_name: string; email: string | null; profile_image_url: string | null }>();
@@ -189,10 +172,9 @@ async function loadTravelerProfiles(userIds: string[]) {
 export async function getOperatorDashboardData(): Promise<OperatorDashboardData> {
   const profile = await requireOperatorProfile();
 
-  const [listings, inquiries, drafts, draftLookup, unreadNotificationsCount, directMessageState] = await Promise.all([
+  const [listings, inquiries, draftLookup, unreadNotificationsCount, directMessageState] = await Promise.all([
     loadOperatorListings(profile.id),
     loadOperatorInquiries(profile.id),
-    loadOperatorDrafts(profile.id),
     loadDraftLookup(profile.id),
     countUnreadPlatformNotifications(profile.id).catch(() => 0),
     getDirectMessagePageState({
@@ -273,7 +255,9 @@ export async function getOperatorDashboardData(): Promise<OperatorDashboardData>
     .sort((left, right) => new Date(right.latest_activity_at).getTime() - new Date(left.latest_activity_at).getTime());
   const recentInquiries = bookings.slice(0, 4);
 
-  const liveListingsCount = listings.length + drafts.length;
+  const liveListingsCount = listings.filter(
+    (listing) => (listing as { status?: string | null }).status === "live" && listing.is_active !== false,
+  ).length;
   const pendingInquiriesCount = inquiries.filter((inquiry) => pendingInquiryStatuses.has(inquiry.status)).length;
   const confirmedTripsCount = inquiries.filter((inquiry) => confirmedInquiryStatuses.has(inquiry.status)).length;
 

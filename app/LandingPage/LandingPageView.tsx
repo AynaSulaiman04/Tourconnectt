@@ -40,98 +40,12 @@ type LandingPageViewProps = {
   } | null;
 };
 
-const fallbackTestimonials: LandingTestimonial[] = [
-  {
-    id: "testimonial-1",
-    text: "Every detail was exceptional. From the private guides to the seamless transfers, TourConnecTT delivered a journey we\'ll never forget.",
-    name: "James L.",
-    location: "New York, USA",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-2",
-    text: "The heritage experiences were beyond incredible. Access we never could have arranged on our own.",
-    name: "Priya M.",
-    location: "London, UK",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-3",
-    text: "Impeccable planning and 24/7 support. Our family trip was effortless and absolutely magical.",
-    name: "Omar R.",
-    location: "Dubai, UAE",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-4",
-    text: "The Argyle Waterfall hike with a naturalist guide was the highlight of our year. We saw wildlife we never would have spotted alone.",
-    name: "Sarah K.",
-    location: "Toronto, Canada",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-5",
-    text: "Booking through the concierge was faster than any travel agent. Two messages and our whole Tobago week was set.",
-    name: "Marcus D.",
-    location: "Berlin, Germany",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-6",
-    text: "The operators knew every hidden beach, every family-run spot for doubles. It felt like being toured by a local friend.",
-    name: "Anika T.",
-    location: "Mumbai, India",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-7",
-    text: "Leatherback turtle nesting at Grande Rivière was unreal. The operator timed everything perfectly and answered every question.",
-    name: "Elena V.",
-    location: "Madrid, Spain",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-8",
-    text: "Carnival with local hosts is a different level. Costumes, mas camps, transport, food — all arranged, all seamless.",
-    name: "Kojo A.",
-    location: "Accra, Ghana",
-    avatarUrl: null,
-    rating: 5,
-  },
-  {
-    id: "testimonial-9",
-    text: "We booked last-minute and still had a private catamaran to Nylon Pool the next morning. Impressive turnaround.",
-    name: "Rachel P.",
-    location: "Sydney, Australia",
-    avatarUrl: null,
-    rating: 5,
-  },
-];
-
 function formatRating(value: number) {
   return value.toFixed(1);
 }
 
 function resolveListings(listings: LandingListingCard[]) {
   return listings;
-}
-
-function resolveTestimonials(testimonials: LandingTestimonial[]) {
-  const seenIds = new Set(testimonials.map((item) => item.id));
-  const merged = [...testimonials];
-  for (const fallback of fallbackTestimonials) {
-    if (merged.length >= 3) break;
-    if (seenIds.has(fallback.id)) continue;
-    merged.push(fallback);
-  }
-  return merged;
 }
 
 export function LandingPageView({
@@ -151,7 +65,7 @@ export function LandingPageView({
       (listing) => listing.island === option.slug || (option.slug !== "both" && listing.island === "both"),
     ),
   })).filter((section) => section.items.length > 0);
-  const testimonialsToRender = resolveTestimonials(testimonials);
+  const testimonialsToRender = testimonials;
   const hasListings = featuredListings.length > 0;
   const slideshowImages = showcaseImages;
   const heroContent = getHeroContentFromSiteContent(siteContent);
@@ -242,6 +156,7 @@ export function LandingPageView({
         )}
       </section>
 
+      {testimonialsToRender.length > 0 ? (
       <section className="lp-section lp-testimonials" aria-labelledby="testimonials" data-lp-reveal>
         <div className="lp-section-head" data-lp-reveal>
           <div>
@@ -249,15 +164,15 @@ export function LandingPageView({
             <h2 id="testimonials">Loved by discerning travellers worldwide.</h2>
           </div>
 
-          <div className="lp-rating">
-            <strong>{reviewSummary ? formatRating(reviewSummary.averageRating) : "4.9"}</strong>
-            <span>/5</span>
-            <small>
-              {reviewSummary
-                ? `Based on ${reviewSummary.reviewCount.toLocaleString()} verified reviews`
-                : "Based on 126+ verified reviews"}
-            </small>
-          </div>
+          {reviewSummary ? (
+            <div className="lp-rating">
+              <strong>{formatRating(reviewSummary.averageRating)}</strong>
+              <span>/5</span>
+              <small>
+                {`Based on ${reviewSummary.reviewCount.toLocaleString()} verified ${reviewSummary.reviewCount === 1 ? "review" : "reviews"}`}
+              </small>
+            </div>
+          ) : null}
         </div>
 
         <div className="lp-testimonial-grid">
@@ -288,7 +203,7 @@ export function LandingPageView({
           ))}
         </div>
       </section>
-
+      ) : null}
     </main>
   );
 }

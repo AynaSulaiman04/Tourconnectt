@@ -53,7 +53,7 @@ export default async function ConciergeChatPage({ searchParams }: ConciergeChatP
     knowledgeSources: [],
     sourceSummaries: [],
     promptContext: [
-      "TT Connect platform context:",
+      "TourConnecTT platform context:",
       "- No live platform data is available right now.",
       "Rules:",
       "- Use only the provided platform context for listings, pricing, and availability.",

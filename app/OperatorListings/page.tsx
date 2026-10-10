@@ -38,6 +38,7 @@ export default async function OperatorListingsPage() {
     getOperatorListingDrafts(profileContext.profile.id),
   ]);
   const activeListings = listings.filter((listing) => listing.is_active);
+  const unpublishedDrafts = drafts.filter((draft) => !draft.published_listing_id);
   const draftByListingId = new Map(
     drafts.filter((draft) => draft.published_listing_id).map((draft) => [draft.published_listing_id as string, draft.id]),
   );
@@ -57,7 +58,7 @@ export default async function OperatorListingsPage() {
           <div className="flex flex-col gap-3">
             <p className="label-caps text-secondary">Operator listings</p>
             <h1 className="font-display text-[48px] leading-14 tracking-[-0.02em] font-light text-on-background">
-              Manage your live listings.
+              Manage your listings.
             </h1>
             <p className="max-w-[720px] text-[18px] leading-7 font-light text-on-surface-variant">
               Review the listings connected to your operator account, open a listing to view its
@@ -68,6 +69,27 @@ export default async function OperatorListingsPage() {
 
         <section className="section-shell grid grid-cols-1 lg:grid-cols-12 gap-gutter">
           <div className="lg:col-span-8 space-y-gutter">
+            {unpublishedDrafts.length ? (
+              <GlassPanel className="p-gutter">
+                <p className="label-caps text-secondary mb-2">Drafts in progress</p>
+                <ul className="divide-y divide-outline-variant/20">
+                  {unpublishedDrafts.map((draft) => (
+                    <li key={draft.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className="min-w-0">
+                        <p className="truncate text-base text-on-background">{draft.title?.trim() || "Untitled draft"}</p>
+                        <p className="text-xs uppercase tracking-[0.15em] text-on-surface-variant/70">
+                          {formatRelativeTime(draft.updated_at)}
+                        </p>
+                      </div>
+                      <Link className="btn-outline btn-sm" href={`/CreateListing?draft=${draft.id}`}>
+                        Resume draft
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </GlassPanel>
+            ) : null}
+
             {listings.length ? (
               listings.map((listing) => (
                 <GlassPanel key={listing.id} className="overflow-hidden">
@@ -84,7 +106,7 @@ export default async function OperatorListingsPage() {
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-on-surface-variant">
-                          <span className="material-symbols-outlined text-[44px]">photo</span>
+                          <span className="material-symbols-outlined text-[44px]" aria-hidden="true">photo</span>
                         </div>
                       )}
                     </div>
@@ -150,7 +172,7 @@ export default async function OperatorListingsPage() {
                   </div>
                 </GlassPanel>
               ))
-            ) : (
+            ) : unpublishedDrafts.length ? null : (
               <GlassPanel className="p-gutter">
                 <p className="label-caps text-secondary mb-2">Listings</p>
                 <h2 className="font-display text-[32px] leading-9 font-light text-on-background">
@@ -185,6 +207,12 @@ export default async function OperatorListingsPage() {
                   <div className="label-caps text-secondary mb-1">Active listings</div>
                   <div className="font-display text-[40px] leading-none font-light text-on-background">
                     {activeListings.length}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-low/70 px-4 py-4">
+                  <div className="label-caps text-secondary mb-1">Saved drafts</div>
+                  <div className="font-display text-[40px] leading-none font-light text-on-background">
+                    {unpublishedDrafts.length}
                   </div>
                 </div>
               </div>

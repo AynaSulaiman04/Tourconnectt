@@ -170,7 +170,7 @@ export default async function OperatorListingViewPage({ params }: OperatorListin
                 />
               ) : (
                 <div className="absolute inset-0 bg-surface-container flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[48px] text-(--outline)">photo</span>
+                  <span className="material-symbols-outlined text-[48px] text-(--outline)" aria-hidden="true">photo</span>
                 </div>
               )}
             </div>

@@ -34,7 +34,7 @@ function buildConversationHref(pathname: string, conversationId: string) {
   return `${url.pathname}?${url.searchParams.toString()}`;
 }
 
-const EMOJI_OPTIONS = ["??", "??", "??", "?", "??"];
+const EMOJI_OPTIONS = ["😊", "👍", "🙏", "🎉", "🌴"];
 const FALLBACK_POLL_INTERVAL_MS = 120_000;
 
 function resolveCounterpartAvatar(
@@ -574,6 +574,7 @@ export function DirectMessagesClient({
               {EMOJI_OPTIONS.map((emoji) => (
                 <button
                   key={emoji}
+                  aria-label={`Insert ${emoji}`}
                   className="tc-emoji-option"
                   type="button"
                   onClick={() => handleEmojiPick(emoji)}

@@ -60,7 +60,7 @@ export function DocumentShareButton({ documentId, documentName, className = "" }
   return (
     <div className={className}>
       <button className="btn-outline btn-sm" type="button" onClick={handleShare} disabled={status.type === "loading"}>
-        <span className="material-symbols-outlined">share</span>
+        <span className="material-symbols-outlined" aria-hidden="true">share</span>
         {status.type === "loading" ? "Sharing..." : "Copy secure link"}
       </button>
       {status.message ? (
