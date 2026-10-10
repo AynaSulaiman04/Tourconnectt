@@ -19,7 +19,11 @@ import { LandingPageView, type LandingTestimonial } from "./LandingPageView";
  * Served from public/ so it comes from our own origin at the original quality,
  * rather than a Supabase Storage round trip on every cold render.
  */
-const LANDING_HERO_VIDEO = { url: "/landing/hero.mp4", contentType: "video/mp4" };
+const LANDING_HERO_VIDEO = {
+  url: "/landing/hero.mp4",
+  contentType: "video/mp4",
+  posterUrl: "/landing/hero-poster.jpg",
+};
 
 export const revalidate = 60;
 

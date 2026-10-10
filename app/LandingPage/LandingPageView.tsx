@@ -32,7 +32,7 @@ type LandingPageViewProps = {
   listings: LandingListingCard[];
   testimonials: LandingTestimonial[];
   showcaseImages: string[];
-  heroVideo: { url: string; contentType: string | null } | null;
+  heroVideo: { url: string; contentType: string | null; posterUrl?: string | null } | null;
   siteContent: SiteContent;
   reviewSummary: {
     averageRating: number;
@@ -76,7 +76,11 @@ export function LandingPageView({
       <LandingScrollReveal />
 
       <section className="lp-hero" data-has-video={heroVideo ? "true" : undefined}>
-        {heroVideo ? <LandingHeroVideo contentType={heroVideo.contentType} src={heroVideo.url} /> : null}
+        {heroVideo ? <LandingHeroVideo
+            contentType={heroVideo.contentType}
+            poster={heroVideo.posterUrl}
+            src={heroVideo.url}
+          /> : null}
         <div className="lp-hero-inner" data-lp-reveal>
           <AnimatedHeroHeadline
             description={heroContent.description}

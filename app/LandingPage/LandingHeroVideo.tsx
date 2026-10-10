@@ -5,6 +5,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 type LandingHeroVideoProps = {
   src: string;
   contentType?: string | null;
+  poster?: string | null;
 };
 
 const SMALL_SCREEN_QUERY = "(max-width: 900px)";
@@ -41,13 +42,20 @@ function getVideoAllowed() {
   const connection = getConnection();
   const saveData = connection?.saveData === true;
   const slowNetwork = /(^|-)(2g|slow-2g)$/.test(connection?.effectiveType ?? "");
-  const smallScreen = window.matchMedia(SMALL_SCREEN_QUERY).matches;
 
-  return !saveData && !slowNetwork && !smallScreen;
+  return !saveData && !slowNetwork;
+}
+
+function getIsSmallScreen() {
+  return window.matchMedia(SMALL_SCREEN_QUERY).matches;
 }
 
 /** The server cannot know the screen or connection, so it assumes the cheap path. */
 function getVideoAllowedOnServer() {
+  return false;
+}
+
+function getIsSmallScreenOnServer() {
   return false;
 }
 
@@ -57,17 +65,21 @@ function getVideoAllowedOnServer() {
  * taking the video fullscreen. If autoplay is still refused the hero simply
  * shows the first frame, so the section never looks broken.
  *
- * A decorative background loop is not worth megabytes on a phone, and most of
- * our visitors are on one, often roaming. Small screens and any browser
- * reporting Save-Data or a 2G-class connection get a painted backdrop instead,
- * and never request the video at all.
+ * The same video plays on every screen size. Any browser reporting Save-Data
+ * or a 2G-class connection gets a painted backdrop instead and never requests
+ * the video, and small screens only preload metadata rather than the whole file.
  */
-export function LandingHeroVideo({ src, contentType }: LandingHeroVideoProps) {
+export function LandingHeroVideo({ src, contentType, poster }: LandingHeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const allowed = useSyncExternalStore(
     subscribeToViewport,
     getVideoAllowed,
     getVideoAllowedOnServer,
+  );
+  const smallScreen = useSyncExternalStore(
+    subscribeToViewport,
+    getIsSmallScreen,
+    getIsSmallScreenOnServer,
   );
 
   useEffect(() => {
@@ -124,7 +136,8 @@ export function LandingHeroVideo({ src, contentType }: LandingHeroVideoProps) {
         loop
         muted
         playsInline
-        preload="auto"
+        preload={smallScreen ? "metadata" : "auto"}
+        poster={poster ?? undefined}
         tabIndex={-1}
       >
         <source src={src} type={contentType ?? undefined} />
